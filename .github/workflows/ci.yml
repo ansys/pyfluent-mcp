@@ -199,7 +199,7 @@ jobs:
       contents: read # Needed to checkout the code
     steps:
       - name: Run Ansys documentation building action
-        uses: ansys/actions/doc-build@a5b0351dc277d68c2dc1beca2d2674c7dfa4fc55 # v10.3.2
+        uses: ansys/actions/doc-build@a5b0351dc277d68c2dc1beca2d2674c7dfa4fc55 # v10.3.3
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           sphinxopts: "-W --keep-going"
@@ -214,7 +214,7 @@ jobs:
       id-token: write # Required for OIDC authentication to upload provenance attestations
     steps:
       - name: "Build library source and wheel artifacts"
-        uses: ansys/actions/build-library@a5b0351dc277d68c2dc1beca2d2674c7dfa4fc55 # v10.3.2
+        uses: ansys/actions/build-library@a5b0351dc277d68c2dc1beca2d2674c7dfa4fc55 # v10.3.3
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
@@ -267,7 +267,7 @@ jobs:
       contents: write # Required for GitHub release
     steps:
       - name: "Release to GitHub"
-        uses: ansys/actions/release-github@a5b0351dc277d68c2dc1beca2d2674c7dfa4fc55 # v10.3.2
+        uses: ansys/actions/release-github@a5b0351dc277d68c2dc1beca2d2674c7dfa4fc55 # v10.3.3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           library-name: ${{ env.PACKAGE_NAME }}
