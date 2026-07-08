@@ -19,7 +19,7 @@ concurrency:
 env:
   MAIN_PYTHON_VERSION: "3.13"
   PACKAGE_NAME: "ansys-fluent-mcp"
-  DOCUMENTATION_CNAME: "glowing-dollop-j14vq8z.pages.github.io" # Will be updated to "fluent-mcp.docs.pyansys.com" later
+  DOCUMENTATION_CNAME: "fluent-mcp.docs.pyansys.com"
 
 jobs:
   update-changelog:
