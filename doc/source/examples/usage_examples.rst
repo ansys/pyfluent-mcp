@@ -82,9 +82,8 @@ Before using ``codegen``, configure an LLM provider in your MCP client environme
 
 .. code-block:: bash
 
-   export OPENAI_API_KEY="<your-key>"
-   export LLM_PROVIDER="openai"
-   export LLM_MODEL="gpt-4o"
+   export LLM_MODEL="openai/gpt-4o"
+   export LLM_API_KEY="<your-key>"
 
 Then ask:
 

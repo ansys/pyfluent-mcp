@@ -164,48 +164,60 @@ You configure the server through `FLUIDS_MCP_*` environment variables. Common va
 
 #### Plain-English quick start
 
-Some features use an AI model. You set three environment variables:
+Some features use an AI model. To use **any** provider you set at most
+**four** environment variables — usually just two:
 
-- Set the AI provider.
-- Set the AI model.
-- Set the API key.
+- **`LLM_MODEL`** — the model, provider-prefixed (provider auto-detected).
+- **`LLM_API_KEY`** — one key for **any** provider.
+- **`LLM_ENDPOINT`** — only for Azure / local / OpenAI-compatible gateways.
 
 Pick the example that matches your setup. Replace `<...>` and start the
-server. The system resolves the rest automatically.
+server. The system resolves the rest (provider, transport, caching)
+automatically.
 
 **OpenAI key**
 ```bash
-export OPENAI_API_KEY="<your-openai-key>"
-export LLM_PROVIDER="openai"
-export LLM_MODEL="gpt-4o"
+export LLM_MODEL="openai/gpt-4o"
+export LLM_API_KEY="<your-openai-key>"
 ```
 
 **Anthropic (Claude) key**
 ```bash
-export ANTHROPIC_API_KEY="<your-anthropic-key>"
-export LLM_PROVIDER="anthropic"
-export LLM_MODEL="claude-3-5-sonnet"
+export LLM_MODEL="anthropic/claude-3-5-sonnet"
+export LLM_API_KEY="<your-anthropic-key>"
 ```
 
 **Google Gemini key**
 ```bash
-export GEMINI_API_KEY="<your-gemini-key>"
-export LLM_PROVIDER="gemini"
-export LLM_MODEL="gemini-1.5-pro"
+export LLM_MODEL="gemini/gemini-1.5-pro"
+export LLM_API_KEY="<your-gemini-key>"
 ```
 
-**A URL and key from your organization** (Azure OpenAI or any
-OpenAI-compatible gateway)
+**A URL and key from your organization** (Azure OpenAI, Azure AI Foundry,
+or any OpenAI-compatible gateway such as vLLM / Ollama)
 ```bash
-export LLM_ENDPOINT="<the-url-you-were-given>"
+export LLM_MODEL="azure/<deployment>"    # or any model name your URL serves
 export LLM_API_KEY="<your-key>"
-export LLM_MODEL="gpt-4o"
+export LLM_ENDPOINT="<the-url-you-were-given>"
 ```
 
-For the first three options, install provider connectors once:
-`pip install ansys-fluent-mcp[providers]`. The connector is free. You pay
-only your AI provider. To change models or providers later, update the
-variables and restart. The next section provides a full reference on advanced tuning.
+`LLM_API_KEY` is a **single key for any provider** — the old per-vendor
+names (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, …) still work as a fallback
+but are no longer required. For the native vendors (OpenAI, Anthropic,
+Gemini, **Azure**), install provider connectors once:
+`pip install ansys-fluent-mcp[providers]` (free; you pay only your AI
+provider). For **Azure**, set `LLM_MODEL=azure/<deployment-name>` (your Azure
+*deployment* name) and `LLM_ENDPOINT` to the resource base URL
+(`https://<resource>.openai.azure.com`) — the suite builds the full
+`/openai/deployments/…` URL and defaults the API version, so model + key +
+endpoint is enough.
+
+**Prefer a file?** Put every setting (the required ones plus any advanced
+knob) in an `llm_config.yaml` instead of environment variables. It is
+auto-discovered in the working directory, the agent state dir, and the AALI
+config dir, or point `LLM_CONFIG` at an explicit path. Precedence, per
+setting: **environment variable → `llm_config.yaml` → AALI `models.yaml`
+→ default.** The next section is a full reference on advanced tuning.
 
 #### Full reference
 
@@ -236,15 +248,17 @@ resolved provider/transport.
 | `LLM_PROVIDER` | auto | `openai`/`azure`/`anthropic`/`gemini`/`compat` (inferred from model/endpoint when unset) |
 | `LLM_TRANSPORT` | `auto` | `litellm` (native APIs) or `openai_compat` (httpx to `LLM_ENDPOINT`) |
 | `LLM_ENDPOINT` | unset | OpenAI-compatible chat-completions URL (custom/local endpoints) |
-| `LLM_API_KEY` | unset | Bearer token (or Azure key) for the compat path |
-| `OPENAI_API_KEY`/`ANTHROPIC_API_KEY`/`GEMINI_API_KEY`/`AZURE_API_KEY` | unset | Per-vendor key for the native (LiteLLM) path |
-| `LLM_API_BASE`/`LLM_API_VERSION` | unset | Azure base/version (also read from `AZURE_API_BASE` / `AZURE_API_VERSION`) |
+| `LLM_API_KEY` | unset | **Single key for any provider** (compat and native paths) |
+| `LLM_CONFIG` | unset | Path to an `llm_config.yaml` (else auto-discovered) |
+| `OPENAI_API_KEY`/`ANTHROPIC_API_KEY`/`GEMINI_API_KEY`/`AZURE_API_KEY` | unset | Deprecated per-vendor key fallback (prefer `LLM_API_KEY`) |
+| `LLM_API_BASE`/`LLM_API_VERSION` | unset / auto | Azure base/version (also `AZURE_API_BASE`/`AZURE_API_VERSION`); version defaulted for Azure |
 | `LLM_MODEL` | `gpt-4o-mini` | Model name (first whitespace token is active); may be a `provider/model` route |
 | `LLM_AUTH_STYLE` | auto | `bearer` or `azure-api-key` (compat path) |
 | `LLM_CACHE_MECHANISM` | auto | `openai_auto`/`anthropic_cache_control`/`gemini_context`/`none` |
 | `LLM_CACHE_TTL_SECONDS` | per-provider | Cache TTL hint used to size keep-alive |
+| `LLM_TEMPERATURE` | unset | **Opt-in:** temperature is omitted from the request unless set |
+| `LLM_MAX_TOKENS` | unset | **Opt-in:** no output-token cap is sent unless set |
 | `LLM_MAX_TOKENS_PARAM` | auto | `max_tokens` vs `max_completion_tokens` (auto for gpt-5 / o-series) |
-| `LLM_SEND_TEMPERATURE` | auto | `0` to omit `temperature` (auto-off for gpt-5/o-series) |
 | `LLM_SEND_CACHE_KEY` | `1` | `0` to omit the cache routing hint/cache breakpoint |
 | `LLM_MAX_RETRIES`/`LLM_TIMEOUT_SECONDS` | `3`/`60` | Transport seam retry/timeout |
 

@@ -65,7 +65,7 @@ DEFAULT_MODEL = "gpt-4o-mini"
 # ---------------------------------------------------------------------------
 
 
-def env_flag(name: str, *, default: bool) -> bool:
+def env_flag(name: str, *, default: bool, env=os.environ) -> bool:
     """Parse a boolean env var with a permissive truthy/falsy grammar.
 
     Parameters
@@ -74,13 +74,17 @@ def env_flag(name: str, *, default: bool) -> bool:
         Name of the object, module, or setting being processed.
     default : bool
         Fallback value used when no explicit value is supplied.
+    env : Any
+        Environment mapping to read instead of the process environment.
+        Accepts the ``_effective_env`` overlay so ``llm_config.yaml`` values
+        participate in boolean resolution.
 
     Returns
     -------
     bool
         Boolean result produced by the function.
     """
-    raw = os.environ.get(name)
+    raw = env.get(name)
     if raw is None:
         return default
     return raw.strip().lower() not in {"0", "false", "no", "off", ""}
@@ -116,7 +120,7 @@ def resolve_tls_verify(env=os.environ) -> bool | str:
         Boolean result produced by the function.
     """
     global _TLS_INSECURE_WARNED
-    if env_flag("LLM_TLS_INSECURE", default=False):
+    if env_flag("LLM_TLS_INSECURE", default=False, env=env):
         if not _TLS_INSECURE_WARNED:
             logger.warning(
                 "LLM_TLS_INSECURE is set: TLS certificate verification is "
@@ -151,7 +155,23 @@ def first_model_token(raw: str | None) -> str | None:
     """
     if not raw or not raw.strip():
         return None
-    return raw.split()[0]
+    return _strip_wrapping_quotes(raw.split()[0])
+
+
+def _strip_wrapping_quotes(value: str | None) -> str | None:
+    """Strip one layer of matched surrounding quotes from a config value.
+
+    Windows ``cmd.exe`` keeps the quotes in ``set VAR="value"``, so a value
+    can arrive as ``"gemini/gemini-2.5-flash"`` (leading/trailing ``"``). That
+    breaks provider detection and LiteLLM's route parser. Strip a single pair
+    of matched single/double quotes so quoted env values behave sanely.
+    """
+    if value is None:
+        return None
+    v = value.strip()
+    if len(v) >= 2 and v[0] == v[-1] and v[0] in ("'", '"'):
+        return v[1:-1]
+    return v
 
 
 # ---------------------------------------------------------------------------
@@ -243,10 +263,19 @@ def normalise_endpoint(url: str) -> str:
     str
         String result produced by the function.
     """
-    cleaned = url.rstrip("/")
-    if cleaned.endswith("/chat/completions"):
-        return cleaned
-    return f"{cleaned}/chat/completions"
+    from urllib.parse import urlsplit, urlunsplit
+
+    parts = urlsplit(url)
+    if not parts.scheme and not parts.netloc:
+        # Not a full URL (bare host/path) — fall back to simple handling.
+        cleaned = url.rstrip("/")
+        return cleaned if cleaned.endswith("/chat/completions") else f"{cleaned}/chat/completions"
+    path = parts.path.rstrip("/")
+    if not path.endswith("/chat/completions"):
+        path = f"{path}/chat/completions"
+    # Preserve any query string (e.g. Azure AI Foundry ``?api-version=...``)
+    # and fragment; only the path is normalised.
+    return urlunsplit((parts.scheme, parts.netloc, path, parts.query, parts.fragment))
 
 
 def load_aali_chat_model() -> AaliChatModel | None:
@@ -319,6 +348,252 @@ def load_aali_chat_model() -> AaliChatModel | None:
 
 
 # ---------------------------------------------------------------------------
+# llm_config.yaml — full-config file (all LLM settings in one place)
+# ---------------------------------------------------------------------------
+
+#: Default Azure OpenAI API version, applied when the provider is Azure and
+#: neither the environment nor ``llm_config.yaml`` pins one. Keeps Azure within
+#: the "<=4 required env vars" budget (no ``LLM_API_VERSION`` needed).
+AZURE_DEFAULT_API_VERSION = "2024-08-01-preview"
+
+#: Recognized keys in ``llm_config.yaml`` (all optional; any subset is fine).
+_LLM_CONFIG_KEYS = frozenset(
+    {
+        "model",
+        "api_key",
+        "endpoint",
+        "auth_style",
+        "provider",
+        "transport",
+        "cache",
+        "cache_ttl",
+        "tool_mode",
+        "retries",
+        "timeout",
+        "supports_tools",
+        "supports_json_mode",
+        "supports_streaming",
+        "parallel_tool_calls",
+        "max_tokens_param",
+        "max_tokens",
+        "send_temperature",
+        "temperature",
+        "send_cache_key",
+        "tls_insecure",
+        "ca_bundle",
+        "offline",
+        "allowed_hosts",
+        "api_base",
+        "api_version",
+        "models",
+    }
+)
+
+_LLM_CONFIG_FILENAMES = ("llm_config.yaml", "llm_config.yml")
+
+#: Map each ``llm_config.yaml`` key to the environment variable it stands in
+#: for. Used to overlay file values *underneath* the real environment so a
+#: single code path (``env.get("LLM_...")``) reads both sources with env
+#: winning per key.
+_FILE_KEY_TO_ENV: dict[str, str] = {
+    "provider": "LLM_PROVIDER",
+    "transport": "LLM_TRANSPORT",
+    "auth_style": "LLM_AUTH_STYLE",
+    "endpoint": "LLM_ENDPOINT",
+    "api_key": "LLM_API_KEY",
+    "model": "LLM_MODEL",
+    "api_base": "LLM_API_BASE",
+    "api_version": "LLM_API_VERSION",
+    "cache": "LLM_CACHE_MECHANISM",
+    "cache_ttl": "LLM_CACHE_TTL_SECONDS",
+    "send_cache_key": "LLM_SEND_CACHE_KEY",
+    "tool_mode": "LLM_TOOL_MODE",
+    "retries": "LLM_MAX_RETRIES",
+    "timeout": "LLM_TIMEOUT_SECONDS",
+    "supports_tools": "LLM_SUPPORTS_TOOLS",
+    "supports_json_mode": "LLM_SUPPORTS_JSON_MODE",
+    "supports_streaming": "LLM_SUPPORTS_STREAMING",
+    "parallel_tool_calls": "LLM_PARALLEL_TOOL_CALLS",
+    "max_tokens_param": "LLM_MAX_TOKENS_PARAM",
+    "max_tokens": "LLM_MAX_TOKENS",
+    "send_temperature": "LLM_SEND_TEMPERATURE",
+    "temperature": "LLM_TEMPERATURE",
+    "tls_insecure": "LLM_TLS_INSECURE",
+    "ca_bundle": "LLM_CA_BUNDLE",
+    "offline": "FLUIDS_AGENT_OFFLINE",
+    "allowed_hosts": "FLUIDS_AGENT_ALLOWED_LLM_HOSTS",
+}
+
+
+def _as_env_str(value: Any) -> str | None:
+    """Normalize a YAML scalar/list to the string form an env var would hold."""
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return "1" if value else "0"
+    if isinstance(value, (list, tuple)):
+        return ",".join(str(v) for v in value)
+    text = str(value).strip()
+    return text or None
+
+
+@dataclass(frozen=True)
+class LlmFileConfig:
+    """Normalized settings loaded from ``llm_config.yaml`` (all optional)."""
+
+    values: dict[str, Any]
+    source: Path
+
+    def get(self, key: str) -> Any:
+        """Return the raw YAML value for ``key`` (``None`` if absent)."""
+        return self.values.get(key)
+
+
+def _llm_config_candidate_paths(env=os.environ) -> list[Path]:
+    """Ordered locations to probe for ``llm_config.yaml``.
+
+    Order: explicit ``LLM_CONFIG`` → ``./llm_config.yaml`` (cwd) → the agent
+    state dir → the AALI config dir. First existing file wins.
+
+    Parameters
+    ----------
+    env : Any
+        Environment mapping to read instead of the process environment.
+
+    Returns
+    -------
+    list[Path]
+        Collection containing the operation results.
+    """
+    paths: list[Path] = []
+
+    override = (env.get("LLM_CONFIG") or "").strip()
+    if override:
+        paths.append(Path(override))
+
+    for name in _LLM_CONFIG_FILENAMES:
+        paths.append(Path.cwd() / name)
+
+    state_roots: list[Path] = []
+    local_app = env.get("LOCALAPPDATA")
+    if local_app:
+        state_roots.append(Path(local_app) / "fluids-agent")
+    xdg_state = env.get("XDG_STATE_HOME")
+    if xdg_state:
+        state_roots.append(Path(xdg_state) / "fluids-agent")
+    state_roots.append(Path.home() / ".local" / "state" / "fluids-agent")
+    for root in state_roots:
+        for name in _LLM_CONFIG_FILENAMES:
+            paths.append(root / name)
+
+    aali_roots: list[Path] = []
+    if local_app:
+        aali_roots.append(Path(local_app))
+    xdg_data = env.get("XDG_DATA_HOME")
+    if xdg_data:
+        aali_roots.append(Path(xdg_data))
+    aali_roots.append(Path.home() / ".local" / "share")
+    aali_roots.append(Path.home() / "Library" / "Application Support")
+    for root in aali_roots:
+        for name in _LLM_CONFIG_FILENAMES:
+            paths.append(root / _CONFIG_DIR / name)
+
+    return paths
+
+
+def load_llm_config_file(env=os.environ) -> LlmFileConfig | None:
+    """Return settings from the first ``llm_config.yaml`` found, or ``None``.
+
+    Accepts either a flat mapping or one nested under a top-level ``llm:``
+    key. Unknown keys are ignored. Never raises: any I/O or parse error is
+    logged and yields ``None`` so callers fall back to env vars / AALI /
+    defaults.
+
+    Parameters
+    ----------
+    env : Any
+        Environment mapping to read instead of the process environment.
+
+    Returns
+    -------
+    LlmFileConfig | None
+        Parsed configuration, or ``None`` when no usable file is found.
+    """
+    try:
+        import yaml  # PyYAML — optional dependency
+    except ImportError:
+        logger.debug("PyYAML not installed; skipping llm_config.yaml lookup.")
+        return None
+
+    for path in _llm_config_candidate_paths(env):
+        try:
+            if not path.is_file():
+                continue
+        except OSError:
+            continue
+        try:
+            with path.open("r", encoding="utf-8") as fh:
+                doc = yaml.safe_load(fh) or {}
+        except (OSError, yaml.YAMLError) as exc:
+            logger.warning("Could not read llm_config.yaml at %s: %s", path, exc)
+            continue
+
+        if isinstance(doc, dict) and isinstance(doc.get("llm"), dict):
+            doc = doc["llm"]
+        if not isinstance(doc, dict) or not doc:
+            continue
+
+        values: dict[str, Any] = {}
+        for raw_key, raw_val in doc.items():
+            key = str(raw_key).strip().lower()
+            if key in _LLM_CONFIG_KEYS and raw_val is not None:
+                values[key] = raw_val
+        if not values:
+            continue
+
+        logger.info(
+            "Loaded LLM configuration from %s: keys=%s", path, sorted(values)
+        )
+        return LlmFileConfig(values=values, source=path)
+
+    return None
+
+
+def _effective_env(env, file_cfg: "LlmFileConfig | None"):
+    """Return ``env`` overlaid on top of ``file_cfg`` (env wins per key).
+
+    ``llm_config.yaml`` values are mapped to their equivalent ``LLM_*`` names
+    and used only where the real environment does not already define that
+    variable. This lets every ``env.get("LLM_...")`` read participate in the
+    file fallback without touching each call site.
+
+    Parameters
+    ----------
+    env : Any
+        The real environment mapping (highest precedence).
+    file_cfg : LlmFileConfig | None
+        Parsed ``llm_config.yaml``, or ``None`` to disable the overlay.
+
+    Returns
+    -------
+    Any
+        ``env`` unchanged when there is nothing to overlay, else a merged dict.
+    """
+    if file_cfg is None:
+        return env
+    overlay: dict[str, str] = {}
+    for key, env_name in _FILE_KEY_TO_ENV.items():
+        val = _as_env_str(file_cfg.get(key))
+        if val is not None:
+            overlay[env_name] = val
+    if not overlay:
+        return env
+    merged = dict(overlay)
+    merged.update(env)  # real environment wins per key
+    return merged
+
+
+# ---------------------------------------------------------------------------
 # Endpoint / key / model resolution
 # ---------------------------------------------------------------------------
 
@@ -341,6 +616,7 @@ def resolve_model_config(
     auth_style: str | None = None,
     aali_fallback: Optional[Callable[[], AaliChatModel | None]] = None,
     env=os.environ,
+    file_cfg: "LlmFileConfig | None" = None,
 ) -> ModelConfig:
     """Resolve the endpoint/key/model/authorization triplet from a uniform order.
 
@@ -379,10 +655,15 @@ def resolve_model_config(
     ModelConfig
         Result produced by the function.
     """
-    env_endpoint = env.get("LLM_ENDPOINT")
-    env_api_key = env.get("LLM_API_KEY")
-    env_model = first_model_token(env.get("LLM_MODEL"))
-    env_auth = env.get("LLM_AUTH_STYLE")
+    # Overlay ``llm_config.yaml`` under the real environment (env wins per key)
+    # so ``LLM_*`` reads pick up the file automatically. ``file_cfg=None`` keeps
+    # resolution strictly environment-driven (and deterministic in tests).
+    eff = _effective_env(env, file_cfg)
+
+    env_endpoint = _strip_wrapping_quotes(eff.get("LLM_ENDPOINT"))
+    env_api_key = _strip_wrapping_quotes(eff.get("LLM_API_KEY"))
+    env_model = first_model_token(eff.get("LLM_MODEL"))
+    env_auth = eff.get("LLM_AUTH_STYLE")
 
     aali: AaliChatModel | None = None
     if aali_fallback is not None and not (endpoint or env_endpoint):
@@ -391,7 +672,16 @@ def resolve_model_config(
     resolved_endpoint = endpoint or env_endpoint or (aali.endpoint if aali else None)
     resolved_api_key = api_key or env_api_key or (aali.api_key if aali else None)
     resolved_model = model or env_model or (aali.model if aali else DEFAULT_MODEL)
-    resolved_auth = (auth_style or env_auth or (aali.auth_style if aali else "bearer")).lower()
+
+    explicit_auth = auth_style or env_auth or (aali.auth_style if aali else None)
+    if explicit_auth:
+        resolved_auth = explicit_auth.lower()
+    elif detect_provider(resolved_model, resolved_endpoint, env=eff) == PROVIDER_AZURE:
+        # Azure ergonomics: derive the auth style so callers need not set
+        # LLM_AUTH_STYLE just to talk to Azure (keeps Azure within <=4 vars).
+        resolved_auth = "azure-api-key"
+    else:
+        resolved_auth = "bearer"
 
     return ModelConfig(
         endpoint=resolved_endpoint,
@@ -432,14 +722,20 @@ def resolve_model_quirks(model: str) -> dict[str, Any]:
     dict[str, Any]
         Mapping containing the operation result.
     """
-    name = (model or "").lower()
+    name = (model or "").lower().strip()
+    # Match on the full name AND on the part after a ``provider/`` route prefix,
+    # so a routed reasoning model (e.g. ``azure/o3-mini`` or ``openai/gpt-5``)
+    # still gets its quirks — the leading ``azure/`` would otherwise defeat a
+    # plain prefix match. (A fully custom Azure deployment name that does not
+    # start with a known family still needs the explicit knobs / llm_config.)
+    tail = name.rsplit("/", 1)[-1]
     for prefix, quirks in _MODEL_QUIRKS:
-        if name.startswith(prefix):
+        if name.startswith(prefix) or tail.startswith(prefix):
             return dict(quirks)
     return {}
 
 
-def max_tokens_param_for(model: str) -> str:
+def max_tokens_param_for(model: str, *, env=os.environ) -> str:
     """Resolve the request field used to cap output tokens for ``model``.
 
     Explicit ``LLM_MAX_TOKENS_PARAM`` environment wins. Otherwise, per-model
@@ -449,18 +745,20 @@ def max_tokens_param_for(model: str) -> str:
     ----------
     model : str
         Model to supply to the function.
+    env : Any
+        Environment mapping to read instead of the process environment.
 
     Returns
     -------
     str
         String result produced by the function.
     """
-    return os.environ.get("LLM_MAX_TOKENS_PARAM") or resolve_model_quirks(model).get(
+    return env.get("LLM_MAX_TOKENS_PARAM") or resolve_model_quirks(model).get(
         "max_tokens_param", "max_tokens"
     )
 
 
-def send_temperature_for(model: str) -> bool:
+def send_temperature_for(model: str, *, env=os.environ) -> bool:
     """Whether ``temperature`` may be sent in the body for ``model``.
 
     Explicit ``LLM_SEND_TEMPERATURE`` environment wins. Otherwise, per-model
@@ -470,6 +768,8 @@ def send_temperature_for(model: str) -> bool:
     ----------
     model : str
         Model to supply to the function.
+    env : Any
+        Environment mapping to read instead of the process environment.
 
     Returns
     -------
@@ -479,6 +779,7 @@ def send_temperature_for(model: str) -> bool:
     return env_flag(
         "LLM_SEND_TEMPERATURE",
         default=resolve_model_quirks(model).get("send_temperature", True),
+        env=env,
     )
 
 
@@ -840,7 +1141,9 @@ _PROVIDER_KEY_ENVS = (
 )
 
 
-def native_provider_configured(model: str | None, *, env=os.environ) -> bool:
+def native_provider_configured(
+    model: str | None, *, env=os.environ, file_cfg: "LlmFileConfig | None" = None
+) -> bool:
     """Whether a native (LiteLLM) provider is *explicitly* configured.
 
     A bare default (provider ``openai``, no endpoint, no key) must NOT be
@@ -861,12 +1164,15 @@ def native_provider_configured(model: str | None, *, env=os.environ) -> bool:
     bool
         Boolean result produced by the function.
     """
-    if (env.get("LLM_PROVIDER") or "").strip():
+    eff = _effective_env(env, file_cfg)
+    if (eff.get("LLM_PROVIDER") or "").strip():
         return True
     name = (model or "").strip().lower()
     if "/" in name or name.startswith("claude") or name.startswith("gemini"):
         return True
-    return any((env.get(k) or "").strip() for k in _PROVIDER_KEY_ENVS)
+    # ``LLM_API_KEY`` is the single canonical key; the vendor-specific names
+    # remain a deprecated fallback (LiteLLM also reads them natively).
+    return any((eff.get(k) or "").strip() for k in _PROVIDER_KEY_ENVS)
 
 
 def default_cache_mechanism(provider: str) -> str:
@@ -943,6 +1249,12 @@ class LLMProfile:
     cache: CacheSpec
     retry: RetrySpec
     auth_style: str = "bearer"
+    #: Output-token cap actually sent on the wire. ``None`` (the default) means
+    #: **do not send** a token cap — set ``LLM_MAX_TOKENS`` to opt in.
+    max_output_tokens: int | None = None
+    #: Sampling temperature actually sent on the wire. ``None`` (the default)
+    #: means **do not send** ``temperature`` — set ``LLM_TEMPERATURE`` to opt in.
+    temperature: float | None = None
 
 
 def resolve_profile(
@@ -952,6 +1264,7 @@ def resolve_profile(
     auth_style: str | None = None,
     env=os.environ,
     aali_fallback: Optional[Callable[[], AaliChatModel | None]] = None,
+    file_cfg: "LlmFileConfig | None" = None,
 ) -> LLMProfile:
     """Resolve an :class:`LLMProfile` from environment plus model/endpoint hints.
 
@@ -982,50 +1295,108 @@ def resolve_profile(
         auth_style=auth_style,
         aali_fallback=aali_fallback,
         env=env,
+        file_cfg=file_cfg,
     )
-    provider = detect_provider(cfg.model, cfg.endpoint, env=env)
+    # Overlay ``llm_config.yaml`` under the real environment so every knob read
+    # below resolves from env → file → default with a single code path.
+    eff = _effective_env(env, file_cfg)
+    provider = detect_provider(cfg.model, cfg.endpoint, env=eff)
 
-    transport = (env.get("LLM_TRANSPORT") or "auto").strip().lower()
+    transport = (eff.get("LLM_TRANSPORT") or "auto").strip().lower()
     if transport not in (TRANSPORT_LITELLM, TRANSPORT_COMPAT, "auto"):
         transport = "auto"
     if transport == "auto":
-        # An EXPLICIT endpoint always means "POST OpenAI-style to this URL":
+        # An EXPLICIT endpoint normally means "POST OpenAI-style to this URL":
         # use the dependency-free httpx path, even when the host name happens
         # to contain a vendor token (e.g. ``*.openai.azure.com``). This keeps
-        # OpenAI / Azure-OpenAI / any OpenAI-compatible gateway working
-        # without requiring the optional ``litellm`` package, and matches the
-        # behavior from before native multi-provider support landed. The
-        # native LiteLLM transport is reserved for KEY-based access with no
-        # endpoint (true native vendor APIs). To force the native SDK against
-        # an endpoint, set ``LLM_TRANSPORT=litellm`` explicitly.
+        # OpenAI / any OpenAI-compatible gateway working without requiring the
+        # optional ``litellm`` package. The native LiteLLM transport is used
+        # for KEY-based access with no endpoint (true native vendor APIs).
+        #
+        # AZURE OpenAI EXCEPTION: a classic Azure *OpenAI* base URL
+        # (``*.openai.azure.com`` with no ``/chat/completions`` path) is an
+        # ``api_base``, not a chat-completions URL — its real URL is
+        # ``/openai/deployments/<dep>/chat/completions?api-version=...``, which
+        # only LiteLLM builds. Raw-POSTing ``<base>/chat/completions`` 404s, so
+        # that one case uses the native transport (endpoint becomes api_base).
+        #
+        # Everything else with an explicit endpoint uses the httpx compat path
+        # (POST OpenAI-style to the URL) — including Azure AI Foundry
+        # (``*.services.ai.azure.com``), whose OpenAI-compatible surface is
+        # ``/models/chat/completions?api-version=...`` and is NOT the Azure
+        # OpenAI deployment scheme. Force either with ``LLM_TRANSPORT``.
         if cfg.endpoint:
-            transport = TRANSPORT_COMPAT
+            from urllib.parse import urlparse as _urlparse
+
+            _host = (_urlparse(cfg.endpoint).hostname or "").lower()
+            # Only ONE case auto-routes an explicit endpoint to LiteLLM: a
+            # classic Azure OpenAI *base* URL (``*.openai.azure.com`` with no
+            # ``/chat/completions`` path), whose real URL
+            # (``/openai/deployments/<dep>/chat/completions?api-version=...``)
+            # only LiteLLM builds. Everything else with an endpoint uses the
+            # OpenAI-compatible httpx path — that is by far the common case
+            # (vLLM/Ollama/proxies, and Azure AI Foundry's ``/models``
+            # OpenAI-compatible surface).
+            #
+            # Speaking a vendor's NATIVE protocol against a custom base (e.g. the
+            # Anthropic Messages API on Foundry's ``/anthropic`` passthrough, POST
+            # ``{api_base}/v1/messages``) is ambiguous to auto-detect vs. an
+            # OpenAI-compatible gateway that merely serves a Claude/Gemini model.
+            # So it is an EXPLICIT opt-in: set ``LLM_TRANSPORT=litellm`` and the
+            # endpoint is used as ``api_base``.
+            _is_azure_openai_base = (
+                provider == PROVIDER_AZURE
+                and _host.endswith("openai.azure.com")
+                and "/chat/completions" not in cfg.endpoint
+            )
+            transport = TRANSPORT_LITELLM if _is_azure_openai_base else TRANSPORT_COMPAT
         elif provider in (PROVIDER_ANTHROPIC, PROVIDER_GEMINI, PROVIDER_AZURE, PROVIDER_OPENAI):
             transport = TRANSPORT_LITELLM
         else:
             transport = TRANSPORT_COMPAT
 
-    mechanism = (env.get("LLM_CACHE_MECHANISM") or "").strip().lower()
+    mechanism = (eff.get("LLM_CACHE_MECHANISM") or "").strip().lower()
     if mechanism not in (CACHE_OPENAI_AUTO, CACHE_ANTHROPIC, CACHE_GEMINI, CACHE_NONE):
         mechanism = default_cache_mechanism(provider)
-    ttl_raw = env.get("LLM_CACHE_TTL_SECONDS")
+    ttl_raw = eff.get("LLM_CACHE_TTL_SECONDS")
     try:
         ttl = int(ttl_raw) if ttl_raw else _CACHE_TTL_DEFAULTS.get(mechanism, 0)
     except (TypeError, ValueError):
         ttl = _CACHE_TTL_DEFAULTS.get(mechanism, 0)
 
-    tool_mode = (env.get("LLM_TOOL_MODE") or "native").strip().lower()
+    tool_mode = (eff.get("LLM_TOOL_MODE") or "native").strip().lower()
     if tool_mode not in ("native", "json_envelope"):
         tool_mode = "native"
 
     try:
-        max_attempts = int(env.get("LLM_MAX_RETRIES") or 3)
+        max_attempts = int(eff.get("LLM_MAX_RETRIES") or 3)
     except (TypeError, ValueError):
         max_attempts = 3
     try:
-        timeout_s = float(env.get("LLM_TIMEOUT_SECONDS") or 60.0)
+        timeout_s = float(eff.get("LLM_TIMEOUT_SECONDS") or 60.0)
     except (TypeError, ValueError):
         timeout_s = 60.0
+
+    # Output-token cap and temperature are OPT-IN: nothing is sent on the wire
+    # unless the user explicitly sets ``LLM_MAX_TOKENS`` / ``LLM_TEMPERATURE``
+    # (or the ``max_tokens`` / ``temperature`` key in llm_config.yaml). This
+    # avoids models that reject those params (e.g. reasoning models) erroring by
+    # default, and lets the endpoint apply its own defaults.
+    max_out_raw = eff.get("LLM_MAX_TOKENS")
+    try:
+        max_output_tokens = int(max_out_raw) if max_out_raw not in (None, "") else None
+    except (TypeError, ValueError):
+        max_output_tokens = None
+    temp_raw = eff.get("LLM_TEMPERATURE")
+    try:
+        temperature = float(temp_raw) if temp_raw not in (None, "") else None
+    except (TypeError, ValueError):
+        temperature = None
+
+    # ``send_temperature`` is now just "was a temperature explicitly requested?".
+    # When the user sets LLM_TEMPERATURE we always send it (their choice); with
+    # nothing set, temperature is None and omitted regardless of this flag.
+    send_temperature = temperature is not None
 
     return LLMProfile(
         provider=provider,
@@ -1034,17 +1405,19 @@ def resolve_profile(
         endpoint=cfg.endpoint,
         transport=transport,
         tool_mode=tool_mode,
-        supports_streaming=env_flag("LLM_SUPPORTS_STREAMING", default=True),
-        supports_json_mode=env_flag("LLM_SUPPORTS_JSON_MODE", default=True),
-        max_tokens_param=max_tokens_param_for(cfg.model),
-        send_temperature=send_temperature_for(cfg.model),
+        supports_streaming=env_flag("LLM_SUPPORTS_STREAMING", default=True, env=eff),
+        supports_json_mode=env_flag("LLM_SUPPORTS_JSON_MODE", default=True, env=eff),
+        max_tokens_param=max_tokens_param_for(cfg.model, env=eff),
+        send_temperature=send_temperature,
         cache=CacheSpec(
             mechanism=mechanism,
             ttl_seconds=ttl,
-            send_key=env_flag("LLM_SEND_CACHE_KEY", default=True),
+            send_key=env_flag("LLM_SEND_CACHE_KEY", default=True, env=eff),
         ),
         retry=RetrySpec(max_attempts=max_attempts, timeout_s=timeout_s),
         auth_style=cfg.auth_style,
+        max_output_tokens=max_output_tokens,
+        temperature=temperature,
     )
 
 
@@ -1224,7 +1597,11 @@ def build_litellm_kwargs(
         "drop_params": True,  # let LiteLLM drop unsupported params per model
     }
     if max_tokens is not None:
-        kwargs["max_tokens"] = max_tokens
+        # Honor the per-model output-cap field (``max_tokens`` vs
+        # ``max_completion_tokens``): reasoning models (gpt-5 / o-series, or a
+        # custom Azure deployment configured via LLM_MAX_TOKENS_PARAM /
+        # max_tokens_param) reject ``max_tokens`` on the native path too.
+        kwargs[profile.max_tokens_param] = max_tokens
     if temperature is not None and profile.send_temperature:
         kwargs["temperature"] = temperature
     if tools:
@@ -1485,6 +1862,11 @@ async def acall(
     import asyncio
 
     _guard_egress(profile, api_base=api_base, allowed_hosts=allowed_hosts, offline=offline)
+    # Opt-in output cap / temperature: send only what the user configured via
+    # LLM_MAX_TOKENS / LLM_TEMPERATURE (resolved onto the profile). Caller-passed
+    # values are ignored so nothing is sent by default.
+    max_tokens = profile.max_output_tokens
+    temperature = profile.temperature
 
     last_exc: Exception | None = None
     for attempt in range(max(1, profile.retry.max_attempts)):
@@ -1572,6 +1954,10 @@ def call(
     import time
 
     _guard_egress(profile, api_base=api_base, allowed_hosts=allowed_hosts, offline=offline)
+    # Opt-in output cap / temperature (see acall): send only what the user
+    # configured via LLM_MAX_TOKENS / LLM_TEMPERATURE; ignore caller-passed values.
+    max_tokens = profile.max_output_tokens
+    temperature = profile.temperature
 
     last_exc: Exception | None = None
     for attempt in range(max(1, profile.retry.max_attempts)):
@@ -1654,6 +2040,10 @@ async def astream(
         Result produced by the function.
     """
     _guard_egress(profile, api_base=api_base, allowed_hosts=allowed_hosts, offline=offline)
+    # Opt-in output cap / temperature (see acall): send only what the user
+    # configured via LLM_MAX_TOKENS / LLM_TEMPERATURE; ignore caller-passed values.
+    max_tokens = profile.max_output_tokens
+    temperature = profile.temperature
     if profile.transport != TRANSPORT_LITELLM:
         raise LLMTransportError(
             "astream is only supported on the LiteLLM transport; use acall for OpenAI-compatible endpoints."  # noqa: E501

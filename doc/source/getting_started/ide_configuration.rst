@@ -170,10 +170,12 @@ variables include:
 
    * - Variable
      - Purpose
-   * - ``OPENAI_API_KEY`` / ``ANTHROPIC_API_KEY`` / ``GEMINI_API_KEY``
-     - API keys for LLM-driven features (``codegen``, ``clarify``)
-   * - ``LLM_PROVIDER`` / ``LLM_MODEL``
-     - LLM vendor and model
+   * - ``LLM_MODEL``
+     - Model for LLM-driven features (``codegen``, ``clarify``), provider-prefixed (e.g. ``openai/gpt-4o``)
+   * - ``LLM_API_KEY``
+     - Single API key for any provider (``OPENAI_API_KEY`` / ``ANTHROPIC_API_KEY`` / ``GEMINI_API_KEY`` still work as a fallback)
+   * - ``LLM_ENDPOINT``
+     - Only for Azure / local / OpenAI-compatible gateways
    * - ``FLUIDS_MCP_LOG_LEVEL``
      - Server log level (default ``INFO``)
    * - ``FLUIDS_MCP_SETTINGS_JSON``

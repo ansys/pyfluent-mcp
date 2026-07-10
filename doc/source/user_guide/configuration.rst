@@ -34,6 +34,11 @@ Some features (``codegen``, ``clarify``) use an LLM. PyFluent-MCP is model- and
 provider-agnostic: native vendor APIs (OpenAI, Azure, Anthropic, Gemini) via the LiteLLM
 SDK, or any OpenAI-compatible endpoint.
 
+To use **any** provider you set at most **four** environment variables — usually
+just two: ``LLM_MODEL`` (provider-prefixed; provider auto-detected) and
+``LLM_API_KEY`` (a **single key for any provider**). Add ``LLM_ENDPOINT`` only for
+Azure / local / OpenAI-compatible gateways.
+
 Quick start
 ~~~~~~~~~~~
 
@@ -41,39 +46,57 @@ Quick start
 
 .. code-block:: bash
 
-   export OPENAI_API_KEY="<your-openai-key>"
-   export LLM_PROVIDER="openai"
-   export LLM_MODEL="gpt-4o"
+   export LLM_MODEL="openai/gpt-4o"
+   export LLM_API_KEY="<your-openai-key>"
 
 **Anthropic (Claude)**
 
 .. code-block:: bash
 
-   export ANTHROPIC_API_KEY="<your-anthropic-key>"
-   export LLM_PROVIDER="anthropic"
-   export LLM_MODEL="claude-3-5-sonnet"
+   export LLM_MODEL="anthropic/claude-3-5-sonnet"
+   export LLM_API_KEY="<your-anthropic-key>"
 
 **Google Gemini**
 
 .. code-block:: bash
 
-   export GEMINI_API_KEY="<your-gemini-key>"
-   export LLM_PROVIDER="gemini"
-   export LLM_MODEL="gemini-1.5-pro"
+   export LLM_MODEL="gemini/gemini-1.5-pro"
+   export LLM_API_KEY="<your-gemini-key>"
 
-**Custom OpenAI-compatible endpoint**
+**Azure OpenAI / Azure AI Foundry / any OpenAI-compatible endpoint**
 
 .. code-block:: bash
 
-   export LLM_ENDPOINT="<the-url-you-were-given>"
+   export LLM_MODEL="azure/<deployment>"    # or any model name your URL serves
    export LLM_API_KEY="<your-key>"
-   export LLM_MODEL="gpt-4o"
+   export LLM_ENDPOINT="<the-url-you-were-given>"
 
-Install the native provider connector once:
+The old per-vendor keys (``OPENAI_API_KEY``, ``ANTHROPIC_API_KEY``, …) still work
+as a fallback but are no longer required. Azure (incl. Foundry-hosted Claude)
+derives its auth style and defaults the API version, so model + key + endpoint is
+enough. Install the native provider connector once:
 
 .. code-block:: bash
 
    pip install "ansys-fluent-mcp[providers]"
+
+Configuration file (``llm_config.yaml``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Instead of environment variables you can put every setting (the required ones plus
+any advanced knob) in an ``llm_config.yaml``. It is auto-discovered in the working
+directory, the agent state dir, and the AALI config dir, or point ``LLM_CONFIG`` at
+an explicit path.
+
+.. code-block:: yaml
+
+   model: anthropic/claude-3-5-sonnet
+   api_key: ${ANTHROPIC_API_KEY}    # ${VAR} expanded from the environment
+   # endpoint: https://host/v1      # only for Azure / gateways / local
+   # timeout: 30                    # any advanced knob is accepted here too
+
+Precedence is per setting: **environment variable → llm_config.yaml → AALI
+models.yaml → default.**
 
 Full model reference
 ~~~~~~~~~~~~~~~~~~~~
@@ -96,13 +119,25 @@ Full model reference
      - OpenAI-compatible chat-completions URL
    * - ``LLM_API_KEY``
      - unset
-     - Bearer token for the compat path
+     - **Single key for any provider** (compat and native paths)
+   * - ``LLM_CONFIG``
+     - unset
+     - Path to an ``llm_config.yaml`` (else auto-discovered)
    * - ``OPENAI_API_KEY`` / ``ANTHROPIC_API_KEY`` / ``GEMINI_API_KEY`` / ``AZURE_API_KEY``
      - unset
-     - Per-vendor key for the native (LiteLLM) path
+     - Deprecated per-vendor key fallback (prefer ``LLM_API_KEY``)
    * - ``LLM_MODEL``
      - ``gpt-4o-mini``
-     - Model name
+     - Model name; may be a ``provider/model`` route
+   * - ``LLM_TEMPERATURE``
+     - unset
+     - **Opt-in:** ``temperature`` is omitted from the request unless set to a value
+   * - ``LLM_MAX_TOKENS``
+     - unset
+     - **Opt-in:** no output-token cap is sent unless set
+   * - ``LLM_MAX_TOKENS_PARAM``
+     - auto
+     - ``max_tokens`` vs ``max_completion_tokens`` (auto for gpt-5 / o-series)
    * - ``LLM_CACHE_MECHANISM``
      - auto
      - ``openai_auto`` / ``anthropic_cache_control`` / ``gemini_context`` / ``none``
