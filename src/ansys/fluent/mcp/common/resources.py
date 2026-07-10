@@ -39,9 +39,9 @@ Usage (inside a leaf's ``_register_resources`` override)::
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field
 from importlib.resources import files as _pkg_files
+import logging
 from typing import TYPE_CHECKING, Any, Sequence
 
 if TYPE_CHECKING:
@@ -196,4 +196,3 @@ class ResourceRegistry:
             root = _pkg_files(_pkg)
             data = (root / _fname).read_text(encoding="utf-8")
             return data
-

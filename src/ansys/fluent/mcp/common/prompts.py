@@ -37,9 +37,9 @@ Usage (inside a leaf's ``_register_prompts`` override)::
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field
 from importlib.resources import files as _pkg_files
+import logging
 from typing import TYPE_CHECKING, Any, Sequence
 
 if TYPE_CHECKING:
@@ -172,4 +172,3 @@ class PromptRegistry:
         def _template(_pkg: str = pkg, _fname: str = fname) -> str:
             root = _pkg_files(_pkg)
             return (root / _fname).read_text(encoding="utf-8")
-

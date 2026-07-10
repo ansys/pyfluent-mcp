@@ -38,8 +38,6 @@ from typing import Any, Awaitable, Callable, Iterable, Optional
 from ansys.common.mcp.server import PyAnsysBaseMCP
 
 from ansys.fluent.mcp.common.backend import Backend
-from ansys.fluent.mcp.common.prompts import PromptRegistry
-from ansys.fluent.mcp.common.resources import ResourceRegistry
 from ansys.fluent.mcp.common.codegen import CodegenPipeline
 from ansys.fluent.mcp.common.conversation import ConversationStore
 from ansys.fluent.mcp.common.errors import (
