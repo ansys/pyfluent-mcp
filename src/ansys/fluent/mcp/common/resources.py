@@ -192,7 +192,7 @@ class ResourceRegistry:
             description=entry.description,
             mime_type=entry.mime_type,
         )
-        def _reader(_pkg: str = pkg, _fname: str = fname) -> str:
-            root = _pkg_files(_pkg)
-            data = (root / _fname).read_text(encoding="utf-8")
+        def _reader() -> str:
+            root = _pkg_files(pkg)
+            data = (root / fname).read_text(encoding="utf-8")
             return data
