@@ -551,9 +551,7 @@ def load_llm_config_file(env=os.environ) -> LlmFileConfig | None:
         if not values:
             continue
 
-        logger.info(
-            "Loaded LLM configuration from %s: keys=%s", path, sorted(values)
-        )
+        logger.info("Loaded LLM configuration from %s: keys=%s", path, sorted(values))
         return LlmFileConfig(values=values, source=path)
 
     return None
