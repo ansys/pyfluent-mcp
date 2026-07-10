@@ -444,15 +444,15 @@ def test_profile_resolution_and_request_building_branches(monkeypatch):
     None
         The function completes through its side effects.
     """
-    monkeypatch.setenv("LLM_SUPPORTS_STREAMING", "0")
-    monkeypatch.setenv("LLM_SUPPORTS_JSON_MODE", "false")
-    monkeypatch.setenv("LLM_SEND_CACHE_KEY", "0")
     env = {
         "LLM_PROVIDER": "openai",
         "LLM_TRANSPORT": "bad",
         "LLM_CACHE_MECHANISM": "bad",
         "LLM_CACHE_TTL_SECONDS": "bad",
         "LLM_TOOL_MODE": "bad",
+        "LLM_SUPPORTS_STREAMING": "0",
+        "LLM_SUPPORTS_JSON_MODE": "false",
+        "LLM_SEND_CACHE_KEY": "0",
     }
     profile = resolve_profile(model="gpt-4o", env=env)
 

@@ -102,6 +102,34 @@ def _norm_multiphase(value: Any) -> str | None:
     return s
 
 
+def _norm_radiation(value: Any) -> str | None:
+    """Normalize a radiation model value to None|'p1'|'do'|'s2s'|'mc'|'rosseland'|'solar'.
+
+    ``None`` means radiation is off — the "simplest" default. Mirrors the
+    off-value handling in :func:`_norm_multiphase` so a live ``none``/``off``
+    reads as no radiation model, matching ``_apply_step_to_mode`` on the
+    fluids-mcp side.
+    """
+    if value is None:
+        return None
+    s = str(value).strip().lower()
+    if s in ("", "off", "none", "no", "false"):
+        return None
+    if "rosseland" in s:
+        return "rosseland"
+    if "solar" in s:
+        return "solar"
+    if "monte" in s or s == "mc":
+        return "mc"
+    if "discrete ordinates" in s or s == "do":
+        return "do"
+    if "s2s" in s or "surface to surface" in s or "surface-to-surface" in s:
+        return "s2s"
+    if s == "p1" or s == "p-1":
+        return "p1"
+    return s
+
+
 def _flag_truthy(value: Any) -> bool:
     if isinstance(value, bool):
         return value
@@ -140,6 +168,7 @@ class SolverMode:
     turbulence_model: str | None = None
     energy: bool = False
     nita: bool = False
+    radiation_model: str | None = None
 
     @property
     def coupled(self) -> bool:
@@ -217,6 +246,11 @@ class SolverMode:
             turbulence_model=_norm_str(st.get("setup.models.viscous.model")),
             energy=_flag_truthy(st.get("setup.models.energy.enabled")),
             nita=nita,
+            radiation_model=_norm_radiation(
+                st.get("setup.models.radiation.model")
+                if st.get("setup.models.radiation.model") is not None
+                else st.get("setup.models.radiation.rad_model")
+            ),
         )
 
     @classmethod
@@ -287,6 +321,8 @@ class SolverMode:
             ("setup/models/multiphase", "models"),
             ("setup/models/viscous", "model"),
             ("setup/models/energy", "enabled"),
+            ("setup/models/radiation", "model"),
+            ("setup/models/radiation", "rad_model"),
             (
                 "solution/methods/nita/nita-settings",
                 "set_velocity_and_vof_cutoffs",
