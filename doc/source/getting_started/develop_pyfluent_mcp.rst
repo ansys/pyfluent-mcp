@@ -162,9 +162,9 @@ Add a domain tool
 =================
 
 Domain tools are stateless backend/catalog operations registered in
-``ansys.fluent.mcp.solve.lib.domain_tools``. To add one:
+``ansys.fluent.mcp.solve.tools.domain_tools``. To add one:
 
-#. Write a typed coroutine in ``solve/lib/<area>.py``:
+#. Write a typed coroutine in ``solve/tools/<area>.py``:
 
    .. code-block:: python
 
@@ -177,7 +177,7 @@ Domain tools are stateless backend/catalog operations registered in
           ...
 
 #. Append a ``DomainTool`` entry to ``get_solve_domain_tools()`` in
-   ``solve/lib/domain_tools.py``.
+   ``solve/tools/domain_tools.py``.
 
 ``SolveMCP._register_tools()`` already registers everything returned by that function.
 

@@ -15,7 +15,7 @@ agent loop, journal, or recipe registry. Domain tool can perform the following t
 - Perform an operation through the ``Backend`` interface.
 - Return structured JSON output.
 
-Tools are registered in ``ansys.fluent.mcp.solve.lib.domain_tools`` and discovered
+Tools are registered in ``ansys.fluent.mcp.solve.tools.domain_tools`` and discovered
 automatically by :class:`~ansys.fluent.mcp.solve.SolveMCP`.
 
 Tool anatomy

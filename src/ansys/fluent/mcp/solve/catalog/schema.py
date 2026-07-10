@@ -19,7 +19,7 @@
 The full schema (``setup``/``solution``/``results``/... consists of 77k+ nodes,
 including command-argument signatures, query lists, enum-flagged
 parameters, and child-aliases). It ships gzipped under
-``ansys/fluent/mcp/solve/data/settings_271.json.gz``. PyFluent itself only
+``ansys/fluent/mcp/solve/resources/settings_271.json.gz``. PyFluent itself only
 ships the slimmer ``api_objects.json`` (path plus kind only) The full
 schema is what allows validation of command kwargs, enum strings, and
 path/alias resolution **without a live solver**.
@@ -180,7 +180,7 @@ def _locate_default_data() -> Path | None:
     """
     name = f"settings_{_DEFAULT_VERSION}.json.gz"
     try:
-        res = resources.files("ansys.fluent.mcp.solve.data").joinpath(name)
+        res = resources.files("ansys.fluent.mcp.solve.resources").joinpath(name)
         # On editable installs ``res`` is a Path-like; ``is_file`` works
         # in both ``zipfile.Path`` and ``pathlib.Path`` flavours.
         if res.is_file():

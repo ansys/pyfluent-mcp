@@ -38,6 +38,8 @@ from typing import Any, Awaitable, Callable, Iterable, Optional
 from ansys.common.mcp.server import PyAnsysBaseMCP
 
 from ansys.fluent.mcp.common.backend import Backend
+from ansys.fluent.mcp.common.prompts import PromptRegistry
+from ansys.fluent.mcp.common.resources import ResourceRegistry
 from ansys.fluent.mcp.common.codegen import CodegenPipeline
 from ansys.fluent.mcp.common.conversation import ConversationStore
 from ansys.fluent.mcp.common.errors import (
@@ -231,6 +233,7 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
 
         self._register_tools()
         self._register_resources()
+        self._register_prompts()
         self._attach_default_observers()
 
     def _attach_default_observers(self) -> None:
@@ -601,6 +604,13 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
                 List of results produced by the operation.
             """
             return toolsets_fn()
+
+    def _register_prompts(self) -> None:
+        """Register MCP prompts (SKILL files, prompt templates).
+
+        Subclasses override to register product-specific prompts via
+        PromptRegistry. The base implementation is a no-op.
+        """
 
     # ------------------------------------------------------------------
     # Toolset definitions

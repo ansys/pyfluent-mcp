@@ -18,8 +18,8 @@ import asyncio
 import logging
 
 from ansys.fluent.mcp.solve import mcp as solve_mcp
-from ansys.fluent.mcp.solve.lib.discovery_tools import list_fields_impl
-from ansys.fluent.mcp.solve.lib.pattern import expand_pattern, is_pattern
+from ansys.fluent.mcp.solve.tools.discovery_tools import list_fields_impl
+from ansys.fluent.mcp.solve.tools.pattern import expand_pattern, is_pattern
 
 
 class FieldsBackend:

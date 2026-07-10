@@ -62,7 +62,7 @@ from enum import Enum
 import re
 from typing import Any, Mapping
 
-from ansys.fluent.mcp.solve.lib.utl import (
+from ansys.fluent.mcp.solve.tools.utl import (
     PathFamily,
     translate_prefix,
 )

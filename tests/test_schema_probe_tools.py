@@ -36,7 +36,7 @@ from typing import Any
 
 from ansys.fluent.mcp.common.backend import Backend, BackendUnavailableError
 from ansys.fluent.mcp.common.models import ConnectResult
-from ansys.fluent.mcp.solve.lib.schema_probe_tools import (
+from ansys.fluent.mcp.solve.tools.schema_probe_tools import (
     describe_named_object_template_impl,
     get_active_status_impl,
     get_allowed_values_impl,

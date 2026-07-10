@@ -25,8 +25,8 @@ explicitness.
 The product-domain layer is organised into subpackages:
 :mod:`~ansys.fluent.mcp.solve.backends` (PyFluent / composite
 backends), :mod:`~ansys.fluent.mcp.solve.catalog` (offline schema,
-index, help, retriever), :mod:`~ansys.fluent.mcp.solve.lib` (domain
-tools, units, patterns) and :mod:`~ansys.fluent.mcp.solve.data`
+index, help, retriever), :mod:`~ansys.fluent.mcp.solve.tools` (domain
+tools, units, patterns) and :mod:`~ansys.fluent.mcp.solve.resources`
 (bundled settings schema).
 """
 

@@ -18,7 +18,7 @@ import math
 
 import pytest
 
-from ansys.fluent.mcp.solve.lib.units import (
+from ansys.fluent.mcp.solve.tools.units import (
     Quantity,
     iter_quantities,
     parse_quantities,

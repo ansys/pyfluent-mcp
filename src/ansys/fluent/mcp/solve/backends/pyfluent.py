@@ -64,7 +64,7 @@ from ansys.fluent.mcp.solve.backends.introspection import (
     discover_named_objects_via_walk,
     resolve_path,
 )
-from ansys.fluent.mcp.solve.lib import intent_guard as _intent_guard
+from ansys.fluent.mcp.solve.tools import intent_guard as _intent_guard
 
 # ---------------------------------------------------------------------------
 # Settings-path extraction helpers (used by validate_code)
@@ -2681,7 +2681,7 @@ class PyFluentBackend(Backend):
         # crash signatures (BC rename with whitespace, VOF count direct-
         # assign, intra-snippet use-before-create on named expressions,
         # phase-material assignment before phase rename, setup writes
-        # while iterating). See solve/lib/intent_guard.py. Disable with
+        # while iterating). See solve/tools/intent_guard.py. Disable with
         # ``FLUIDS_MCP_INTENT_GUARD=0``.
         guard_warnings: list[str] = []
         if _intent_guard.is_enabled():

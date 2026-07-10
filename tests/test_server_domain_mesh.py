@@ -23,8 +23,8 @@ import pytest
 from ansys.fluent.mcp import server
 from ansys.fluent.mcp.common.domain_tools import schema_from_signature
 from ansys.fluent.mcp.common.errors import BackendUnavailableError
-from ansys.fluent.mcp.solve.lib import domain_tools as solve_domain_tools
-from ansys.fluent.mcp.solve.lib.mesh_tools import _safe_mesh_counts, mesh_quality_impl
+from ansys.fluent.mcp.solve.tools import domain_tools as solve_domain_tools
+from ansys.fluent.mcp.solve.tools.mesh_tools import _safe_mesh_counts, mesh_quality_impl
 
 
 def test_argparser_defaults_and_http_options():

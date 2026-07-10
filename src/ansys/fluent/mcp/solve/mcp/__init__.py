@@ -149,6 +149,35 @@ class SolveMCP(FluidsLeafMCP):
             **fastmcp_kwargs,
         )
 
+    def _register_resources(self) -> None:
+        """Register MCP resources for the Solve leaf."""
+        super()._register_resources()
+        from ansys.fluent.mcp.common.resources import ResourceRegistry
+
+        registry = ResourceRegistry()
+        registry.add_file(
+            package="ansys.fluent.mcp.solve.resources",
+            filename="settings_271.json.gz",
+            uri="resource://solve/schema/settings_271.json.gz",
+            description="Fluent v27.1 offline settings schema (compressed)",
+            mime_type="application/gzip",
+        )
+        registry.register_on(self)
+
+    def _register_prompts(self) -> None:
+        """Register MCP prompts for the Solve leaf."""
+        super()._register_prompts()
+        from ansys.fluent.mcp.common.prompts import PromptRegistry
+
+        registry = PromptRegistry()
+        registry.add_file(
+            package="ansys.fluent.mcp.solve.skills",
+            filename="SKILL.md",
+            name="solve_skill",
+            description="Fluent Solve MCP-leaf skill guide",
+        )
+        registry.register_on(self)
+
     def _register_tools(self) -> None:
         """Register the tools exposed by this MCP leaf.
 
@@ -159,9 +188,9 @@ class SolveMCP(FluidsLeafMCP):
         """
         super()._register_tools()
         # Register the canonical solve-leaf domain tools from
-        # ``ansys.fluent.mcp.solve.lib.domain_tools``. These are the
+        # ``ansys.fluent.mcp.solve.tools.domain_tools``. These are the
         # pure backend / catalog operations exposed on the MCP surface.
-        from ansys.fluent.mcp.solve.lib.domain_tools import get_solve_domain_tools
+        from ansys.fluent.mcp.solve.tools.domain_tools import get_solve_domain_tools
 
         self._register_domain_tools(get_solve_domain_tools())
 

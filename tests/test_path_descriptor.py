@@ -28,7 +28,7 @@ from ansys.fluent.mcp.common.path_descriptor import (
     CommandArgument,
     PathDescriptor,
 )
-from ansys.fluent.mcp.solve.lib.schema_probe_tools import describe_path_impl
+from ansys.fluent.mcp.solve.tools.schema_probe_tools import describe_path_impl
 
 # ---------------------------------------------------------------------
 # Stub backend
@@ -545,7 +545,7 @@ def test_describe_path_skips_command_args_when_disabled():
 
 def test_describe_path_registered_in_domain_tool_catalogue():
     """The tool must be in the canonical catalogue with the expected description."""
-    from ansys.fluent.mcp.solve.lib.domain_tools import get_solve_domain_tools
+    from ansys.fluent.mcp.solve.tools.domain_tools import get_solve_domain_tools
 
     names = {tool.spec.name for tool in get_solve_domain_tools()}
     assert "describe_path" in names

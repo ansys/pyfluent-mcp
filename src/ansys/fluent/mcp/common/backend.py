@@ -282,7 +282,7 @@ class Backend(ABC):
         except BackendUnavailableError:
             return []
 
-        from ansys.fluent.mcp.solve.lib.pattern import expand_pattern, is_pattern
+        from ansys.fluent.mcp.solve.tools.pattern import expand_pattern, is_pattern
 
         if is_pattern(target):
             results: list[dict[str, Any]] = []

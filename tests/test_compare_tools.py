@@ -18,8 +18,8 @@ import asyncio
 from types import SimpleNamespace
 
 from ansys.fluent.mcp.common.models import ConnectResult, RunCodeResult
-from ansys.fluent.mcp.solve.lib import compare_tools
-from ansys.fluent.mcp.solve.lib.compare_tools import (
+from ansys.fluent.mcp.solve.tools import compare_tools
+from ansys.fluent.mcp.solve.tools.compare_tools import (
     collect_compare_snapshot,
     compare_files_impl,
     diff_snapshots,

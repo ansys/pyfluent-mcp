@@ -43,7 +43,7 @@ whose ``inspect.Signature`` mirrors the handler minus the leading
 from the wrapper.
 
 To add a tool, write a typed ``<name>_impl`` coroutine in
-``ansys.fluent.mcp.solve.lib.<area>.py`` and append a
+``ansys.fluent.mcp.solve.tools.<area>.py`` and append a
 :class:`DomainTool` entry to :func:`get_solve_domain_tools`. No
 leaf-side changes are needed. ``SolveMCP._register_tools`` already
 registers everything this function returns.
@@ -52,10 +52,10 @@ registers everything this function returns.
 from __future__ import annotations
 
 from ansys.fluent.mcp.common.domain_tools import DomainTool, DomainToolSpec
-from ansys.fluent.mcp.solve.lib.compare_tools import compare_files_impl
-from ansys.fluent.mcp.solve.lib.discovery_tools import list_fields_impl
-from ansys.fluent.mcp.solve.lib.mesh_tools import mesh_quality_impl
-from ansys.fluent.mcp.solve.lib.schema_probe_tools import (
+from ansys.fluent.mcp.solve.tools.compare_tools import compare_files_impl
+from ansys.fluent.mcp.solve.tools.discovery_tools import list_fields_impl
+from ansys.fluent.mcp.solve.tools.mesh_tools import mesh_quality_impl
+from ansys.fluent.mcp.solve.tools.schema_probe_tools import (
     describe_named_object_template_impl,
     describe_path_impl,
     get_active_status_impl,

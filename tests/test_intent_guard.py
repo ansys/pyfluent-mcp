@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ansys.fluent.mcp.solve.lib import intent_guard
+from ansys.fluent.mcp.solve.tools import intent_guard
 
 
 def _signatures(code, **kwargs):

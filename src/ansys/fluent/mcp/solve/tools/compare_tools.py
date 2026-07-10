@@ -49,7 +49,7 @@ from ansys.fluent.mcp.common.file_handlers import (
     supported_suffixes as _supported_file_suffixes,
 )
 
-logger = logging.getLogger("ansys.fluent.mcp.solve.lib.compare_tools")
+logger = logging.getLogger("ansys.fluent.mcp.solve.tools.compare_tools")
 
 
 # ---------------------------------------------------------------------------

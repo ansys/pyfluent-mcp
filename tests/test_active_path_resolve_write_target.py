@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import pytest
 
-from ansys.fluent.mcp.solve.lib.active_path import (
+from ansys.fluent.mcp.solve.tools.active_path import (
     SolverMode,
     UrfFamily,
     WriteTarget,

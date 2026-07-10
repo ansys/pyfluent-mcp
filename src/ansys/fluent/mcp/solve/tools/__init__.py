@@ -16,12 +16,12 @@
 
 """Cross-cutting solve helpers that aren't backend/catalog/agent.
 
-* :mod:`ansys.fluent.mcp.solve.lib.utl`: Unified Topology Layer
+* :mod:`ansys.fluent.mcp.solve.tools.utl`: Unified Topology Layer
   detection and the :class:`PathFamily` helper used by every
   UTL-aware recipe and rule pack.
-* :mod:`ansys.fluent.mcp.solve.lib.units`: Unit conversion and
+* :mod:`ansys.fluent.mcp.solve.tools.units`: Unit conversion and
   quantity-hint helpers.
-* :mod:`ansys.fluent.mcp.solve.lib.pattern`: Wildcard pattern
+* :mod:`ansys.fluent.mcp.solve.tools.pattern`: Wildcard pattern
   matching used by named-object resolution (also surfaced through
   :mod:`ansys.fluent.mcp.common.backend`).
 

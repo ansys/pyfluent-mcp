@@ -19,7 +19,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from ansys.fluent.mcp.solve.lib import utl
+from ansys.fluent.mcp.solve.tools import utl
 
 
 class FakeBackend:
