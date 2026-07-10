@@ -1338,18 +1338,35 @@ def resolve_profile(
             # (vLLM/Ollama/proxies, and Azure AI Foundry's ``/models``
             # OpenAI-compatible surface).
             #
-            # Speaking a vendor's NATIVE protocol against a custom base (e.g. the
-            # Anthropic Messages API on Foundry's ``/anthropic`` passthrough, POST
-            # ``{api_base}/v1/messages``) is ambiguous to auto-detect vs. an
-            # OpenAI-compatible gateway that merely serves a Claude/Gemini model.
-            # So it is an EXPLICIT opt-in: set ``LLM_TRANSPORT=litellm`` and the
-            # endpoint is used as ``api_base``.
+            # Speaking a vendor's NATIVE protocol against a custom base is
+            # generally ambiguous to auto-detect vs. an OpenAI-compatible gateway
+            # that merely serves a Claude/Gemini model, so it stays an EXPLICIT
+            # opt-in (``LLM_TRANSPORT=litellm``) — EXCEPT the one Foundry shape
+            # below, which is unmistakable.
             _is_azure_openai_base = (
                 provider == PROVIDER_AZURE
                 and _host.endswith("openai.azure.com")
                 and "/chat/completions" not in cfg.endpoint
             )
-            transport = TRANSPORT_LITELLM if _is_azure_openai_base else TRANSPORT_COMPAT
+            # Azure AI Foundry's Anthropic passthrough (POST
+            # ``{base}/anthropic/v1/messages``): host ``*.services.ai.azure.com``
+            # + an ``/anthropic`` path segment + an Anthropic model. This is NOT
+            # an OpenAI-compatible surface — raw-POSTing ``/chat/completions``
+            # 404s — and no compat gateway uses this exact shape, so it is safe
+            # to auto-route to LiteLLM (endpoint becomes ``api_base``; LiteLLM's
+            # Anthropic transport appends ``/v1/messages``).
+            _path = (_urlparse(cfg.endpoint).path or "").lower()
+            _is_anthropic_foundry = (
+                provider == PROVIDER_ANTHROPIC
+                and _host.endswith("services.ai.azure.com")
+                and "/anthropic" in _path
+                and "/chat/completions" not in cfg.endpoint
+            )
+            transport = (
+                TRANSPORT_LITELLM
+                if (_is_azure_openai_base or _is_anthropic_foundry)
+                else TRANSPORT_COMPAT
+            )
         elif provider in (PROVIDER_ANTHROPIC, PROVIDER_GEMINI, PROVIDER_AZURE, PROVIDER_OPENAI):
             transport = TRANSPORT_LITELLM
         else:
