@@ -1794,6 +1794,29 @@ def _import_litellm():
     None
         The function completes through its side effects.
     """
+    import sys as _sys
+
+    if getattr(_sys, "frozen", False) and "tokenizers" not in _sys.modules:
+        import types as _types
+
+        _stub = _types.ModuleType("tokenizers")
+        _stub.__doc__ = "Stub — native tokenizers unavailable in frozen env."
+        _stub.__path__ = []
+        _stub.__file__ = "<frozen-stub>"
+
+        class _Tok:
+            def __init__(self, *a, **kw):
+                raise ImportError("tokenizers native ext not available in frozen env")
+
+            @classmethod
+            def from_pretrained(cls, *a, **kw):
+                raise ImportError("tokenizers native ext not available in frozen env")
+
+        _stub.Tokenizer = _Tok
+        _sys.modules["tokenizers"] = _stub
+        _sys.modules["tokenizers.tokenizers"] = _stub
+        del _types, _stub
+
     try:
         import litellm  # type: ignore
     except ImportError as exc:  # pragma: no cover
