@@ -2235,7 +2235,8 @@ def _raise_for_status_with_body(resp) -> None:
     model name, a malformed tool schema). Surface a truncated body so the
     failure is actionable instead of opaque.
     """
-    if resp.status_code < 400:
+    status_code = getattr(resp, "status_code", 200)
+    if status_code < 400:
         return
     try:
         detail = resp.text.strip()
@@ -2244,8 +2245,10 @@ def _raise_for_status_with_body(resp) -> None:
     if len(detail) > 800:
         detail = detail[:800] + "… (truncated)"
     suffix = f" — response body: {detail}" if detail else ""
+    request = getattr(resp, "request", None)
+    request_url = getattr(request, "url", "<unknown>")
     raise LLMTransportError(
-        f"LLM call failed: HTTP {resp.status_code} from {resp.request.url}{suffix}"
+        f"LLM call failed: HTTP {status_code} from {request_url}{suffix}"
     )
 
 
