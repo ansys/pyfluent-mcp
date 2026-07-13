@@ -2247,9 +2247,7 @@ def _raise_for_status_with_body(resp) -> None:
     suffix = f" — response body: {detail}" if detail else ""
     request = getattr(resp, "request", None)
     request_url = getattr(request, "url", "<unknown>")
-    raise LLMTransportError(
-        f"LLM call failed: HTTP {status_code} from {request_url}{suffix}"
-    )
+    raise LLMTransportError(f"LLM call failed: HTTP {status_code} from {request_url}{suffix}")
 
 
 async def _acall_httpx(
