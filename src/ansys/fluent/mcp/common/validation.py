@@ -338,6 +338,7 @@ def _validate_python_source_uncached(
 
     forbidden = set(forbidden_calls)
     flagged: list[str] = []
+    tui_flagged: list[str] = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Call):
             name = _dotted_name(node.func)
@@ -376,16 +377,37 @@ def _validate_python_source_uncached(
                 or ".tui." in dotted
                 or dotted.endswith(".tui")
             ):
-                flagged.append(f"{dotted} (TUI escape hatch is forbidden \u2014 use settings API)")
+                tui_flagged.append(f"{dotted} (TUI escape hatch is forbidden \u2014 use settings API)")
+            # ``execute_tui(...)`` is the method-call form of the same
+            # text-command bridge \u2014 reject it with the same code.
+            if node.attr == "execute_tui":
+                tui_flagged.append(
+                    "execute_tui (TUI escape hatch is forbidden \u2014 use settings API)"
+                )
         if (
             isinstance(node, ast.Call)
             and isinstance(node.func, ast.Name)
             and node.func.id in {"getattr", "setattr", "delattr", "hasattr"}
             and len(node.args) >= 2
             and isinstance(node.args[1], ast.Constant)
-            and node.args[1].value == "tui"
+            and node.args[1].value in {"tui", "execute_tui"}
         ):
-            flagged.append("getattr(..., 'tui') (TUI escape hatch is forbidden)")
+            tui_flagged.append(
+                f"getattr(..., {node.args[1].value!r}) (TUI escape hatch is forbidden)"
+            )
+
+    # TUI escape hatches get a dedicated error code so the codegen pipeline
+    # can treat them as a hard failure (see ``_HARD_VALIDATION_ERROR_CODES``).
+    # They take priority over the generic ``forbidden_call`` classification.
+    if tui_flagged:
+        return RunCodeResult(
+            status="error",
+            error_code="tui_not_allowed",
+            message=(
+                "TUI escape hatch is forbidden \u2014 use the settings API: "
+                f"{sorted(set(tui_flagged))}"
+            ),
+        )
 
     if flagged:
         return RunCodeResult(

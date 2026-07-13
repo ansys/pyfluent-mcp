@@ -43,7 +43,7 @@ def test_validate_python_source_accepts_valid_code_and_caches_result():
         ("for", "syntax_error", "SyntaxError"),
         ("eval('1')", "forbidden_call", "eval"),
         ("os.system('calc')", "forbidden_call", "os.system"),
-        ("solver.tui.file.read_case()", "forbidden_call", "TUI escape hatch"),
+        ("solver.tui.file.read_case()", "tui_not_allowed", "TUI escape hatch"),
         ("getattr(obj, '__subclasses__')", "forbidden_call", "__subclasses__"),
     ],
 )

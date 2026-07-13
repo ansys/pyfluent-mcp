@@ -2225,6 +2225,31 @@ def _build_compat_request(
     return url, body, headers
 
 
+def _raise_for_status_with_body(resp) -> None:
+    """Raise on a 4xx/5xx response, INCLUDING the response body in the message.
+
+    ``httpx.Response.raise_for_status`` reports only the status line
+    ("Client error '400 Bad Request' for url ..."), discarding the body —
+    but for an OpenAI-compatible gateway the body is exactly where the
+    server explains WHAT it rejected (an unsupported parameter, a bad
+    model name, a malformed tool schema). Surface a truncated body so the
+    failure is actionable instead of opaque.
+    """
+    if resp.status_code < 400:
+        return
+    try:
+        detail = resp.text.strip()
+    except Exception:  # noqa: BLE001 — body may be unreadable (streamed/binary)
+        detail = ""
+    if len(detail) > 800:
+        detail = detail[:800] + "… (truncated)"
+    suffix = f" — response body: {detail}" if detail else ""
+    raise LLMTransportError(
+        f"LLM call failed: HTTP {resp.status_code} from "
+        f"{resp.request.url}{suffix}"
+    )
+
+
 async def _acall_httpx(
     profile, messages, *, tools, max_tokens, temperature, response_format, api_key
 ) -> dict[str, Any]:
@@ -2267,7 +2292,7 @@ async def _acall_httpx(
         verify=resolve_tls_verify(), timeout=profile.retry.timeout_s
     ) as client:
         resp = await client.post(url, json=body, headers=headers)
-        resp.raise_for_status()
+        _raise_for_status_with_body(resp)
         return resp.json()
 
 
@@ -2311,7 +2336,7 @@ def _call_httpx(
     )
     with httpx.Client(verify=resolve_tls_verify(), timeout=profile.retry.timeout_s) as client:
         resp = client.post(url, json=body, headers=headers)
-        resp.raise_for_status()
+        _raise_for_status_with_body(resp)
         return resp.json()
 
 

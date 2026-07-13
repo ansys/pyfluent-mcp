@@ -115,17 +115,21 @@ def _norm_radiation(value: Any) -> str | None:
     s = str(value).strip().lower()
     if s in ("", "off", "none", "no", "false"):
         return None
-    if "rosseland" in s:
+    # Separator-robust matching: fold ``_``/``-`` to spaces so the raw model
+    # string the plan simulator stores (``"discrete-ordinates"``) reads the
+    # same as the live-state value (``"discrete ordinates"``/``"do"``).
+    t = s.replace("_", " ").replace("-", " ")
+    if "rosseland" in t:
         return "rosseland"
-    if "solar" in s:
+    if "solar" in t:
         return "solar"
-    if "monte" in s or s == "mc":
+    if "monte" in t or t == "mc":
         return "mc"
-    if "discrete ordinates" in s or s == "do":
+    if "discrete ordinates" in t or t == "do":
         return "do"
-    if "s2s" in s or "surface to surface" in s or "surface-to-surface" in s:
+    if "s2s" in t or "surface to surface" in t:
         return "s2s"
-    if s == "p1" or s == "p-1":
+    if t in ("p1", "p 1"):
         return "p1"
     return s
 
@@ -847,6 +851,51 @@ _METHODS_MODE_GATES: tuple[tuple[str, str, Any, str], ...] = (
         None,
         "high_speed_numerics is a density-based-solver knob (compressible / high-speed physics)",
     ),
+    # Pressure-based-only stabilizer. Density-based cases have no active
+    # high_order_term_relaxation (HOTR).
+    (
+        "solution.methods.high_order_term_relaxation",
+        "pressure_based",
+        None,
+        (
+            "high_order_term_relaxation (HOTR) is a pressure-based-solver "
+            "stabilizer; density-based cases have no active "
+            "high_order_term_relaxation"
+        ),
+    ),
+    # Model sub-selectors that live under ``setup.models.*`` rather than
+    # ``solution.methods.*`` but share the "active or the mode is wrong"
+    # semantics (no correct sibling — the leaf only exists under the
+    # matching parent model). Turbulence family sub-selectors:
+    (
+        "setup.models.viscous.k_omega_model",
+        "viscous_k_omega",
+        None,
+        (
+            "the k_omega_model sub-selector is only active when "
+            "setup.models.viscous.model is a k-omega variant"
+        ),
+    ),
+    (
+        "setup.models.viscous.k_epsilon_model",
+        "viscous_k_epsilon",
+        None,
+        (
+            "the k_epsilon_model sub-selector is only active when "
+            "setup.models.viscous.model is a k-epsilon variant"
+        ),
+    ),
+    # Radiation sub-branch controls are only active under the matching
+    # radiation model (e.g. discrete-ordinates energy iterations).
+    (
+        "setup.models.radiation.discrete_ordinates",
+        "radiation_do",
+        None,
+        (
+            "discrete_ordinates.* controls are only active when "
+            "setup.models.radiation.model is discrete-ordinates (DO)"
+        ),
+    ),
 )
 
 
@@ -858,8 +907,21 @@ def _methods_facet_active(mode: SolverMode, facet: str) -> bool:
         return mode.coupled
     if facet == "density_based":
         return mode.density_based
+    if facet == "pressure_based":
+        return not mode.density_based
     if facet == "transient":
         return mode.transient
+    if facet == "viscous_k_omega":
+        return "omega" in (mode.turbulence_model or "").lower()
+    if facet == "viscous_k_epsilon":
+        return "epsilon" in (mode.turbulence_model or "").lower()
+    if facet.startswith("radiation_"):
+        # ``radiation_do`` -> "do", ``radiation_p1`` -> "p1", etc. Normalize
+        # the mode value so this tolerates both the raw model string the plan
+        # simulator stores (``"discrete-ordinates"``) and the already-
+        # normalized live-state value (``"do"``).
+        want = facet.split("_", 1)[1]
+        return _norm_radiation(mode.radiation_model) == want
     # Unknown facet — never false-block.
     return True
 
