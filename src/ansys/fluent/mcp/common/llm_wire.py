@@ -2245,8 +2245,7 @@ def _raise_for_status_with_body(resp) -> None:
         detail = detail[:800] + "… (truncated)"
     suffix = f" — response body: {detail}" if detail else ""
     raise LLMTransportError(
-        f"LLM call failed: HTTP {resp.status_code} from "
-        f"{resp.request.url}{suffix}"
+        f"LLM call failed: HTTP {resp.status_code} from {resp.request.url}{suffix}"
     )
 
 

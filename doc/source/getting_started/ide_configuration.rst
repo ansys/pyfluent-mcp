@@ -171,7 +171,7 @@ variables include:
    * - Variable
      - Purpose
    * - ``LLM_MODEL``
-     - Model for LLM-driven features (``codegen``, ``clarify``), provider-prefixed (e.g. ``openai/gpt-4o``)
+    - Model for LLM-driven features (``codegen``, ``clarify``), provider-prefixed (for example ``openai/gpt-4o``)
    * - ``LLM_API_KEY``
      - Single API key for any provider (``OPENAI_API_KEY`` / ``ANTHROPIC_API_KEY`` / ``GEMINI_API_KEY`` still work as a fallback)
    * - ``LLM_ENDPOINT``

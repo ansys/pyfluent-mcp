@@ -34,7 +34,7 @@ Some features (``codegen``, ``clarify``) use an LLM. PyFluent-MCP is model- and
 provider-agnostic: native vendor APIs (OpenAI, Azure, Anthropic, Gemini) via the LiteLLM
 SDK, or any OpenAI-compatible endpoint.
 
-To use **any** provider you set at most **four** environment variables — usually
+To use **any** provider you set at most **four** environment variables—usually
 just two: ``LLM_MODEL`` (provider-prefixed; provider auto-detected) and
 ``LLM_API_KEY`` (a **single key for any provider**). Add ``LLM_ENDPOINT`` only for
 Azure / local / OpenAI-compatible gateways.

@@ -183,8 +183,8 @@ Domain tools are stateless backend/catalog operations registered in
 
 For a full walkthrough, see :doc:`../examples/implementing_a_tool`.
 
-Install pluggable backends
-==========================
+Install external backends
+=========================
 
 You can install packages through the ``ansys.fluent.mcp.solve_backends`` entry-point
 group to provide additional execution backends. At construction time,

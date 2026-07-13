@@ -377,7 +377,9 @@ def _validate_python_source_uncached(
                 or ".tui." in dotted
                 or dotted.endswith(".tui")
             ):
-                tui_flagged.append(f"{dotted} (TUI escape hatch is forbidden \u2014 use settings API)")
+                tui_flagged.append(
+                    f"{dotted} (TUI escape hatch is forbidden \u2014 use settings API)"
+                )
             # ``execute_tui(...)`` is the method-call form of the same
             # text-command bridge \u2014 reject it with the same code.
             if node.attr == "execute_tui":
