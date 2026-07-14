@@ -45,14 +45,14 @@ dependencies = [
 
 [project.optional-dependencies]
 file-probe = ["h5py>=3"]
-providers = ["litellm>=1.50"]
+providers = ["litellm>=1.50; python_version >= '3.13'"]  # LiteLLM is only supported on Python 3.13 and later
 pyfluent = ["ansys-fluent-core>=0.27"]
 tests = [
     "ansys-common-mcp==0.3.2",
     "ansys-fluent-core==0.40.0",
     "httpx==0.28.1",
     "h5py==3.16.0",
-    "litellm==1.90.1",
+    "litellm==1.90.1; python_version >= '3.13'",
     "pydantic==2.13.4",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
