@@ -109,7 +109,7 @@ lint.isort.known-first-party = [ "ansys.fluent.mcp" ]
 lint.pydocstyle.convention = "numpy"
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.12"
 mypy_path = "src"
 namespace_packages = true
 explicit_package_bases = true

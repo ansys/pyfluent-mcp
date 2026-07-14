@@ -67,7 +67,7 @@ You can use 22 tools exposed by the server:
 
 | Requirement | When needed | Notes |
 |-------------|-------------|-------|
-| Python 3.13 or later | Always | 3.13 and 3.14 supported |
+| Python 3.12 or later | Always | 3.12, 3.13, and 3.14 supported |
 | Core runtime dependencies | Always (installed automatically) | `ansys-common-mcp`, `fastmcp`, `httpx`, `pydantic` |
 | [PyFluent](https://fluent.docs.pyansys.com/) (`ansys-fluent-core` 0.27 or later) | To drive a live Fluent session (`connect`, `run_code`, `get_state`, `mesh_quality`, …) | The `pyfluent` extra, which is the execution backend |
 | A licensed local ANSYS Fluent installation | To actually launch/attach a solver | PyFluent talks to this Fluent installation over gRPC |

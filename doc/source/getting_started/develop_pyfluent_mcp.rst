@@ -91,7 +91,7 @@ Check prerequisites
 
 Before you begin, ensure you have:
 
-- Python 3.13 or higher
+- Python 3.12 or higher
 - Git installed
 - A text editor or IDE (such as Visual Studio Code or PyCharm)
 - A GitHub account
