@@ -1031,6 +1031,65 @@ def test_pyfluent_live_context_methods_with_fake_settings_tree(monkeypatch):
         asyncio.run(backend.get_targeted_context(paths_to_check=[]))
 
 
+def test_get_command_arguments_skips_allowed_values_on_inactive_argument(monkeypatch):
+    """Inactive command arguments must not trigger an ``allowed_values()``
+    readout — the Scheme side prints ``api-get-attrs: the object is not
+    active`` into Fluent's transcript before Python can swallow the
+    exception. Batched ``get_attrs(["active?", "allowed-values"])`` lets
+    us gate on ``active?`` in the same RPC."""
+
+    calls: dict[str, list] = {"allowed_values": [], "get_attrs": []}
+
+    class BatchedArg:
+        """Fake command argument that supports batched ``get_attrs``."""
+
+        def __init__(self, *, active, allowed):
+            self._active = active
+            self._allowed = allowed
+
+        def get_attrs(self, attrs, recursive=False):  # noqa: ARG002
+            calls["get_attrs"].append(tuple(attrs))
+            raw = {}
+            if "active?" in attrs:
+                raw["active?"] = self._active
+            if "allowed-values" in attrs and self._active:
+                raw["allowed-values"] = list(self._allowed)
+            return raw
+
+        def allowed_values(self):
+            calls["allowed_values"].append(True)
+            return list(self._allowed)
+
+    class FakeCommand:
+        argument_names = ("method", "normal_computation_method")
+
+        def __init__(self):
+            self.method = BatchedArg(active=True, allowed=["yz-plane", "point-and-normal"])
+            self.normal_computation_method = BatchedArg(
+                active=False, allowed=["front-only", "back-only"]
+            )
+
+    root = SimpleNamespace(
+        setup=SimpleNamespace(command=FakeCommand()),
+    )
+    backend = pyfluent.PyFluentBackend()
+    backend._solver = SimpleNamespace(settings=root)
+
+    signature = asyncio.run(backend.get_command_arguments("setup.command"))
+
+    assert signature is not None
+    args = signature["arguments"]
+    assert args["method"]["is_active"] is True
+    assert args["method"]["allowed_values"] == ["yz-plane", "point-and-normal"]
+    assert args["normal_computation_method"]["is_active"] is False
+    assert "allowed_values" not in args["normal_computation_method"]
+    assert calls["allowed_values"] == []
+    assert calls["get_attrs"] == [
+        ("active?", "allowed-values"),
+        ("active?", "allowed-values"),
+    ]
+
+
 def test_pyfluent_command_call_diagnostics_for_commands_named_families_and_leaves():
     """Verify that pyfluent command call diagnostics for commands named families and leaves.
 
