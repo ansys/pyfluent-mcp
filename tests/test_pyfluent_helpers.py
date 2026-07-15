@@ -1069,9 +1069,7 @@ def test_get_command_arguments_skips_allowed_values_on_inactive_argument(monkeyp
         argument_names = ("method", "normal_computation_method")
 
         def __init__(self):
-            self.method = BatchedArg(
-                active=True, allowed=["yz-plane", "point-and-normal"]
-            )
+            self.method = BatchedArg(active=True, allowed=["yz-plane", "point-and-normal"])
             self.normal_computation_method = BatchedArg(
                 active=False, allowed=["front-only", "back-only"]
             )

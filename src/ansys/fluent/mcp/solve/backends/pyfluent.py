@@ -2098,7 +2098,7 @@ class PyFluentBackend(Backend):
                     ),
                     bases[0] if bases else "unknown",
                 )
-                
+
                 attrs_fn = getattr(child, "get_attrs", None)
                 if callable(attrs_fn):
                     try:
@@ -2110,11 +2110,7 @@ class PyFluentBackend(Backend):
                         if is_active_flag is not None:
                             info["is_active"] = bool(is_active_flag)
                         allowed = raw.get("allowed-values")
-                        if (
-                            isinstance(allowed, list)
-                            and allowed
-                            and info.get("is_active", True)
-                        ):
+                        if isinstance(allowed, list) and allowed and info.get("is_active", True):
                             info["allowed_values"] = list(allowed)[:25]
                 else:
                     is_active = getattr(child, "is_active", None)
@@ -2124,9 +2120,7 @@ class PyFluentBackend(Backend):
                             active_ok = bool(is_active())
                             info["is_active"] = active_ok
                         except Exception as exc:
-                            logger.debug(
-                                "is_active() failed for %s: %s", n, exc, exc_info=True
-                            )
+                            logger.debug("is_active() failed for %s: %s", n, exc, exc_info=True)
                     if active_ok:
                         fn = getattr(child, "allowed_values", None)
                         if callable(fn):
