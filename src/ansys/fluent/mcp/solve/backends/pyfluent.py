@@ -2098,14 +2098,49 @@ class PyFluentBackend(Backend):
                     ),
                     bases[0] if bases else "unknown",
                 )
-                fn = getattr(child, "allowed_values", None)
-                if callable(fn):
+                
+                attrs_fn = getattr(child, "get_attrs", None)
+                if callable(attrs_fn):
                     try:
-                        vals = list(fn())
-                        if vals:
-                            info["allowed_values"] = vals[:25]
-                    except Exception as exc:
-                        logger.debug("allowed_values() failed for %s: %s", n, exc, exc_info=True)
+                        raw = attrs_fn(["active?", "allowed-values"]) or {}
+                    except Exception:
+                        raw = {}
+                    if isinstance(raw, dict):
+                        is_active_flag = raw.get("active?")
+                        if is_active_flag is not None:
+                            info["is_active"] = bool(is_active_flag)
+                        allowed = raw.get("allowed-values")
+                        if (
+                            isinstance(allowed, list)
+                            and allowed
+                            and info.get("is_active", True)
+                        ):
+                            info["allowed_values"] = list(allowed)[:25]
+                else:
+                    is_active = getattr(child, "is_active", None)
+                    active_ok = True
+                    if callable(is_active):
+                        try:
+                            active_ok = bool(is_active())
+                            info["is_active"] = active_ok
+                        except Exception as exc:
+                            logger.debug(
+                                "is_active() failed for %s: %s", n, exc, exc_info=True
+                            )
+                    if active_ok:
+                        fn = getattr(child, "allowed_values", None)
+                        if callable(fn):
+                            try:
+                                vals = list(fn())
+                                if vals:
+                                    info["allowed_values"] = vals[:25]
+                            except Exception as exc:
+                                logger.debug(
+                                    "allowed_values() failed for %s: %s",
+                                    n,
+                                    exc,
+                                    exc_info=True,
+                                )
                 args[n] = info
             return {"argument_names": names, "arguments": args}
 
