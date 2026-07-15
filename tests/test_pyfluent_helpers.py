@@ -1032,16 +1032,11 @@ def test_pyfluent_live_context_methods_with_fake_settings_tree(monkeypatch):
 
 
 def test_get_command_arguments_skips_allowed_values_on_inactive_argument(monkeypatch):
-    """Regression: run-a01375e93f51. ``get_command_arguments`` used to
-    call ``allowed_values()`` unconditionally on every command
-    argument. On conditionally-active arguments (``create_multiple_
-    plane_surfaces.normal_computation_method`` is only active when
-    ``method='point-and-normal'``) the Scheme side prints
-    ``api-get-attrs: the object is not active`` into Fluent's
-    transcript BEFORE the Python-level try/except swallows the
-    exception. The batched ``get_attrs(["active?", "allowed-values"])``
-    probe checks ``active?`` in the SAME RPC, so we can skip the
-    allowed-values readout cleanly when the argument is inactive."""
+    """Inactive command arguments must not trigger an ``allowed_values()``
+    readout — the Scheme side prints ``api-get-attrs: the object is not
+    active`` into Fluent's transcript before Python can swallow the
+    exception. Batched ``get_attrs(["active?", "allowed-values"])`` lets
+    us gate on ``active?`` in the same RPC."""
 
     calls: dict[str, list] = {"allowed_values": [], "get_attrs": []}
 
