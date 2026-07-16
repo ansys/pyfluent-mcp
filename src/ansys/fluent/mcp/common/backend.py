@@ -35,7 +35,6 @@ from typing import Any, Optional
 from ansys.fluent.mcp.common.errors import BackendUnavailableError
 from ansys.fluent.mcp.common.models import (
     ConnectResult,
-    RemediationResult,
     RunCodeResult,
     SessionStatus,
 )
@@ -138,30 +137,6 @@ class Backend(ABC):
             backend_kind=self.kind,  # type: ignore[arg-type]
             endpoint=getattr(self, "endpoint", None),
         )
-
-    # ---- remediation --------------------------------------------------
-
-    async def error_remediation(
-        self,
-        remediation_request: str,
-        *,
-        context: Optional[dict[str, Any]] = None,
-    ) -> RemediationResult:
-        """Generate remediation guidance for an error request.
-
-        Parameters
-        ----------
-        remediation_request : str
-            Description of the error or remediation request.
-        context : Optional[dict[str, Any]]
-            Additional context passed to the backend or pipeline.
-
-        Returns
-        -------
-        RemediationResult
-            RemediationResult produced by the operation.
-        """
-        raise BackendUnavailableError(f"{self.label} does not support error_remediation.")
 
     # ---- live model context ------------------------------------------
 

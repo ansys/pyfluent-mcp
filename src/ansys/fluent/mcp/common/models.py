@@ -85,15 +85,6 @@ class RunCodeResult(BaseModel):
     warnings: list[str] = []
 
 
-class RemediationResult(BaseModel):
-    """Markdown response from a remediation/help endpoint (such as Prime meshing)."""
-
-    status: Literal["ok", "error"]
-    markdown: str = ""
-    message: Optional[str] = None
-    error_code: Optional[str] = None
-
-
 # ---------------------------------------------------------------------------
 # Errors
 # ---------------------------------------------------------------------------

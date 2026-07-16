@@ -170,7 +170,6 @@ def test_backend_default_methods_and_validation(monkeypatch):
         with pytest.raises(BackendUnavailableError):
             await call()
 
-    asyncio.run(raises_unavailable(lambda: backend.error_remediation("help")))
     asyncio.run(raises_unavailable(lambda: backend.get_state()))
     asyncio.run(raises_unavailable(lambda: backend.get_active_status(["x"])))
     asyncio.run(raises_unavailable(lambda: backend.get_allowed_values(["x"])))

@@ -120,10 +120,9 @@ class SolveMCP(FluidsLeafMCP):
             self.default_backend_kind = default_backend_kind
         backends: dict[str, Any] = {"pyfluent": SolveCompositeBackend()}
         backends.update(_discover_external_solve_backends())
-        super().__init__(
-            backends=backends,
-            expose_tools=expose_tools
-            or (
+
+        if expose_tools is None:
+            default_tools = [
                 "session_status",
                 "connect",
                 "disconnect",
@@ -138,10 +137,22 @@ class SolveMCP(FluidsLeafMCP):
                 "run_code",
                 "validate_code",
                 "screenshot",
-                "manage_component",
                 "summarize_setup",
                 "simulation_report",
-            ),
+            ]
+            # ``manage_component`` (exposed as ``manage_fluent``) drives a
+            # managed component lifecycle that only exists for an external
+            # Fluids One backend. The in-process PyFluent backend has no
+            # component to manage, so only expose the tool when a non-pyfluent
+            # (managed) backend was actually discovered — otherwise every
+            # action just returns ``backend_unavailable``.
+            if any(kind != "pyfluent" for kind in backends):
+                default_tools.append("manage_component")
+            expose_tools = tuple(default_tools)
+
+        super().__init__(
+            backends=backends,
+            expose_tools=expose_tools,
             **fastmcp_kwargs,
         )
 

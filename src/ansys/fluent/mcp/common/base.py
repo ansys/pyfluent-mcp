@@ -39,7 +39,6 @@ from typing import Any, Awaitable, Callable, Iterable, Optional
 from ansys.common.mcp.server import PyAnsysBaseMCP
 
 from ansys.fluent.mcp.common.backend import Backend
-from ansys.fluent.mcp.common.conversation import ConversationStore
 from ansys.fluent.mcp.common.errors import (
     BackendUnavailableError,
     InvalidArgumentsError,
@@ -101,7 +100,6 @@ ALL_TOOLS = (
     "session_status",
     "connect",
     "disconnect",
-    "error_remediation",
     "list_named_objects",
     "find_named_object",
     "select_named_objects",
@@ -161,22 +159,11 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
     #: ``"prepare"`` (geometry), ``"mesh"`` (Prime), ``"fluent"`` (Fluent).
     component_label: str = ""
 
-    #: Description surfaced to MCP clients for the ``error_remediation`` tool.
-    #: Leaves should override with a domain-specific description so the
-    #: tool is reliably picked up by tool-discovery / function-calling.
-    error_remediation_description: str = (
-        "Generate a Markdown remediation / how-to answer for an error "
-        "message, workflow question, or related support request. The "
-        "backend returns rendered Markdown text. Optional `context` is "
-        "forwarded verbatim to the backend."
-    )
-
     def __init__(
         self,
         *,
         backends: dict[str, Backend],
         expose_tools: Iterable[str] = ALL_TOOLS,
-        conversation_store: Optional[ConversationStore] = None,
         name: Optional[str] = None,
         **fastmcp_kwargs: Any,
     ) -> None:
@@ -188,8 +175,6 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
             Backend instances available to the leaf server.
         expose_tools : Iterable[str]
             Whether MCP tools should be registered on the server.
-        conversation_store : Optional[ConversationStore]
-            Store used to retain conversation turns and tool results.
         name : Optional[str]
             Name of the object, module, or setting being processed.
         fastmcp_kwargs : Any
@@ -202,11 +187,16 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         """
         if not backends:
             raise ValueError(f"{self.leaf_name}: at least one backend is required")
+        # The Fluent leaf executes Python against the in-process PyFluent
+        # solver session (``run_code`` -> backend), never the base framework's
+        # ``PersistentPythonSession`` subprocess. Pass ``need_python=False`` so
+        # that subprocess is not launched (it would otherwise start on every
+        # server boot and sit idle). Callers may still override via kwargs.
+        fastmcp_kwargs.setdefault("need_python", False)
         super().__init__(name=name or f"ansys-fluent-mcp-{self.leaf_name}", **fastmcp_kwargs)
         self._backends = backends
         self._active_kind: Optional[str] = None
         self._exposed = set(expose_tools)
-        self._store = conversation_store or ConversationStore()
         if self.default_backend_kind and self.default_backend_kind in backends:
             self._active_kind = self.default_backend_kind
 
@@ -324,8 +314,6 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
             self._tool_connect()
         if "disconnect" in self._exposed:
             self._tool_disconnect()
-        if "error_remediation" in self._exposed:
-            self._tool_error_remediation()
         if "list_named_objects" in self._exposed:
             self._tool_list_named_objects()
         if "find_named_object" in self._exposed:
@@ -658,15 +646,6 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
             ),
             "tools": ["screenshot"],
         },
-        "error-handling": {
-            "description": ("Tools for diagnosing and remediating errors."),
-            "skill": (
-                "Use error_remediation when the user reports an error "
-                "message or asks a workflow question. Returns a Markdown "
-                "remediation answer from the upstream chat endpoint."
-            ),
-            "tools": ["error_remediation"],
-        },
         "component-lifecycle": {
             "description": (
                 "Tools for activating, deactivating, updating, and "
@@ -841,45 +820,6 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
             await backend.disconnect()
             self._active_kind = None
             return {"status": "ok"}
-
-    def _tool_error_remediation(self) -> None:
-        """Register the ``error_remediation`` MCP tool.
-
-        Returns
-        -------
-        None
-            The function completes through its side effects.
-        """
-
-        @self.tool(
-            name="error_remediation",
-            description=self.error_remediation_description,
-        )
-        @typed_guard
-        async def error_remediation(
-            remediation_request: str,
-            context: Optional[dict[str, Any]] = None,
-        ):
-            """Generate remediation guidance for an error request.
-
-            Parameters
-            ----------
-            remediation_request : str
-                Description of the error or remediation request.
-            context : Optional[dict[str, Any]]
-                Additional context passed to the backend or pipeline.
-
-            Returns
-            -------
-            None
-                The function completes through its side effects.
-            """
-            if not remediation_request or not remediation_request.strip():
-                raise InvalidArgumentsError("remediation_request must be a non-empty string")
-            return await self.backend.error_remediation(
-                remediation_request,
-                context=context,
-            )
 
     # ---- live model context -------------------------------------------
 

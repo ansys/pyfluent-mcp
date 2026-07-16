@@ -20,7 +20,6 @@ import re
 
 from ansys.fluent.mcp.common.models import (
     ConnectResult,
-    RemediationResult,
     RunCodeResult,
     SessionStatus,
 )
@@ -114,25 +113,6 @@ class IntegrationBackend:
             The function completes through its side effects.
         """
         self.invalidated += 1
-
-    async def error_remediation(self, remediation_request, *, context=None):
-        """Generate remediation guidance for an error request.
-
-        Parameters
-        ----------
-        remediation_request : Any
-            Description of the error or remediation request.
-        context : Any
-            Additional context passed to the backend or pipeline.
-
-        Returns
-        -------
-        None
-            The function completes through its side effects.
-        """
-        return RemediationResult(
-            status="ok", markdown=f"Fixed: {remediation_request}", message=str(context)
-        )
 
     async def list_named_objects(self):
         """List named objects entries.
@@ -543,7 +523,6 @@ def test_solve_mcp_runtime_covers_general_tool_surface(monkeypatch):
                 "session_status",
                 "connect",
                 "disconnect",
-                "error_remediation",
                 "list_named_objects",
                 "find_named_object",
                 "select_named_objects",
@@ -620,13 +599,6 @@ def test_solve_mcp_runtime_covers_general_tool_surface(monkeypatch):
             }
         ]
 
-        remediation = _structured(
-            await server.call_tool(
-                "error_remediation",
-                {"remediation_request": "bad mesh", "context": {"case": "demo"}},
-            )
-        )
-        assert remediation["markdown"] == "Fixed: bad mesh"
         validated = _structured(await server.call_tool("validate_code", {"code": "print('x')"}))
         assert validated["stdout"] == "valid"
         executed = _structured(await server.call_tool("run_code", {"code": "print('x')"}))

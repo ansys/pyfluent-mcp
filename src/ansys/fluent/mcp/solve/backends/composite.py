@@ -434,6 +434,18 @@ class SolveCompositeBackend(Backend):
         """
         return await self._pyfluent.list_fields(scope=scope)
 
+    async def mesh_adjacency_probe(
+        self,
+        cellzones: list[str],
+        *,
+        bc_filter: tuple[str, ...] | None = None,
+    ) -> dict[str, list[str]]:
+        """Return ``{cellzone -> [adjacent_face_zone_names]}`` from PyFluent."""
+        return await self._pyfluent.mesh_adjacency_probe(
+            cellzones,
+            bc_filter=bc_filter,
+        )
+
     async def solver_status(self) -> dict[str, Any]:
         """Return solver status information from the backend.
 

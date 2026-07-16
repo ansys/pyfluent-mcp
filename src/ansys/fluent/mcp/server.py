@@ -23,7 +23,6 @@ import logging
 from typing import Any, Optional
 
 from ansys.fluent.mcp.common.config import ConfigError, validate_config
-from ansys.fluent.mcp.common.conversation import ConversationStore
 from ansys.fluent.mcp.solve import SolveMCP
 
 
@@ -67,10 +66,8 @@ def _build_server(args: argparse.Namespace) -> Any:
     None
         The function completes through its side effects.
     """
-    store = ConversationStore()
     kwargs: dict[str, Any] = {
         "name": "ansys-fluent-mcp",
-        "conversation_store": store,
     }
     if args.backend is not None:
         kwargs["default_backend_kind"] = args.backend
