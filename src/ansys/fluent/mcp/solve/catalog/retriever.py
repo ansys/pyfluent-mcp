@@ -29,11 +29,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import logging
-import os
 import threading
 from typing import Any, Optional, Sequence
-
-import httpx
 
 from ansys.fluent.mcp.solve.catalog.index import ApiIndex, get_default_api_index
 
@@ -219,103 +216,6 @@ class LexicalApiRetriever(ApiRetriever):
         ]
 
 
-class HttpApiRetriever(ApiRetriever):
-    """HTTP forwarder compatible with the legacy encoded-elements service."""
-
-    name = "http"
-
-    def __init__(
-        self,
-        url: str,
-        *,
-        client: Optional[httpx.AsyncClient] = None,
-        collection_name: str | None = None,
-    ) -> None:
-        """Initialize the HTTP API retriever."""
-        self.url = url
-        self.collection_name = collection_name
-        self._client = client or httpx.AsyncClient()
-        self._owns_client = client is None
-
-    async def retrieve(
-        self,
-        query: str,
-        *,
-        top_k: int = 10,
-        kinds: Optional[Sequence[str]] = None,
-        under: Optional[str] = None,
-    ) -> list[ApiHit]:
-        """Retrieve API hits from an HTTP retrieval endpoint."""
-        payload: dict[str, Any] = {
-            "query": query,
-            "top_k": top_k,
-        }
-        if self.collection_name:
-            payload["collection_name"] = self.collection_name
-        if kinds:
-            payload["kinds"] = list(kinds)
-        if under:
-            payload["under"] = under
-
-        try:
-            response = await self._client.post(self.url, json=payload)
-            response.raise_for_status()
-            data = response.json()
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("HTTP API retriever failed: %s", exc)
-            return []
-
-        raw_hits = data.get("hits", []) if isinstance(data, dict) else []
-        hits: list[ApiHit] = []
-        for raw_hit in raw_hits:
-            if not isinstance(raw_hit, dict):
-                continue
-            path = raw_hit.get("path")
-            kind = raw_hit.get("kind")
-            if not isinstance(path, str) or not isinstance(kind, str):
-                continue
-            payload_extra = {
-                key: value
-                for key, value in raw_hit.items()
-                if key not in {"path", "kind", "score", "raw"}
-            }
-            hits.append(ApiHit(
-                path=path,
-                kind=kind,
-                score=float(raw_hit.get("score", 0.0)),
-                raw=raw_hit.get("raw") if isinstance(raw_hit.get("raw"), str) else None,
-                payload=payload_extra or None,
-            ))
-        return hits
-
-    async def aclose(self) -> None:
-        """Close the owned HTTP client, when applicable."""
-        if self._owns_client:
-            await self._client.aclose()
-
-
-class QdrantApiRetriever(ApiRetriever):
-    """Compatibility placeholder for legacy Qdrant retriever configuration."""
-
-    name = "qdrant"
-
-    def __init__(self, url: str, *, collection_name: str | None = None) -> None:
-        """Initialize the Qdrant API retriever."""
-        self.url = url
-        self.collection_name = collection_name
-
-    async def retrieve(
-        self,
-        query: str,
-        *,
-        top_k: int = 10,
-        kinds: Optional[Sequence[str]] = None,
-        under: Optional[str] = None,
-    ) -> list[ApiHit]:
-        """Return no hits when no Qdrant client integration is installed."""
-        return []
-
-
 # ---------------------------------------------------------------------------
 # Default factory
 # ---------------------------------------------------------------------------
@@ -326,29 +226,13 @@ _default_lock = threading.Lock()
 
 
 def _build_default() -> ApiRetriever:
-    """Build the default API retriever.
+    """Build the default lexical retriever.
 
     Returns
     -------
     ApiRetriever
         Result produced by the function.
     """
-    http_url = os.environ.get("FLUIDS_MCP_API_RETRIEVER_URL")
-    if http_url:
-        logger.info("Using HttpApiRetriever from FLUIDS_MCP_API_RETRIEVER_URL")
-        return HttpApiRetriever(
-            http_url,
-            collection_name=os.environ.get("FLUIDS_MCP_API_RETRIEVER_COLLECTION"),
-        )
-
-    qdrant_url = os.environ.get("FLUIDS_MCP_QDRANT_URL")
-    if qdrant_url:
-        logger.info("Using QdrantApiRetriever from FLUIDS_MCP_QDRANT_URL")
-        return QdrantApiRetriever(
-            qdrant_url,
-            collection_name=os.environ.get("FLUIDS_MCP_QDRANT_COLLECTION"),
-        )
-
     logger.info("Using LexicalApiRetriever (default, BM25 over api_objects.json + docstrings)")
     return LexicalApiRetriever()
 
@@ -390,10 +274,7 @@ def set_default_api_retriever(retriever: Optional[ApiRetriever]) -> None:
 __all__ = [
     "ApiHit",
     "ApiRetriever",
-    "HttpApiRetriever",
     "LexicalApiRetriever",
-    "QdrantApiRetriever",
-    "_build_default",
     "get_default_api_retriever",
     "set_default_api_retriever",
 ]
