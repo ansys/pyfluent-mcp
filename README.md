@@ -67,17 +67,16 @@ You can use 20 tools exposed by the server:
 |-------------|-------------|-------|
 | Python 3.13 or later | Always | 3.13 and 3.14 supported |
 | Core runtime dependencies | Always (installed automatically) | `ansys-common-mcp`, `fastmcp`, `httpx`, `pydantic` |
-| [PyFluent](https://fluent.docs.pyansys.com/) (`ansys-fluent-core` 0.27 or later) | To drive a live Fluent session (`connect`, `run_code`, `get_state`, `mesh_quality`, …) | The `pyfluent` extra, which is the execution backend |
+| [PyFluent](https://fluent.docs.pyansys.com/) (`ansys-fluent-core` 0.27 or later) | To drive a live Fluent session (`connect`, `run_code`, `get_state`, `mesh_quality`, …) | Installed automatically as a required dependency |
 | A licensed local ANSYS Fluent installation | To actually launch/attach a solver | PyFluent talks to this Fluent installation over gRPC |
 | `h5py` 3.0 or later | Only for `compare_files` on `.h5`/`.cas.h5` files | The `file-probe` extra |
 
-> **PyFluent is required for live-session tools.** You install it with the
-> optional `pyfluent` extra, not as a hard dependency. That design keeps
-> offline-only tools (`find_api`, `get_help`, and
-> `validate_code`) usable without Fluent. Any tool that touches a solver,
-> including `connect`, `run_code`, `get_state`, `summarize_setup`,
-> `mesh_quality`, and `screenshot`, requires `ansys-fluent-core` and a licensed
-> Fluent installation on your machine.
+> **PyFluent is required for live-session tools and is installed automatically.**
+> Offline-only tools such as `find_api`, `get_help`, and `validate_code`
+> still work without a local Fluent installation. Any tool that touches a
+> solver, including `connect`, `run_code`, `get_state`, `summarize_setup`,
+> `mesh_quality`, and `screenshot`, requires a licensed Fluent installation
+> on your machine.
 
 ## Installation
 
@@ -87,27 +86,18 @@ Install the latest release:
 pip install ansys-fluent-mcp
 ```
 
-To also pull in the local PyFluent backend (required for live Fluent
-sessions):
-
-```bash
-pip install "ansys-fluent-mcp[pyfluent]"
-```
-
-For more information, see [Requirements](#requirements).
-
 To add the optional HDF5 file-probe support used by `compare_files`:
 
 ```bash
-pip install "ansys-fluent-mcp[pyfluent,file-probe]"
+pip install "ansys-fluent-mcp[file-probe]"
 ```
 
-If you want an editable developer installation with the PyFluent backend and test dependencies:
+If you want an editable developer installation with test dependencies:
 
 ```bash
 git clone https://github.com/ansys/pyfluent-mcp.git
 cd pyfluent-mcp
-pip install -e ".[pyfluent,tests]"
+pip install -e ".[tests]"
 ```
 
 ## Usage

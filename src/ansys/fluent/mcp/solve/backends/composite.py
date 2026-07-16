@@ -356,6 +356,84 @@ class SolveCompositeBackend(Backend):
         """
         return await self._pyfluent.get_help(path)
 
+    async def probe_path(self, paths: list[str]) -> dict[str, dict[str, Any]]:
+        """Return the ``{exists, is_active, is_user_creatable, kind}`` envelope.
+
+        Delegates to PyFluent so the executor / validator can pre-flight a
+        batch of mutating writes against the same live session that will run
+        them. The base ``Backend`` raises ``BackendUnavailableError``; without
+        this delegation the ``probe_path`` / ``describe_path`` tools are dead.
+
+        Parameters
+        ----------
+        paths : list[str]
+            Fluent object paths to pre-flight.
+
+        Returns
+        -------
+        dict[str, dict[str, Any]]
+            Mapping of path to its probe envelope.
+        """
+        return await self._pyfluent.probe_path(paths)
+
+    async def describe_named_object_template(self, path: str) -> dict[str, Any] | None:
+        """Describe the child field shape of a NamedObject collection.
+
+        Delegates to PyFluent's static-settings-class walk. The base
+        ``Backend`` returns ``None`` (rendering ``template: null``); this
+        delegation surfaces the real per-field template.
+
+        Parameters
+        ----------
+        path : str
+            NamedObject collection path to inspect.
+
+        Returns
+        -------
+        dict[str, Any] | None
+            Template mapping, or ``None`` when the path is not a NamedObject
+            collection.
+        """
+        return await self._pyfluent.describe_named_object_template(path)
+
+    async def get_command_arguments(self, path: str) -> dict[str, Any] | None:
+        """Return the keyword-argument signature of a command path.
+
+        Delegates to PyFluent so ``describe_path`` can fuse the create-command
+        signature into its unified descriptor.
+
+        Parameters
+        ----------
+        path : str
+            Command path to introspect.
+
+        Returns
+        -------
+        dict[str, Any] | None
+            Argument signature, or ``None`` when the path is not a command.
+        """
+        return await self._pyfluent.get_command_arguments(path)
+
+    async def list_fields(self, *, scope: str = "any") -> dict[str, Any] | None:
+        """Enumerate solver field / variable names for reports & post.
+
+        Delegates to PyFluent; the base ``Backend`` returns ``None`` and would
+        otherwise strand the ``list_fields`` tool and any report-def / graphics
+        recipe that validates a ``field`` argument against it.
+
+        Parameters
+        ----------
+        scope : str
+            Field-info scope hint (``"any"``, ``"cell"``, ``"node"``,
+            ``"surface"``).
+
+        Returns
+        -------
+        dict[str, Any] | None
+            Mapping containing the available field names, or ``None``.
+        """
+        return await self._pyfluent.list_fields(scope=scope)
+
     async def solver_status(self) -> dict[str, Any]:
         """Return solver status information from the backend.
 
