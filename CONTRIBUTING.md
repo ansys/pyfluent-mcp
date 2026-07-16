@@ -38,7 +38,7 @@ python -m pip install ruff pre-commit
 
 ## Coding conventions
 
-- Target Python 3.13+ and keep the package import-light (heavy/optional
+- Target Python 3.12+ and keep the package import-light (heavy/optional
   dependencies stay behind extras).
 - The dependency direction is one-way: this package never imports a
   higher-level consumer.

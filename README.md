@@ -1,7 +1,7 @@
 # PyFluent-MCP
 
 [![PyAnsys](https://img.shields.io/badge/Py-Ansys-ffc107.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABDklEQVQ4jWNgoDfg5+OQgMJ/0AqCqXGQMEBAwBEKQj5gGDjQsA80UeCDscxrD4YhGsgABEELnC5zAwAu6ACKQDAQzNBFwAAVdgFEAnfDiQAATyIBaAFgCbkAI5DQwAVGAYkAMA4gHgg2AC+AAgQIABggagAqyAD4AACkR7cEdcEBQOPjIvAEtRDoAbYLANQAZGsBEAFeBwCsAY0HgGCAAEQTaDj7xQABItJ+S3DsQAAAABJRU5ErkJggg==)](https://docs.pyansys.com/)
-[![Python](https://img.shields.io/badge/Python-3.13%2B-blue)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.12%2B-blue)](https://www.python.org/)
 [![Apache](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 PyFluent-MCP (`ansys-fluent-mcp`) gives you a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
@@ -65,7 +65,7 @@ You can use 20 tools exposed by the server:
 
 | Requirement | When needed | Notes |
 |-------------|-------------|-------|
-| Python 3.13 or later | Always | 3.13 and 3.14 supported |
+| Python 3.12 or later | Always | 3.12, 3.13, and 3.14 supported |
 | Core runtime dependencies | Always (installed automatically) | `ansys-common-mcp`, `fastmcp`, `httpx`, `pydantic` |
 | [PyFluent](https://fluent.docs.pyansys.com/) (`ansys-fluent-core` 0.27 or later) | To drive a live Fluent session (`connect`, `run_code`, `get_state`, `mesh_quality`, …) | Installed automatically as a required dependency |
 | A licensed local ANSYS Fluent installation | To actually launch/attach a solver | PyFluent talks to this Fluent installation over gRPC |

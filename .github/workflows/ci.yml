@@ -107,7 +107,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.13', '3.14']
+        python-version: ['3.12', '3.13', '3.14']
         should-release:
           - ${{ github.event_name == 'push' && contains(github.ref, 'refs/tags') }}
         exclude:
@@ -131,7 +131,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python-version: ["3.13", "3.14"]
+        python-version: ["3.12", "3.13", "3.14"]
     steps:
       - name: "Run unit tests"
         uses: ansys/actions/tests-pytest@a5b0351dc277d68c2dc1beca2d2674c7dfa4fc55 #v10.3.3
@@ -139,15 +139,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
           pytest-markers: '-m "not integration"'
 
-      # TODO: this will be enabled once public
-      # - name: Upload coverage to Codecov
-      #   uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
-      #   if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
-      #   with:
-      #     file: ./coverage.xml
-      #     flags: unittests
-      #     name: codecov-umbrella
-      #     fail_ci_if_error: false
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
 
   integration:
     name: "Integration tests (live Fluent)"
