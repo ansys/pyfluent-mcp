@@ -20,8 +20,8 @@ Before this module the leaf published four separate probes
 (``probe_path``, ``get_active_status``, ``get_allowed_values``,
 ``describe_named_object_template``) plus a couple of higher-level tools
 (``find_api``, ``get_targeted_context``) and every one of them returned
-a *different* payload shape. The agent-side validator, the recipe
-grounder, and the LLM tool-call handlers all built their own view of a
+a *different* payload shape. Validators, recipe grounders, and tool-call
+handlers all built their own view of a
 path by stitching those envelopes together, and each stitching layer
 disagreed with the others on edge cases:
 
@@ -218,7 +218,7 @@ class PathDescriptor:
     #: context.
     multiphase_alternate_path: str | None = None
 
-    #: Free-form notes surfaced to the LLM (e.g. ``"only writable
+    #: Free-form notes surfaced to clients (e.g. ``"only writable
     #: after energy=on"``). Never load-bearing.
     notes: tuple[str, ...] = field(default_factory=tuple)
 

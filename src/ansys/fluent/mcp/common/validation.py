@@ -87,7 +87,7 @@ def _cache_store(key: tuple, value: RunCodeResult) -> None:
         _VALIDATE_CACHE.popitem(last=False)
 
 
-# Patterns that almost always indicate the LLM hallucinated unsafe ops.
+# Patterns that almost always indicate unsafe host-authored operations.
 _FORBIDDEN_CALLS: tuple[str, ...] = (
     "os.system",
     "subprocess.Popen",
@@ -106,7 +106,7 @@ _FORBIDDEN_CALLS: tuple[str, ...] = (
     "globals",
     "locals",
     "vars",
-    "open",  # outside of explicit Fluent file APIs the LLM should never open files
+    "open",  # outside of explicit Fluent file APIs, callers should not open files
     "input",
     "exit",
     "quit",
@@ -301,7 +301,7 @@ def _validate_python_source_uncached(
 
     Strict mode is what :class:`PyFluentBackend.run_code` uses. The
     relaxed default is reused by :meth:`Backend.validate_code`, which
-    is also used as a dry-run from the LLM.
+    is also used as a client-side dry-run.
 
     Parameters
     ----------
@@ -398,8 +398,8 @@ def _validate_python_source_uncached(
                 f"getattr(..., {node.args[1].value!r}) (TUI escape hatch is forbidden)"
             )
 
-    # TUI escape hatches get a dedicated error code so the codegen pipeline
-    # can treat them as a hard failure (see ``_HARD_VALIDATION_ERROR_CODES``).
+    # TUI escape hatches get a dedicated error code so callers can treat them
+    # as a hard failure (see ``_HARD_VALIDATION_ERROR_CODES``).
     # They take priority over the generic ``forbidden_call`` classification.
     if tui_flagged:
         return RunCodeResult(
@@ -569,8 +569,8 @@ def _count_nodes(tree: ast.AST) -> int:
 # ---------------------------------------------------------------------------
 
 # JavaScript / JSON-style tokens that are valid Python *names* but not the
-# correct Python constants.  The LLM-backed geometry codegen sometimes
-# emits ``true`` / ``false`` / ``null`` instead of ``True`` / ``False`` /
+# correct Python constants. Generated or caller-provided code can emit
+# ``true`` / ``false`` / ``null`` instead of ``True`` / ``False`` /
 # ``None``.  These are legal NAME tokens so ``ast.parse`` succeeds, but
 # the code crashes at runtime with ``NameError``.
 _JS_TO_PYTHON: dict[str, str] = {

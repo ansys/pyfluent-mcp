@@ -19,7 +19,6 @@ from pathlib import Path
 import re
 
 from ansys.fluent.mcp.common.models import (
-    CodegenResult,
     ConnectResult,
     RemediationResult,
     RunCodeResult,
@@ -115,40 +114,6 @@ class IntegrationBackend:
             The function completes through its side effects.
         """
         self.invalidated += 1
-
-    async def codegen(self, prompt, *, session_id=None, context=None):
-        """Generate code from the provided prompt.
-
-        Parameters
-        ----------
-        prompt : Any
-            Natural-language request to process.
-        session_id : Any
-            Identifier for the conversation or tool session.
-        context : Any
-            Additional context passed to the backend or pipeline.
-
-        Returns
-        -------
-        None
-            The function completes through its side effects.
-        """
-        return CodegenResult(status="ok", code="print('generated')", session_id=session_id)
-
-    async def clarify(self, **kwargs):
-        """Apply a clarification answer to a pending code-generation session.
-
-        Parameters
-        ----------
-        kwargs : Any
-            Keyword arguments forwarded to the callable.
-
-        Returns
-        -------
-        None
-            The function completes through its side effects.
-        """
-        return {"status": "ok", "code": "print('clarified')"}
 
     async def error_remediation(self, remediation_request, *, context=None):
         """Generate remediation guidance for an error request.
@@ -578,7 +543,6 @@ def test_solve_mcp_runtime_covers_general_tool_surface(monkeypatch):
                 "session_status",
                 "connect",
                 "disconnect",
-                "codegen",
                 "error_remediation",
                 "list_named_objects",
                 "find_named_object",
@@ -656,11 +620,6 @@ def test_solve_mcp_runtime_covers_general_tool_surface(monkeypatch):
             }
         ]
 
-        codegen = _structured(
-            await server.call_tool("codegen", {"prompt": "make code", "context": {"unit": "K"}})
-        )
-        assert codegen["status"] == "ok"
-        assert codegen["session_id"]
         remediation = _structured(
             await server.call_tool(
                 "error_remediation",

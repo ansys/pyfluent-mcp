@@ -31,9 +31,7 @@ def test_load_config_uses_defaults_for_empty_env():
 
     assert config.http_timeout == 300.0
     assert config.verify_tls is True
-    assert config.llm_max_steps == 30
-    assert config.llm_model == "gpt-4o-mini"
-    assert config.llm_auth_style == "bearer"
+    assert config.max_steps == 30
     assert config.log_level == "INFO"
     assert config.warnings == ()
 
@@ -50,25 +48,15 @@ def test_load_config_reads_known_environment_values():
         {
             "FLUIDS_MCP_HTTP_TIMEOUT": "12.5",
             "FLUIDS_MCP_VERIFY_TLS": "off",
-            "FLUIDS_MCP_LLM_MAX_STEPS": "4",
+            "FLUIDS_MCP_MAX_STEPS": "4",
             "FLUIDS_MCP_LOG_LEVEL": "debug",
-            "FLUIDS_MCP_API_RETRIEVER_URL": "https://retriever.example",
-            "FLUIDS_MCP_QDRANT_API_KEY": "key",
-            "LLM_ENDPOINT": "https://llm.example/v1",
-            "LLM_MODEL": "gpt-4o other-model",
-            "LLM_AUTH_STYLE": "azure-api-key",
         }
     )
 
     assert config.http_timeout == 12.5
     assert config.verify_tls is False
-    assert config.llm_max_steps == 4
+    assert config.max_steps == 4
     assert config.log_level == "DEBUG"
-    assert config.api_retriever_url == "https://retriever.example"
-    assert config.qdrant_api_key == "key"
-    assert config.llm_endpoint == "https://llm.example/v1"
-    assert config.llm_model == "gpt-4o"
-    assert config.llm_auth_style == "azure-api-key"
     assert any("VERIFY_TLS is disabled" in warning for warning in config.warnings)
 
 
@@ -91,9 +79,8 @@ def test_load_config_warns_for_unknown_fluids_mcp_variable():
     [
         ({"FLUIDS_MCP_VERIFY_TLS": "maybe"}, "valid boolean"),
         ({"FLUIDS_MCP_HTTP_TIMEOUT": "0"}, "must be >"),
-        ({"FLUIDS_MCP_LLM_MAX_STEPS": "0"}, "must be >="),
+        ({"FLUIDS_MCP_MAX_STEPS": "0"}, "must be >="),
         ({"FLUIDS_MCP_LOG_LEVEL": "trace"}, "must be one of"),
-        ({"LLM_AUTH_STYLE": "basic"}, "LLM_AUTH_STYLE"),
     ],
 )
 def test_load_config_rejects_invalid_values(env, message):
@@ -123,4 +110,4 @@ def test_validate_config_returns_loaded_config():
     None
         The function completes through its side effects.
     """
-    assert validate_config({"FLUIDS_MCP_LLM_MAX_STEPS": "2"}).llm_max_steps == 2
+    assert validate_config({"FLUIDS_MCP_MAX_STEPS": "2"}).max_steps == 2

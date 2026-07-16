@@ -43,7 +43,7 @@ python -m pip install ruff pre-commit
 - The dependency direction is one-way: this package never imports a
   higher-level consumer.
 - All outbound HTTP must verify TLS by default. Use
-  `ansys.fluent.mcp.common.llm_wire.resolve_tls_verify()` rather than
+  `ansys.fluent.mcp.common.network.resolve_tls_verify()` rather than
   passing `verify=False`.
 
 ## Reporting security issues

@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Solve leaf, which is Fluent solver's code generation and live-context tools.
+"""Solve leaf, which provides Fluent solver live-context and execution tools.
 
 The MCP class :class:`SolveMCP` lives in
 :mod:`ansys.fluent.mcp.solve.mcp`; it is re-exported here so both

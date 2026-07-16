@@ -88,14 +88,14 @@ def test_env_snapshot_filters_and_redacts(monkeypatch):
         The function completes through its side effects.
     """
     monkeypatch.setenv("FLUIDS_VISIBLE", "value")
-    monkeypatch.setenv("LLM_API_KEY", "abcdef")
+    monkeypatch.setenv("FLUIDS_API_KEY", "abcdef")
     monkeypatch.setenv("ANSYS_TOKEN", "secret-token")
     monkeypatch.setenv("UNRELATED_SECRET", "should-not-appear")
 
     snapshot = session_logging._gather_env_snapshot()
 
     assert "FLUIDS_VISIBLE=value" in snapshot
-    assert "LLM_API_KEY=<redacted len=6>" in snapshot
+    assert "FLUIDS_API_KEY=<redacted len=6>" in snapshot
     assert "ANSYS_TOKEN=<redacted len=12>" in snapshot
     assert "UNRELATED_SECRET" not in snapshot
     assert "pyfluent:" in snapshot

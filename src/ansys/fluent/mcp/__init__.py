@@ -19,7 +19,7 @@
 A Model Context Protocol (MCP) server that lets AI assistants drive an
 ANSYS Fluent solver session through `PyFluent
 <https://fluent.docs.pyansys.com/>`_. It load cases and meshes, inspects the
-live settings tree, generates and executes settings and API code, runs
+live settings tree, validates and executes settings and API code, runs
 iterations, and queries results.
 
 This package is the open-source distribution of the Fluent Solve MCP
@@ -45,13 +45,7 @@ from ansys.fluent.mcp.common.errors import (
     NotConnectedError,
     UpstreamError,
 )
-from ansys.fluent.mcp.common.models import (
-    Clarification,
-    ClarificationOption,
-    CodegenResult,
-    ConnectResult,
-    RunCodeResult,
-)
+from ansys.fluent.mcp.common.models import ConnectResult, RunCodeResult
 from ansys.fluent.mcp.solve import SolveMCP
 
 __version__ = importlib_metadata.version(__name__.replace(".", "-"))
@@ -60,9 +54,6 @@ __version__ = importlib_metadata.version(__name__.replace(".", "-"))
 __all__ = [
     "__version__",
     "SolveMCP",
-    "Clarification",
-    "ClarificationOption",
-    "CodegenResult",
     "ConnectResult",
     "RunCodeResult",
     "BackendUnavailableError",

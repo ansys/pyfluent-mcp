@@ -18,7 +18,7 @@
 
 Every leaf has one or more backends. A backend is the thing that actually
 talks to a Fluids product (Fluent solver, Fluent meshing, Discovery, Prime,
-or the Fluids One service). Tools are LLM-facing; backends are
+or the Fluids One service). Tools are MCP-client-facing; backends are
 implementation-facing.
 
 A backend implements only the operations its product supports. Unsupported
@@ -34,7 +34,6 @@ from typing import Any, Optional
 
 from ansys.fluent.mcp.common.errors import BackendUnavailableError
 from ansys.fluent.mcp.common.models import (
-    CodegenResult,
     ConnectResult,
     RemediationResult,
     RunCodeResult,
@@ -49,7 +48,7 @@ class Backend(ABC):
     Default implementations raise `BackendUnavailableError`.
     """
 
-    #: Short identifier surfaced to the LLM (e.g. "fluids_one", "pyfluent").
+    #: Short identifier surfaced to MCP clients (e.g. "fluids_one", "pyfluent").
     kind: str = "unknown"
     #: Human-readable name surfaced in `session.status`.
     label: str = "Unknown backend"
@@ -139,52 +138,6 @@ class Backend(ABC):
             backend_kind=self.kind,  # type: ignore[arg-type]
             endpoint=getattr(self, "endpoint", None),
         )
-
-    # ---- codegen ------------------------------------------------------
-
-    async def codegen(
-        self,
-        prompt: str,
-        *,
-        session_id: Optional[str] = None,
-        context: Optional[dict[str, Any]] = None,
-    ) -> CodegenResult:
-        """Generate code from the provided prompt.
-
-        Parameters
-        ----------
-        prompt : str
-            Natural-language request to process.
-        session_id : Optional[str]
-            Identifier for the conversation or tool session.
-        context : Optional[dict[str, Any]]
-            Additional context passed to the backend or pipeline.
-
-        Returns
-        -------
-        CodegenResult
-            CodegenResult produced by the operation.
-        """
-        raise BackendUnavailableError(f"{self.label} does not support codegen.")
-
-    async def clarify(self, session_id: str, clarification_id: str, answer: str) -> CodegenResult:
-        """Apply a clarification answer to a pending code-generation session.
-
-        Parameters
-        ----------
-        session_id : str
-            Identifier for the conversation or tool session.
-        clarification_id : str
-            Identifier for the clarification.
-        answer : str
-            Answer text supplied for the pending clarification.
-
-        Returns
-        -------
-        CodegenResult
-            CodegenResult produced by the operation.
-        """
-        raise BackendUnavailableError(f"{self.label} does not support clarify.")
 
     # ---- remediation --------------------------------------------------
 
@@ -632,9 +585,8 @@ class Backend(ABC):
         hits = await retriever.retrieve(query, top_k=top_k, kinds=kinds, under=under)
         if not hits:
             raise BackendUnavailableError(
-                "No API retriever returned results. Configure "
-                "FLUIDS_MCP_API_RETRIEVER_URL or FLUIDS_MCP_QDRANT_URL, "
-                "or install pyfluent for the lexical fallback."
+                "No API retriever returned results. "
+                "Install pyfluent and ensure the lexical API index is available."
             )
         return [h.to_tool_dict() for h in hits]
 

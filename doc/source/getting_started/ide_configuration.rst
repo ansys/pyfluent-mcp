@@ -7,8 +7,8 @@ configuration for the most popular clients.
 Claude Code
 -----------
 
-Claude Code is Anthropic's code editor with built-in MCP support. You can add
-PyFluent-MCP using the command-line tool.
+Claude Code includes MCP support. You can add PyFluent-MCP using the
+command-line tool.
 
 Set up PyFluent-MCP for a specific project (recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -170,14 +170,14 @@ variables include:
 
    * - Variable
      - Purpose
-   * - ``LLM_MODEL``
-     - Model for LLM-driven features (``codegen``, ``clarify``), provider-prefixed (for example ``openai/gpt-4o``)
-   * - ``LLM_API_KEY``
-     - Single API key for any provider (``OPENAI_API_KEY`` / ``ANTHROPIC_API_KEY`` / ``GEMINI_API_KEY`` still work as a fallback)
-   * - ``LLM_ENDPOINT``
-     - Only for Azure / local / OpenAI-compatible gateways
    * - ``FLUIDS_MCP_LOG_LEVEL``
      - Server log level (default ``INFO``)
+   * - ``FLUIDS_MCP_HTTP_TIMEOUT``
+     - Timeout for outbound HTTP operations
+   * - ``FLUIDS_MCP_CA_BUNDLE``
+     - Path to a PEM CA bundle for corporate or self-signed TLS environments
+   * - ``FLUIDS_MCP_VERIFY_TLS``
+     - Enable or disable TLS verification (default enabled)
    * - ``FLUIDS_MCP_SETTINGS_JSON``
      - External file for overriding the bundled settings schema
 

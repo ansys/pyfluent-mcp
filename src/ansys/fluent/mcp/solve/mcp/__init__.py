@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Solve MCP leaf provides Fluent solver code generation and live-context tools.
+"""Solve MCP leaf provides Fluent solver live-context and execution tools.
 
 This module physically hosts the :class:`SolveMCP` class. The parent
 package ``ansys.fluent.mcp.solve`` re-exports the class so both
@@ -25,8 +25,7 @@ agent loop, planner, and recipes are not part of this package.
 
 This open-source leaf ships only the PyFluent backend. It always
 connects to PyFluent for code execution and live-model introspection.
-``codegen``/``clarify are handled by the LLM pipeline. Additional backends
-(such as the internal Fluids One managed-service ``fluids_one_solve``
+Additional backends (such as the internal Fluids One managed-service ``fluids_one_solve``
 backend) are contributed by other installed packages through the
 ``ansys.fluent.mcp.solve_backends`` entry-point group and merged into
 the backend registry at construction time.
@@ -35,7 +34,6 @@ Usage::
 
     connect()  # launch / attach PyFluent
     connect(ip="...", port=12345)  # attach to a remote solver
-    codegen("set inlet to 323 K")  # LLM pipeline
     run_code(code)  # always executed via PyFluent
 """
 
@@ -89,7 +87,7 @@ def _discover_external_solve_backends() -> "dict[str, Backend]":
 
 
 class SolveMCP(FluidsLeafMCP):
-    """Solve MCP leaf: Fluent solver codegen and live-context tools."""
+    """Solve MCP leaf: Fluent solver live-context and execution tools."""
 
     leaf_name = "solve"
     default_backend_kind = "pyfluent"
@@ -129,8 +127,6 @@ class SolveMCP(FluidsLeafMCP):
                 "session_status",
                 "connect",
                 "disconnect",
-                "codegen",
-                "clarify",
                 "list_named_objects",
                 "find_named_object",
                 "select_named_objects",

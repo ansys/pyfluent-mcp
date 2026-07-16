@@ -58,58 +58,45 @@ multi-tenant service.
 
 ## Network egress and TLS
 
-All outbound LLM and retrieval calls verify TLS certificates **by
-default**.
+HTTP retrieval and remote MCP calls verify TLS certificates by default.
 
 ### Do I need to provide a certificate?
 
-In most cases, **no**. This package does **not** issue, generate, or bundle
-any certificate of its own — it only *verifies* the certificates presented by
-the LLM/retrieval endpoints you connect to.
+In most cases, **no**. This package does not issue, generate, or bundle
+certificates. It only verifies the certificates presented by the endpoints you
+connect to.
 
-- **Public LLM providers (OpenAI, Azure, Anthropic, Gemini, …):** nothing to
-  do. Their certificates are signed by publicly-trusted CAs that Python's
-  built-in trust store (`certifi`) already recognizes — calls just work.
-- **Behind a corporate proxy/firewall that intercepts TLS** (Zscaler,
-  Netskope, etc.) **or an internal/self-signed endpoint:** you must supply
-  your organization's CA bundle so the package can trust it.
+- Public HTTPS endpoints typically work with Python's default certificate
+  trust store.
+- Behind a corporate proxy/firewall that intercepts TLS, or for internal
+  self-signed endpoints, provide your organization's CA bundle.
 
 ### How to get and use a corporate CA bundle
 
-1. Obtain the CA bundle (a `.pem`/`.crt` file) from **your IT/security team**
-   or export it from your corporate proxy. This package cannot create one for
-   you — it comes from your organization's certificate authority.
-2. Point one of these environment variables at the file (first non-empty wins):
+1. Obtain the CA bundle (a `.pem`/`.crt` file) from your IT/security team or
+   export it from your proxy infrastructure.
+2. Point one of these environment variables at the file:
 
    ```bash
-   export LLM_CA_BUNDLE=/path/to/corporate-ca-bundle.pem
-   # alternatives, checked in this order: SSL_CERT_FILE, REQUESTS_CA_BUNDLE
+   export FLUIDS_MCP_CA_BUNDLE=/path/to/corporate-ca-bundle.pem
+   # alternatives: SSL_CERT_FILE or REQUESTS_CA_BUNDLE
    ```
-
-   Unlike `requests`, the underlying `httpx` client does not auto-read
-   `SSL_CERT_FILE` / `REQUESTS_CA_BUNDLE`, so this package resolves the bundle
-   explicitly and passes it to the TLS layer for you.
 
 ### Serving the MCP over HTTP
 
 This package does not terminate TLS for its own HTTP transport. Bind it to
-`127.0.0.1` and put any remote access behind your own authenticated,
-TLS-terminating proxy (nginx, Caddy, …) using a certificate you provision
-there (e.g. Let's Encrypt or your corporate CA).
+`127.0.0.1` and place remote access behind your own authenticated,
+TLS-terminating proxy.
 
 ### Reference
 
 | Control | Effect |
 |---------|--------|
-| `LLM_CA_BUNDLE` (or `SSL_CERT_FILE` / `REQUESTS_CA_BUNDLE`) | Trust a corporate/self-signed CA by pointing at its PEM bundle |
-| `LLM_TLS_INSECURE=1` | Disables TLS verification (logs a warning). Development only — exposes keys/prompts to MITM |
-| `FLUIDS_AGENT_OFFLINE=1` | Kill switch: forbids all outbound LLM/retrieval calls |
-| `FLUIDS_AGENT_ALLOWED_LLM_HOSTS` | Comma-separated host allowlist enforced before any outbound call |
+| `FLUIDS_MCP_CA_BUNDLE` (or `SSL_CERT_FILE` / `REQUESTS_CA_BUNDLE`) | Trust a corporate/self-signed CA by pointing at its PEM bundle |
+| `FLUIDS_MCP_VERIFY_TLS=0` | Disable TLS verification for development/testing only |
 
 ## Secrets
 
-- Provider API keys are read from environment variables only and are never
-  written to disk by this package.
 - `.env` files are git-ignored; only `.env.example` (a template with no
   secrets) is tracked.
-- Do not paste secrets into prompts, issues, or logs.
+- Do not paste credentials, tokens, or internal endpoints into issues or logs.

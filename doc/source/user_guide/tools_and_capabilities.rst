@@ -18,8 +18,8 @@ PyFluent-MCP exposes **22 tools** organized into 6 groups:
      - ``find_api``, ``get_help``, ``get_state``, ``get_targeted_context``
    * - Named objects
      - ``list_named_objects``, ``find_named_object``, ``select_named_objects``
-   * - Codegen & execution
-     - ``codegen``, ``clarify``, ``run_code``, ``validate_code``
+   * - Execution & validation
+     - ``run_code``, ``validate_code``
    * - Reporting & inspection
      - ``summarize_setup``, ``simulation_report``, ``screenshot``, ``manage_component``
    * - Domain tools
@@ -31,7 +31,6 @@ Live versus offline tools
 **Offline-capable tools** work without a live Fluent session:
 
 - ``find_api`` and ``get_help`` search the bundled settings schema.
-- ``codegen`` and ``clarify`` generate PyFluent Python and require an LLM.
 - ``validate_code`` performs an AST pre-check only.
 
 **Live-session tools** require PyFluent and a connected Fluent solver:
@@ -44,15 +43,14 @@ Live versus offline tools
 Using the tools
 ---------------
 
-Discover-generate-validate-execute loop
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Discover-validate-execute loop
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For most setup tasks, follow this pattern:
 
-#. **Discover**: ``find_api("turbulence model")`` or ``get_state(["setup.general"])``.
-#. **Generate**: ``codegen("enable k-epsilon turbulence model")``.
-#. **Validate**: ``validate_code(generated_python)``.
-#. **Execute**: ``run_code(generated_python)``.
+#. **Discover**: ``find_api("turbulence model")`` or ``get_state("setup.general")``.
+#. **Validate**: ``validate_code(python_snippet)``.
+#. **Execute**: ``run_code(python_snippet)``.
 #. **Verify**: ``summarize_setup()`` or ``simulation_report()``.
 
 Connection management
@@ -82,7 +80,7 @@ Code execution
 
 ``run_code`` executes sandboxed PyFluent Python in a persistent REPL namespace.
 **This tool mutates the live solver**. Always prefer ``validate_code`` first for
-untrusted or generated code.
+untrusted code.
 
 ``validate_code`` performs an AST and signature pre-check without execution.
 
@@ -113,8 +111,7 @@ Generate and apply a settings change
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #. ``find_api("under-relaxation pressure")`` discovers the active path family.
-#. ``get_state(["solution.controls"])`` reads the live URF configuration.
-#. ``codegen("set pressure URF to 0.3")`` generates PyFluent code.
+#. ``get_state("solution.controls")`` reads the live URF configuration.
 #. ``validate_code`` then ``run_code`` applies the change.
 
 Compare two case files
@@ -139,10 +136,6 @@ Tool return types
      - ``connect``
    * - ``RunCodeResult``
      - ``run_code``
-   * - ``CodegenResult``
-     - ``codegen``, ``clarify``
-   * - ``Clarification`` / ``ClarificationOption``
-     - ``codegen`` or ``clarify`` when ambiguity must be resolved
 
 Configuration is loaded from ``FLUIDS_MCP_*`` environment variables via
 :func:`~ansys.fluent.mcp.load_config`. Use :func:`~ansys.fluent.mcp.validate_config`
@@ -183,7 +176,6 @@ The package re-exports the server class and shared models from its top-level nam
        SolveMCP,
        ConnectResult,
        RunCodeResult,
-       CodegenResult,
        FluidsMCPConfig,
        load_config,
    )

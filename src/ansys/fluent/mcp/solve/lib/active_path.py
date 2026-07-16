@@ -47,7 +47,7 @@ Two cooperating capabilities:
 2. **Reverse routing** -- given ANY proposed path + a :class:`SolverMode`,
    say whether it is active and, if not, what the correct active sibling
    is. See :func:`reroute`. This is what lets the validator hard-block a
-   wrong-path write *before* Apply and hand the LLM a deterministic fix
+    wrong-path write *before* Apply and hand clients a deterministic fix
    instead of letting the executor silently skip the step.
 
 The module has NO dependency on the agent loop or live backend; it is pure,
@@ -371,7 +371,7 @@ def active_urf_family(mode: SolverMode) -> UrfFamily:
     return UrfFamily.SEGREGATED
 
 
-# Canonical equation tokens used internally. The natural-language /
+# Canonical equation tokens used internally. Free-text /
 # per-family spellings normalize onto these.
 _EQ_CANON: dict[str, str] = {
     "p": "pressure",
@@ -1038,7 +1038,7 @@ class WriteTarget:
 
     The three consumers of active-path knowledge (the validator's
     ``inactive_path`` diagnostic, the ``resolve_active_path`` tool
-    surfaced to the LLM, and the recipe URF stagers) historically
+    surfaced to clients, and the recipe URF stagers) historically
     each maintained their OWN version of the classify → reroute →
     fetch-alternate-path pipeline. That triplication is the reason
     the same live case could produce three DIFFERENT answers for
@@ -1056,7 +1056,7 @@ class WriteTarget:
     * ``needs_reroute`` — True iff ``active_path != requested_path``.
     * ``group`` / ``active_family`` — for messaging and telemetry.
     * ``reason`` — short human-readable explanation suitable for a
-      validator diagnostic and the LLM-facing tool response.
+            validator diagnostic and the client-facing tool response.
     * ``classified`` — True iff the requested path was recognized
       as belonging to a known multi-path class. When False, the
       resolver is conservative: it returns ``needs_reroute=False``
@@ -1158,8 +1158,8 @@ def resolve_write_target(mode: SolverMode, path: str) -> WriteTarget:
 
 
 # ---------------------------------------------------------------------------
-# Mode summary + write-target hints (shared by codegen prefetch and the
-# agent-loop, so the LLM sees ONE deterministic answer for "what should
+# Mode summary + write-target hints (shared by authoring hosts and the
+# agent loop, so callers see one deterministic answer for "what should
 # a write to X look like under the current live mode".
 # ---------------------------------------------------------------------------
 
@@ -1209,8 +1209,8 @@ def describe_mode(mode: SolverMode) -> dict[str, Any]:
 def write_target_hints(mode: SolverMode) -> dict[str, Any]:
     """Return canonical write-target answers for the CURRENT ``mode``.
 
-    Emits a small dict that any authoring surface (codegen prefetch,
-    agent-loop system prompt, `describe_path` fallback) can turn into
+    Emits a small dict that any authoring surface (agent-loop system prompt,
+    `describe_path` fallback, external host preflight) can turn into
     a short "when you write X, use path Y" guide. Contains ONLY facts
     derivable from ``mode`` — no live tool calls, no schema probes.
 
@@ -1285,7 +1285,7 @@ def format_mode_summary(mode: SolverMode) -> str:
     Two lines: one for the mode identity, one for the write-target
     hints (URF family, BC namespace, run command, multiphase state).
     Deliberately compact — the full JSON summary is available via
-    :func:`describe_mode` and :func:`write_target_hints` when the LLM
+    :func:`describe_mode` and :func:`write_target_hints` when a caller
     needs to inspect it.
     """
     desc = describe_mode(mode)

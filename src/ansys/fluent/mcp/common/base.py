@@ -21,10 +21,11 @@ A leaf:
 - Picks one or more `Backend` instances at construction time.
 - Inherits from `PyAnsysBaseMCP` so it can be registered alongside other
   PyAnsys MCP servers at the organisation level.
-- Auto-registers the standard tool surface: ``session_status``, ``connect``,
-  ``disconnect``, ``codegen``, ``clarify``, ``list_named_objects``,
-  ``get_state``, ``get_targeted_context``, ``run_code``, ``validate_code``,
-  ``screenshot``, and others (see ALL_TOOLS).
+- Auto-registers the standard deterministic tool surface:
+    ``session_status``, ``connect``, ``disconnect``,
+    ``list_named_objects``, ``get_state``, ``get_targeted_context``,
+    ``run_code``, ``validate_code``, ``screenshot``, and others
+    (see ALL_TOOLS).
 
 Concrete leaves only have to declare which tools to *expose* (subset of the
 above) so we keep the MCP surface lean per leaf.
@@ -38,7 +39,6 @@ from typing import Any, Awaitable, Callable, Iterable, Optional
 from ansys.common.mcp.server import PyAnsysBaseMCP
 
 from ansys.fluent.mcp.common.backend import Backend
-from ansys.fluent.mcp.common.codegen import CodegenPipeline
 from ansys.fluent.mcp.common.conversation import ConversationStore
 from ansys.fluent.mcp.common.errors import (
     BackendUnavailableError,
@@ -101,8 +101,6 @@ ALL_TOOLS = (
     "session_status",
     "connect",
     "disconnect",
-    "codegen",
-    "clarify",
     "error_remediation",
     "list_named_objects",
     "find_named_object",
@@ -163,15 +161,14 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
     #: ``"prepare"`` (geometry), ``"mesh"`` (Prime), ``"fluent"`` (Fluent).
     component_label: str = ""
 
-    #: Description surfaced to the LLM for the ``error_remediation`` tool.
+    #: Description surfaced to MCP clients for the ``error_remediation`` tool.
     #: Leaves should override with a domain-specific description so the
     #: tool is reliably picked up by tool-discovery / function-calling.
     error_remediation_description: str = (
-        "Generate a Markdown remediation / how-to answer for a "
-        "natural-language request (error message, workflow question, "
-        "etc.). The backend calls the upstream chat endpoint and returns "
-        "the rendered Markdown text. Optional `context` is forwarded "
-        "verbatim to the backend."
+        "Generate a Markdown remediation / how-to answer for an error "
+        "message, workflow question, or related support request. The "
+        "backend returns rendered Markdown text. Optional `context` is "
+        "forwarded verbatim to the backend."
     )
 
     def __init__(
@@ -180,7 +177,6 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         backends: dict[str, Backend],
         expose_tools: Iterable[str] = ALL_TOOLS,
         conversation_store: Optional[ConversationStore] = None,
-        codegen_pipeline: Optional[CodegenPipeline] = None,
         name: Optional[str] = None,
         **fastmcp_kwargs: Any,
     ) -> None:
@@ -194,8 +190,6 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
             Whether MCP tools should be registered on the server.
         conversation_store : Optional[ConversationStore]
             Store used to retain conversation turns and tool results.
-        codegen_pipeline : Optional[CodegenPipeline]
-            Pipeline used to generate and refine Fluent code snippets.
         name : Optional[str]
             Name of the object, module, or setting being processed.
         fastmcp_kwargs : Any
@@ -208,19 +202,11 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         """
         if not backends:
             raise ValueError(f"{self.leaf_name}: at least one backend is required")
-        super().__init__(
-            name=name or f"ansys-fluent-mcp-{self.leaf_name}", need_python=False, **fastmcp_kwargs
-        )
+        super().__init__(name=name or f"ansys-fluent-mcp-{self.leaf_name}", **fastmcp_kwargs)
         self._backends = backends
         self._active_kind: Optional[str] = None
         self._exposed = set(expose_tools)
         self._store = conversation_store or ConversationStore()
-        self._pipeline = codegen_pipeline or CodegenPipeline(store=self._store)
-        # Inject product identity so the LLM pipeline builds the right
-        # system prompt (solve / mesh / geometry / ...).
-        if hasattr(self._pipeline, "product_label"):
-            self._pipeline.product_label = self.leaf_name
-
         if self.default_backend_kind and self.default_backend_kind in backends:
             self._active_kind = self.default_backend_kind
 
@@ -338,10 +324,6 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
             self._tool_connect()
         if "disconnect" in self._exposed:
             self._tool_disconnect()
-        if "codegen" in self._exposed:
-            self._tool_codegen()
-        if "clarify" in self._exposed:
-            self._tool_clarify()
         if "error_remediation" in self._exposed:
             self._tool_error_remediation()
         if "list_named_objects" in self._exposed:
@@ -389,8 +371,8 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
 
         Domain tools are intentionally outside the ``ALL_TOOLS`` /
         ``expose_tools`` filter machinery, which curates the general
-        leaf surface (codegen, clarify, screenshot, manage_component,
-        …).
+        leaf surface (screenshot, manage_component, ``run_code``,
+        ``validate_code``, …).
 
         Parameters
         ----------
@@ -617,16 +599,6 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
                 "let it auto-launch. Call disconnect for graceful cleanup."
             ),
             "tools": ["session_status", "connect", "disconnect"],
-        },
-        "code-generation": {
-            "description": ("Tools for natural-language to code translation and clarification."),
-            "skill": (
-                "Use codegen for translating natural-language requests "
-                "into executable code. If the backend asks a follow-up "
-                "question, respond with clarify. Use validate_code for "
-                "dry-run checks before execution."
-            ),
-            "tools": ["codegen", "clarify", "validate_code"],
         },
         "api-discovery": {
             "description": ("Tools for exploring and searching the settings API tree."),
@@ -870,96 +842,6 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
             self._active_kind = None
             return {"status": "ok"}
 
-    # ---- codegen / clarify -------------------------------------------
-
-    def _tool_codegen(self) -> None:
-        """Register the ``codegen`` MCP tool.
-
-        Returns
-        -------
-        None
-            The function completes through its side effects.
-        """
-
-        @self.tool(
-            name="codegen",
-            description=(
-                f"Generate Python code for the {self.leaf_name} stage from a "
-                "natural-language prompt. Returns either `status='ok'` with "
-                "`code`, or `status='needs_clarification'` with one or more "
-                "`clarifications` to answer via the `clarify` tool. Pass the "
-                "returned `session_id` back on follow-up calls to keep context."
-            ),
-        )
-        @typed_guard
-        async def codegen(
-            prompt: str, session_id: Optional[str] = None, context: Optional[dict[str, Any]] = None
-        ):
-            """Generate code from the provided prompt.
-
-            Parameters
-            ----------
-            prompt : str
-                Natural-language request to process.
-            session_id : Optional[str]
-                Identifier for the conversation or tool session.
-            context : Optional[dict[str, Any]]
-                Additional context passed to the backend or pipeline.
-
-            Returns
-            -------
-            None
-                The function completes through its side effects.
-            """
-            return await self._pipeline.generate(
-                backend=self.backend,
-                prompt=prompt,
-                session_id=session_id,
-                context=context,
-            )
-
-    def _tool_clarify(self) -> None:
-        """Register the ``clarify`` MCP tool.
-
-        Returns
-        -------
-        None
-            The function completes through its side effects.
-        """
-
-        @self.tool(
-            name="clarify",
-            description=(
-                "Provide an answer to a clarification raised by `codegen`. "
-                "`session_id` and `clarification_id` come from the previous "
-                "`codegen` (or `clarify`) response."
-            ),
-        )
-        @typed_guard
-        async def clarify(session_id: str, clarification_id: str, answer: str):
-            """Apply a clarification answer to a pending code-generation session.
-
-            Parameters
-            ----------
-            session_id : str
-                Identifier for the conversation or tool session.
-            clarification_id : str
-                Identifier for the clarification.
-            answer : str
-                Answer text supplied for the pending clarification.
-
-            Returns
-            -------
-            None
-                The function completes through its side effects.
-            """
-            return await self._pipeline.clarify(
-                backend=self.backend,
-                session_id=session_id,
-                clarification_id=clarification_id,
-                answer=answer,
-            )
-
     def _tool_error_remediation(self) -> None:
         """Register the ``error_remediation`` MCP tool.
 
@@ -1083,7 +965,7 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
                 "matches first. Use this BEFORE generating code so you know "
                 "which collection (wall, velocity_inlet, fluid_zone, ...) "
                 "the user actually meant; if multiple matches exist, ask a "
-                "clarification."
+                "follow-up question."
             ),
         )
         @typed_guard
@@ -1539,7 +1421,7 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
             name="validate_code",
             description=(
                 "Dry-run / validate the generated code without applying side "
-                "effects. Returns parse / type / semantic feedback for the LLM."
+                "effects. Returns parse / type / semantic feedback for callers."
             ),
         )
         @typed_guard

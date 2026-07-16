@@ -14,11 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""In-memory conversation/clarification store with TTL.
+"""In-memory conversation store with TTL.
 
-Used to track multi-turn ``codegen`` <-> ``clarify`` interactions so the LLM
-caller can be stateless. (It only needs to keep ``session_id`` and
-``clarification_id``.)
+Provides lightweight state tracking for request/response flows that need
+short-lived session continuity.
 
 Pluggable: swap ``_now()`` and the dict for a Redis-backed implementation
 later without touching the rest of the codebase.
@@ -41,7 +40,7 @@ class ConversationEntry:
     created_at: float
     updated_at: float
     history: list[dict[str, Any]] = field(default_factory=list)
-    pending_clarification: Optional[dict[str, Any]] = None
+    pending_followup: Optional[dict[str, Any]] = None
     extra: dict[str, Any] = field(default_factory=dict)
 
 
@@ -181,17 +180,15 @@ class ConversationStore:
             entry.history.append({"role": role, "content": content, "ts": self._now()})
             entry.updated_at = self._now()
 
-    def set_pending_clarification(
-        self, session_id: str, clarification: dict[str, Any] | None
-    ) -> None:
-        """Set the pending clarification.
+    def set_pending_followup(self, session_id: str, followup: dict[str, Any] | None) -> None:
+        """Set the pending follow-up prompt.
 
         Parameters
         ----------
         session_id : str
             Identifier for the conversation or tool session.
-        clarification : dict[str, Any] | None
-            Clarification to supply to the function.
+        followup : dict[str, Any] | None
+            Pending follow-up payload to store.
 
         Returns
         -------
@@ -201,18 +198,18 @@ class ConversationStore:
         with self._lock:
             entry = self._entries.get(session_id)
             if entry is not None:
-                entry.pending_clarification = clarification
+                entry.pending_followup = followup
                 entry.updated_at = self._now()
 
-    def has_pending_clarification_id(self, session_id: str, clarification_id: str) -> bool:
-        """Return True if ``session_id`` already has a pending clarification with this ID.
+    def has_pending_followup_id(self, session_id: str, followup_id: str) -> bool:
+        """Return True if ``session_id`` already has a pending follow-up with this ID.
 
         Parameters
         ----------
         session_id : str
             Session identifier to supply to the function.
-        clarification_id : str
-            Clarification identifier to supply to the function.
+        followup_id : str
+            Pending follow-up identifier to check.
 
         Returns
         -------
@@ -221,12 +218,12 @@ class ConversationStore:
         """
         with self._lock:
             entry = self._entries.get(session_id)
-            if entry is None or entry.pending_clarification is None:
+            if entry is None or entry.pending_followup is None:
                 return False
-            return entry.pending_clarification.get("id") == clarification_id
+            return entry.pending_followup.get("id") == followup_id
 
-    def clarification_was_just_asked(self, session_id: str, question_text: str) -> bool:
-        """Detect a clarification loop: same question text already pending.
+    def followup_was_just_asked(self, session_id: str, question_text: str) -> bool:
+        """Detect a follow-up loop: same question text already pending.
 
         Parameters
         ----------
@@ -242,9 +239,9 @@ class ConversationStore:
         """
         with self._lock:
             entry = self._entries.get(session_id)
-            if entry is None or entry.pending_clarification is None:
+            if entry is None or entry.pending_followup is None:
                 return False
-            existing = (entry.pending_clarification.get("question") or "").strip().lower()
+            existing = (entry.pending_followup.get("question") or "").strip().lower()
             return bool(existing) and existing == (question_text or "").strip().lower()
 
     # ---- maintenance -------------------------------------------------

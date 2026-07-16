@@ -23,7 +23,7 @@ Learn how to use PyFluent-MCP effectively.
       :link: configuration
       :link-type: doc
 
-      Environment variables, LLM settings, transport options, and security controls.
+      Environment variables, transport options, and security controls.
 
    .. grid-item-card:: :fa:`check-double` Best practices
       :link: best_practices

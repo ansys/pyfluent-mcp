@@ -23,7 +23,7 @@ higher-level layer that shares the process can add its own root via
 :func:`register_log_root` so a single ``session.log`` captures the whole
 stack. This package never names or imports that layer. All child
 loggers propagate up to the handler, so tool calls, plan executions,
-``run_code`` snippets, LLM round-trips, and validator decisions are all
+``run_code`` snippets, client turns, and validator decisions are all
 captured in one place without touching individual call sites.
 
 Goals
@@ -437,7 +437,7 @@ def _gather_env_snapshot() -> str:
     str
         String result produced by the function.
     """
-    keep_prefixes = ("FLUIDS_", "ANSYS", "AWP_ROOT", "PYFLUENT_", "FLUENT_", "AALI_", "LLM_")
+    keep_prefixes = ("FLUIDS_", "ANSYS", "AWP_ROOT", "PYFLUENT_", "FLUENT_", "AALI_")
     redact_keys = ("API_KEY", "TOKEN", "SECRET", "PASSWORD")
     lines: list[str] = []
     lines.append(f"# Captured: {datetime.now(timezone.utc).isoformat()}")

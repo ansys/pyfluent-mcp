@@ -49,7 +49,6 @@ connection and the per-session REPL namespace used by ``run_code``.
 - Exposes 22 MCP tools for Fluent interaction.
 - Routes live operations through the PyFluent backend.
 - Runs Python through an AST sandbox before it reaches the solver.
-- Optionally uses an LLM for ``codegen`` and ``clarify``.
 
 **Shutdown**
 
@@ -69,9 +68,8 @@ Package layout
    │   ├── common/               # Shared infrastructure
    │   │   ├── base.py           # FluidsLeafMCP
    │   │   ├── backend.py        # Backend ABC
-   │   │   ├── codegen.py        # CodegenPipeline
    │   │   ├── config.py         # FLUIDS_MCP_* env vars
-   │   │   ├── llm_wire.py       # Model-agnostic LLM transport
+   │   │   ├── network.py        # TLS and HTTP helpers
    │   │   └── validation.py     # AST sandbox
    │   └── solve/                # Fluent Solve MCP leaf
    │       ├── mcp/              # SolveMCP

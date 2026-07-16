@@ -14,24 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Composite Solve backend that always connects to PyFluent.
+"""Composite backend: deterministic PyFluent solver operations.
 
 The solve leaf requires a live PyFluent solver session for code execution
 and live-model introspection.  This composite backend ensures that PyFluent
 is **always** the execution engine, regardless of how the user initiates
-the connection.
+the connection. Semantic orchestration is intentionally left to the host
+application.
 
-``codegen``/``clarify`` raise :class:`BackendUnavailableError` so the
-:class:`CodegenPipeline` (or the LLM orchestrator) generates the code
-itself.  Hosted deployments that want a managed-service code generantion/execution
-path install the internal ``fluids_one_solve`` backend, which the leaf
-discovers via the ``ansys.fluent.mcp.solve_backends`` entry point. It is
-intentionally **not** part of this open-source package.
-
-Typical usage from an LLM client::
+Typical usage from an MCP client::
 
     connect()  # launches / attaches PyFluent
-    codegen("set inlet to 323 K")  # → LLM / CodegenPipeline
     run_code(code)  # → PyFluent (always)
 """
 
@@ -41,7 +34,6 @@ import logging
 from typing import Any, Optional
 
 from ansys.fluent.mcp.common.backend import Backend
-from ansys.fluent.mcp.common.errors import BackendUnavailableError
 from ansys.fluent.mcp.common.models import ConnectResult, RunCodeResult, SessionStatus
 from ansys.fluent.mcp.solve.backends.pyfluent import PyFluentBackend
 
@@ -49,13 +41,10 @@ logger = logging.getLogger("ansys.fluent.mcp.backends.solve_composite")
 
 
 class SolveCompositeBackend(Backend):
-    """Composite backend: PyFluent for execution; LLM pipeline for codegen.
+    """Composite backend that delegates deterministic operations to PyFluent.
 
     * **Execution & live context** are always handled by an in-process
       :class:`PyFluentBackend`.
-    * **Codegen & clarify** raise :class:`BackendUnavailableError` so the
-      :class:`CodegenPipeline` (or the LLM orchestrator) falls back to
-      its own generation strategy.
     """
 
     kind = "pyfluent"
@@ -224,7 +213,6 @@ class SolveCompositeBackend(Backend):
         """
         base = self._pyfluent.status(leaf)
         notes = list(base.notes)
-        notes.append("Codegen: LLM pipeline")
         return SessionStatus(
             leaf=leaf,
             connected=self.is_connected(),
@@ -233,63 +221,6 @@ class SolveCompositeBackend(Backend):
             endpoint=self._pyfluent.endpoint,
             capabilities=base.capabilities,
             notes=notes,
-        )
-
-    # ------------------------------------------------------------------
-    # Codegen / clarify → handled by the LLM / CodegenPipeline
-    # ------------------------------------------------------------------
-
-    async def codegen(
-        self,
-        prompt: str,
-        *,
-        session_id: Optional[str] = None,
-        context: Optional[dict[str, Any]] = None,
-    ):
-        """Generate code from the provided prompt.
-
-        Parameters
-        ----------
-        prompt : str
-            Natural-language request to process.
-        session_id : Optional[str]
-            Identifier for the conversation or tool session.
-        context : Optional[dict[str, Any]]
-            Additional context passed to the backend or pipeline.
-
-        Returns
-        -------
-        None
-            The function completes through its side effects.
-        """
-        raise BackendUnavailableError(
-            "Codegen is handled by the LLM pipeline for the PyFluent backend."
-        )
-
-    async def clarify(
-        self,
-        session_id: str,
-        clarification_id: str,
-        answer: str,
-    ):
-        """Apply a clarification answer to a pending code-generation session.
-
-        Parameters
-        ----------
-        session_id : str
-            Identifier for the conversation or tool session.
-        clarification_id : str
-            Identifier for the clarification.
-        answer : str
-            Answer text supplied for the pending clarification.
-
-        Returns
-        -------
-        None
-            The function completes through its side effects.
-        """
-        raise BackendUnavailableError(
-            "Clarify is handled by the LLM pipeline for the PyFluent backend."
         )
 
     # ------------------------------------------------------------------

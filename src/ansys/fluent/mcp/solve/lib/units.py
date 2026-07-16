@@ -14,15 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit- and quantity-aware parsing for natural-language Fluent values.
+"""Unit- and quantity-aware parsing for free-text Fluent values.
 
 PyFluent settings parameters generally accept either a bare numeric in
-the Fluent active unit-system or a ``(value, unit)`` tuple. LLM-generated
-code that ignores units is the single biggest source of silently-wrong
+the Fluent active unit-system or a ``(value, unit)`` tuple. Host-generated
+code that ignores units is a major source of silently-wrong
 boundary conditions ("set inlet to 50 C" landing as 50 K because the
 solver is in SI). This module extracts ``{value, unit, quantity}``
 hints from a free-form prompt so the orchestrator can pass them to the
-LLM as structured context. The grounding pass can then rewrite plain
+authoring host as structured context. The grounding pass can then rewrite plain
 numeric literals into ``(value, unit)`` tuples when the target API
 supports it.
 
@@ -302,11 +302,11 @@ def parse_quantities(text: str) -> list[Quantity]:
 
 
 def quantity_hints(text: str) -> list[dict[str, object]]:
-    """LLM-friendly serialization of every quantity in ``text``.
+    """Client-friendly serialization of every quantity in ``text``.
 
     Each hint contains the original literal, canonical unit,
     quantity classification, and value converted to Fluent's
-    default SI unit so the LLM can plug it straight into PyFluent.
+    default SI unit so callers can plug it straight into PyFluent.
 
     Parameters
     ----------

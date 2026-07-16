@@ -6,8 +6,8 @@ description: |
   case/mesh, inspect physics, change settings, run iterations, or
   query results — and the chat client is connected directly to the
   MCP (VS Code Copilot, Cursor, Claude Desktop). EXPOSES a 22-tool
-  surface: `session_status`, `connect`, `disconnect`, `codegen`,
-  `clarify`, `find_api`, `get_help`, `get_state`,
+  surface: `session_status`, `connect`, `disconnect`, `find_api`,
+  `get_help`, `get_state`,
   `get_targeted_context`, `list_named_objects`, `find_named_object`,
   `select_named_objects`, `summarize_setup`, `simulation_report`,
   `solver_status`, `run_code`, `validate_code`, `screenshot`,
@@ -22,8 +22,8 @@ description: |
 
 This skill targets the tool surface that `ansys-fluent-mcp` ships.
 The server gives you composable primitives — discovery, state read,
-code generation, sandboxed execution — and you build everything else
-by chaining them. It is **stateless**: each call stands alone, there
+schema discovery, validation, sandboxed execution — and you build
+everything else by chaining them. It is **stateless**: each call stands alone, there
 is no plan builder, journal, or undo.
 
 ## Tool roster (this is what you actually have)
@@ -35,8 +35,6 @@ is no plan builder, journal, or undo.
 | `disconnect` | Tear down the session. |
 | `solver_status` | Is the solver busy iterating? |
 | `manage_component(action)` | Activate / refresh the managed solver component. |
-| `codegen(code_request, context?)` | Natural-language → PyFluent Python (returns code, does NOT execute). |
-| `clarify(question, code_request, context?)` | One-shot ambiguity resolution for a prior `codegen`. |
 | `find_api(query, limit?, kind?)` | Lexical (or, if configured, semantic) search over the Fluent settings tree. Returns ranked paths + signatures. |
 | `get_help(path)` | Per-node help text. |
 | `get_state(path, projection?)` | Read any settings path. `path` is a STRING. |
@@ -66,15 +64,16 @@ For nearly every intent, the loop is:
 
 ```
 1. Discover    → find_api / get_help / list_named_objects / summarize_setup
-2. Generate    → codegen (intent → PyFluent code)
+2. Author      → your host or user supplies PyFluent settings-API Python
 3. Validate    → validate_code (offline AST check)
 4. Execute     → run_code (mutates the live solver)
 5. Verify      → get_state / summarize_setup / simulation_report
 ```
 
-`codegen` is your high-level lever — it already understands BCs,
-models, numerics, reports, multiphase, UTL etc. Use it FIRST for
-anything more complex than reading a single path.
+Intent-to-code translation is not part of this leaf.
+If a host wants to translate user intent into Python, it should do so
+outside this server, then pass the resulting Python through
+`validate_code` before calling `run_code`.
 
 ## Path roots (universal Fluent knowledge)
 
@@ -124,25 +123,19 @@ echo that string verbatim to the user.
 
 These engineering correlations and material lookups are **not on
 this server**. Ground the value yourself (textbook / handbook) and
-pass it straight into a `codegen` request rather than calling a
-non-existent tool.
+use it in host-authored Python rather than calling a non-existent
+tool.
 
 ### "Show me the current setup"
 
 `summarize_setup(scope='models')` or `summarize_setup(scope='bcs')`
-— don't dump the whole tree. Scoped output keeps the LLM context
+— don't dump the whole tree. Scoped output keeps client context
 small and the response on-topic.
 
 ### "Enable energy" / "set BC outlet to pressure-outlet" / "switch turbulence to k-ω SST"
 
-```
-codegen(code_request="enable energy and switch to k-omega SST")
-→ returns Python code
-validate_code(code=<returned code>)
-→ ok / errors
-run_code(code=<returned code>)
-→ mutates the live solver
-```
+Author PyFluent settings-API Python, validate it with `validate_code`,
+then execute it with `run_code`.
 
 Always show the generated code to the user before `run_code` — it
 mutates the solver immediately and there is **no undo** on this
@@ -193,7 +186,7 @@ run_code(code="solver.file.read_data(file_name=r'<path>')")
 
 ## Golden rules
 
-- **NEVER** emit `.tui.*` calls from `codegen` or `run_code`. Always
+- **NEVER** emit `.tui.*` calls from `run_code`. Always
   `solver.settings.*` / `solver.<root>.<path>...` (the settings API
   is what's available in 27.1).
 - `.list()` / `.list_properties()` are **void** — they print only.
@@ -219,9 +212,9 @@ run_code(code="solver.file.read_data(file_name=r'<path>')")
   dedicated `mesh_quality` tool instead (it returns the structured
   histograms directly and optionally wraps Fluent's `mesh.check()`).
 - Calling `run_code` with intent strings (it expects Python, not
-  natural language). Use `codegen` first to TRANSLATE intent →
-  code, then `run_code` to EXECUTE.
-- Skipping `validate_code` on `codegen` output for safety-critical
+  executable code). Translate intent outside this leaf, validate the
+  resulting Python, then execute it with `run_code`.
+- Skipping `validate_code` on host-authored Python for safety-critical
   operations (model toggles, BC writes, `file.write_*`).
 
 ## Planning, retries, and recovery — host responsibility

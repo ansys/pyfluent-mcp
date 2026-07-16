@@ -17,7 +17,7 @@
 r"""Docstring extractor for PyFluent's generated ``settings_<version>.py``.
 
 The bundled ``api_objects.json`` carries only ``(path, kind)`` tuples,
-which is fine for exact-path lookup but useless for natural-language
+which is fine for exact-path lookup but useless for free-text
 queries such as *"temperature of incoming gas"*. The relevant leaf is
 spelled ``velocity_inlet.thermal.t``, and the token ``t`` does not match
 any English word.
