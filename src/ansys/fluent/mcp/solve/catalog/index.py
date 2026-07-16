@@ -26,7 +26,7 @@ by orchestration:
   tokens and PyFluent class docstring tokens. (See
   :mod:`ansys.fluent.mcp.common.api_help`). Cheap, dependency free, and
   much stronger than the previous token-overlap scorer for
-    free-text queries. For example, "temperature of incoming gas" →
+  free-text queries. For example, "temperature of incoming gas" →
   ``velocity_inlet.thermal.t`` now works because the leaf class's
   docstring contains the word *temperature*.
 * :meth:`ApiIndex.lookup`: Exact dotted-path resolution.

@@ -47,7 +47,7 @@ Two cooperating capabilities:
 2. **Reverse routing** -- given ANY proposed path + a :class:`SolverMode`,
    say whether it is active and, if not, what the correct active sibling
    is. See :func:`reroute`. This is what lets the validator hard-block a
-    wrong-path write *before* Apply and hand clients a deterministic fix
+   wrong-path write *before* Apply and hand clients a deterministic fix
    instead of letting the executor silently skip the step.
 
 The module has NO dependency on the agent loop or live backend; it is pure,
