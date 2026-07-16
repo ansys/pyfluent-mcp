@@ -39,7 +39,7 @@ PyFluent-MCP includes several key components under the ``ansys.fluent.mcp`` name
 - **Tool surface**: Stateless tools for connection, discovery, execution,
   validation, and reporting.
 - **PyFluent backend**: In-process gRPC to a local or remote Fluent solver.
-- **Settings catalog**: Offline schema (~62k paths) plus optional semantic retriever.
+- **Settings catalog**: Offline schema (~62k paths) with local BM25-based search.
 - **AST sandbox**: Validates Python before it reaches the solver.
 
 PyFluent-MCP intentionally stays a deterministic substrate. It does not own

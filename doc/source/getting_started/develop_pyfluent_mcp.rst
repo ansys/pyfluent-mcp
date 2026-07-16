@@ -74,7 +74,7 @@ Package layout
    │   └── solve/                # Fluent Solve MCP leaf
    │       ├── mcp/              # SolveMCP
    │       ├── backends/         # PyFluent backend (+ plugins)
-   │       ├── catalog/          # Schema, index, retriever
+   │       ├── catalog/          # Schema and local API search
    │       ├── lib/              # Domain tools
    │       ├── data/             # settings_271.json.gz
    │       └── skills/           # MCP-host routing skill

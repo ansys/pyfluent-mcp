@@ -999,8 +999,7 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
             name="find_api",
             description=(
                 "Retrieve candidate Fluent settings APIs for a query "
-                "from the Fluent API vector database "
-                "(`fluent_api_collection`). Returns ranked hits as "
+                "from the bundled Fluent API catalog. Returns ranked hits as "
                 "{path, kind, score, ...}. Use this to locate the "
                 "dotted settings path that implements a property "
                 "(e.g. query 'temperature wall' returns "

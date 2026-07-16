@@ -527,11 +527,9 @@ class Backend(ABC):
     ) -> list[dict[str, Any]]:
         """Retrieve candidate Fluent settings APIs for ``query``.
 
-        Uses the configured :class:`ApiRetriever` (HTTP → Qdrant →
-        lexical fallback). The HTTP and Qdrant retrievers query the
-        ``fluent_api_collection`` vector database; the lexical
-        fallback is intentionally weaker and exists only so the MCP
-        keeps working without a vector DB.
+        Uses the configured lexical :class:`ApiRetriever`, which
+        performs BM25 ranking over the bundled Fluent API catalog
+        and PyFluent class docstrings.
 
         Returns a list of ``{path, kind, score, ...}`` hits.
         Backends may override to add live cross-checks (e.g. filter
