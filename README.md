@@ -58,7 +58,7 @@ You can use 20 tools exposed by the server:
 | Schema discovery | `find_api`, `get_help`, `get_state`, `get_targeted_context` |
 | Named objects | `list_named_objects`, `find_named_object`, `select_named_objects` |
 | Execution and validation | `run_code`, `validate_code` |
-| Reporting and inspection | `summarize_setup`, `simulation_report`, `screenshot`, `manage_component` |
+| Reporting and inspection | `summarize_setup`, `simulation_report`, `screenshot` |
 | Mesh/fields/compare | `mesh_quality`, `list_fields`, `compare_files` |
 
 ## Requirements

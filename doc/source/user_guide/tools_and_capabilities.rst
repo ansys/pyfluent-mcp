@@ -21,7 +21,7 @@ PyFluent-MCP exposes **22 tools** organized into 6 groups:
    * - Execution & validation
      - ``run_code``, ``validate_code``
    * - Reporting & inspection
-     - ``summarize_setup``, ``simulation_report``, ``screenshot``, ``manage_component``
+    - ``summarize_setup``, ``simulation_report``, ``screenshot``
    * - Domain tools
      - ``mesh_quality``, ``list_fields``, ``compare_files``
 

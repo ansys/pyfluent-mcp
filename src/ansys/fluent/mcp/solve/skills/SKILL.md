@@ -11,7 +11,7 @@ description: |
   `get_targeted_context`, `list_named_objects`, `find_named_object`,
   `select_named_objects`, `summarize_setup`, `simulation_report`,
   `solver_status`, `run_code`, `validate_code`, `screenshot`,
-  `manage_component`, `mesh_quality`, `list_fields`, `compare_files`.
+  `mesh_quality`, `list_fields`, `compare_files`.
   This is a STATELESS leaf: there is no plan/journal/rollback and no
   `propose_step` / `finalize` planning machinery — `run_code` mutates
   the live solver immediately. DO NOT USE FOR generic Python /
@@ -34,7 +34,6 @@ is no plan builder, journal, or undo.
 | `connect(ip?, port?, ...)` | Launch a local Fluent session or attach to a running one. |
 | `disconnect` | Tear down the session. |
 | `solver_status` | Is the solver busy iterating? |
-| `manage_component(action)` | Activate / refresh the managed solver component. |
 | `find_api(query, limit?, kind?)` | Lexical (or, if configured, semantic) search over the Fluent settings tree. Returns ranked paths + signatures. |
 | `get_help(path)` | Per-node help text. |
 | `get_state(path, projection?)` | Read any settings path. `path` is a STRING. |
