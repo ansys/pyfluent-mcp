@@ -170,9 +170,6 @@ def test_backend_default_methods_and_validation(monkeypatch):
         with pytest.raises(BackendUnavailableError):
             await call()
 
-    asyncio.run(raises_unavailable(lambda: backend.codegen("prompt")))
-    asyncio.run(raises_unavailable(lambda: backend.clarify("s", "c", "a")))
-    asyncio.run(raises_unavailable(lambda: backend.error_remediation("help")))
     asyncio.run(raises_unavailable(lambda: backend.get_state()))
     asyncio.run(raises_unavailable(lambda: backend.get_active_status(["x"])))
     asyncio.run(raises_unavailable(lambda: backend.get_allowed_values(["x"])))
@@ -609,7 +606,7 @@ def test_solve_composite_delegates_to_pyfluent(monkeypatch):
 
     status = backend.status("solve")
     assert status.backend == "Solve Test"
-    assert status.notes == ["base", "Codegen: LLM pipeline"]
+    assert status.notes == ["base"]
     assert asyncio.run(backend.list_named_objects()) == {"bc": ["inlet"]}
     assert asyncio.run(backend.find_named_object("inlet")) == [{"name": "inlet"}]
     assert asyncio.run(backend.get_state(["x"])) == {"paths": ["x"]}
@@ -628,11 +625,6 @@ def test_solve_composite_delegates_to_pyfluent(monkeypatch):
     assert asyncio.run(backend.run_code("print(1)", filename="cell.py")).return_value == "cell.py"
     assert asyncio.run(backend.validate_code("x = 1")).stdout == "x = 1"
     assert asyncio.run(backend.screenshot(view="front")) == {"view": "front"}
-
-    with pytest.raises(BackendUnavailableError):
-        asyncio.run(backend.codegen("prompt"))
-    with pytest.raises(BackendUnavailableError):
-        asyncio.run(backend.clarify("s", "c", "a"))
 
     backend.invalidate_cache()
     backend.invalidate_live_caches()

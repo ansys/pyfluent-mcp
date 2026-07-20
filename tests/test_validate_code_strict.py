@@ -106,7 +106,7 @@ def test_validate_code_rejects_completely_hallucinated_path():
 
 def test_validate_code_keeps_nearby_misspellings_as_warning():
     """A path whose leaf has a plausible near-match should stay as
-    a warning so the LLM can self-correct."""
+    a warning so the caller can self-correct."""
     backend = _make_backend()
     # ``material_name`` is the canonical typo for ``general.material``
     # under a fluid cell zone — the catalog index can resolve "material"

@@ -857,7 +857,7 @@ def _prune_inactive_children(node: Any, state: Any) -> Any:
     Group nodes. When present and successful, restrict the returned
     dict to active children only — inactive subtrees (e.g. species
     settings while the species model is off) carry default noise that
-    bloats the state payload and confuses the LLM.
+    bloats the state payload and confuses callers.
 
     Tolerates the known ``setup.models`` Scheme bug where the call
     raises ``RuntimeError``: on failure we return ``state`` unchanged.

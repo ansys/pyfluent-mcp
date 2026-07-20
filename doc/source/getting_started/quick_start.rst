@@ -65,11 +65,9 @@ Once Fluent is connected, the recommended loop for most setup tasks is:
 
 1. **Discover**: Use ``find_api``, ``get_state``, or ``list_named_objects`` to inspect
    the live settings tree.
-2. **Generate**: Use ``codegen`` to turn natural language into PyFluent Python. (The
-   code is returned but **not** executed.)
-3. **Validate**: Use ``validate_code`` to pre-check the snippet against the AST sandbox.
-4. **Execute**: Use ``run_code`` to apply the change to the live solver.
-5. **Verify**: Use ``summarize_setup`` or ``simulation_report`` to confirm the result.
+2. **Validate**: Use ``validate_code`` to pre-check Python snippets against the AST sandbox.
+3. **Execute**: Use ``run_code`` to apply the change to the live solver.
+4. **Verify**: Use ``summarize_setup`` or ``simulation_report`` to confirm the result.
 
 Use offline-only tools
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -78,7 +76,6 @@ You can use several tools **without** a live Fluent session:
 
 - ``find_api`` searches the bundled settings schema.
 - ``get_help`` returns per-path help text.
-- ``codegen`` / ``clarify`` generate PyFluent Python from natural language.
 - ``validate_code`` performs an AST pre-check only.
 
 Consider example use cases

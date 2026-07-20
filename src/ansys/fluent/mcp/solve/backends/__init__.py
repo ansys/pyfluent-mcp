@@ -18,7 +18,7 @@
 
 * :mod:`ansys.fluent.mcp.solve.backends.composite`: The
   :class:`SolveCompositeBackend`; PyFluent for execution and live
-  context, LLM pipeline for code generation.
+  context.
 * :mod:`ansys.fluent.mcp.solve.backends.pyfluent`: local in-process
   :class:`PyFluentBackend` over gRPC.
 * :mod:`ansys.fluent.mcp.solve.backends.introspection`: Fluent

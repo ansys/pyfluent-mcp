@@ -61,7 +61,7 @@ async def probe_path_impl(
     Returns ``{path: {exists, is_active, is_user_creatable, kind}}``
     in a single round-trip. Backends without a live session raise
     :class:`BackendUnavailableError`; the wrapper surfaces that as
-    a structured error so the LLM can pivot to ``get_state`` or
+    a structured error so callers can pivot to ``get_state`` or
     ``find_api`` without burning a turn.
 
     Parameters
@@ -100,7 +100,7 @@ async def probe_path_impl(
             "error_code": "backend_unavailable",
             "message": str(exc),
         }
-    except Exception as exc:  # noqa: BLE001 — backend probe must surface to LLM
+    except Exception as exc:  # noqa: BLE001 — backend probe must surface to callers
         return {
             "connected": True,
             "status": "error",
@@ -185,7 +185,7 @@ async def get_allowed_values_impl(
     ``setup.boundary_conditions.wall["foo"].thermal.thermal_condition``,
     discretization schemes, ...). Returns an empty list for paths
     that have no allowed-values constraint. Use BEFORE writing to
-    an enum field so the LLM can pick a value from the live set
+    an enum field so callers can pick a value from the live set
     instead of guessing.
 
     Parameters

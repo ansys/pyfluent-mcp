@@ -4,7 +4,7 @@ Installation
 Check prerequisites
 -------------------
 
-- Python 3.13 or later
+- Python 3.12 or later
 - A licensed local Ansys Fluent installation (to launch or attach a solver)
 - PyFluent_ (``ansys-fluent-core`` 0.27 or later) for live-session tools
 
@@ -29,9 +29,6 @@ Optional extras:
 
    # HDF5 file-probe support for compare_files on .h5/.cas.h5 files
    pip install "ansys-fluent-mcp[pyfluent,file-probe]"
-
-   # Native multi-provider LLM transport (OpenAI, Azure, Anthropic, Gemini)
-   pip install "ansys-fluent-mcp[pyfluent,providers]"
 
 Install from source
 -------------------

@@ -16,14 +16,14 @@
 
 """Shared string-matching utilities for fuzzy/typo-tolerant lookup.
 
-These helpers are used everywhere the agent has to reconcile an
-LLM-supplied identifier against a finite, authoritative set of known
+These helpers are used everywhere a caller has to reconcile a
+user-supplied identifier against a finite, authoritative set of known
 strings ( such as material names from the shipped Fluent database, allowed
 values of an enum-typed setting, NamedObject keys, dict-key schemas,
 and command kwargs).
 
 Keeping the implementation in one place avoids the trap hit
-historically: ``_check_value`` learned to tolerate the LLM's
+historically: ``_check_value`` learned to tolerate a host-provided
 ``"least-squares-cell-based"`` → ``"least-square-cell-based"`` typo
 while ``copy_material`` could not even resolve ``"water-vapour"`` →
 ``"water-vapor"``. Both are the same single-edit problem. Both should
@@ -125,7 +125,7 @@ def fuzzy_normalize(value: str, allowed: Iterable[str]) -> str | None:
 
 
 # Whitespace inside a NamedObject key is the most common Fluent-name
-# violation we see from natural-language intent (``"oil inlet"`` →
+# violation we see from free-text intent (``"oil inlet"`` →
 # Fluent rejects). Other illegal characters (``/``, ``\``, ``:``,
 # brackets, ...) appear far more rarely and conflating them into the
 # same auto-fix risks corrupting names the user intentionally typed,
@@ -150,7 +150,7 @@ def sanitize_named_object_key(
 
     The function is conservative. It ONLY rewrites whitespace.
     Other illegal characters (such as ``/``, ``\\``, ``:``, and brackets) are
-    rare in natural-language intent and are deliberately left alone
+    rare in free-text intent and are deliberately left alone
     so a deterministic rewrite never corrupts a name that the user
     intentionally typed. Fluent surfaces those at apply time.
 

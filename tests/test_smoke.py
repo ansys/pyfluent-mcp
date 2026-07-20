@@ -17,12 +17,11 @@
 """Smoke tests for the public ansys-fluent-mcp package.
 
 Offline-only: no live Fluent, no network. These guard the import surface,
-the bundled schema data, and the TLS / egress security defaults.
+the bundled schema data, and the TLS security defaults.
 """
 
 from __future__ import annotations
 
-import asyncio
 import importlib
 
 import pytest
@@ -36,7 +35,7 @@ def test_package_imports():
     None
         The function completes through its side effects.
     """
-    importlib.import_module("ansys.fluent.mcp.common.llm_wire")
+    importlib.import_module("ansys.fluent.mcp.common.network")
     importlib.import_module("ansys.fluent.mcp.solve.catalog.retriever")
 
 
@@ -83,11 +82,16 @@ def test_tls_verify_on_by_default(monkeypatch):
     None
         The function completes through its side effects.
     """
-    from ansys.fluent.mcp.common import llm_wire
+    from ansys.fluent.mcp.common.network import resolve_tls_verify
 
-    for var in ("LLM_TLS_INSECURE", "LLM_CA_BUNDLE", "SSL_CERT_FILE", "REQUESTS_CA_BUNDLE"):
+    for var in (
+        "FLUIDS_MCP_VERIFY_TLS",
+        "FLUIDS_MCP_CA_BUNDLE",
+        "SSL_CERT_FILE",
+        "REQUESTS_CA_BUNDLE",
+    ):
         monkeypatch.delenv(var, raising=False)
-    assert llm_wire.resolve_tls_verify() is True
+    assert resolve_tls_verify() is True
 
 
 def test_tls_ca_bundle_path(monkeypatch):
@@ -103,11 +107,11 @@ def test_tls_ca_bundle_path(monkeypatch):
     None
         The function completes through its side effects.
     """
-    from ansys.fluent.mcp.common import llm_wire
+    from ansys.fluent.mcp.common.network import resolve_tls_verify
 
-    monkeypatch.delenv("LLM_TLS_INSECURE", raising=False)
-    monkeypatch.setenv("LLM_CA_BUNDLE", "/etc/ssl/corp-ca.pem")
-    assert llm_wire.resolve_tls_verify() == "/etc/ssl/corp-ca.pem"
+    monkeypatch.delenv("FLUIDS_MCP_VERIFY_TLS", raising=False)
+    monkeypatch.setenv("FLUIDS_MCP_CA_BUNDLE", "/etc/ssl/corp-ca.pem")
+    assert resolve_tls_verify() == "/etc/ssl/corp-ca.pem"
 
 
 def test_tls_insecure_opt_out(monkeypatch):
@@ -123,56 +127,10 @@ def test_tls_insecure_opt_out(monkeypatch):
     None
         The function completes through its side effects.
     """
-    from ansys.fluent.mcp.common import llm_wire
+    from ansys.fluent.mcp.common.network import resolve_tls_verify
 
-    monkeypatch.setenv("LLM_TLS_INSECURE", "1")
-    assert llm_wire.resolve_tls_verify() is False
-
-
-# --- Egress guard (regression for the retriever offline fix) --------------
-
-
-def test_retriever_offline_kill_switch(monkeypatch):
-    """Verify that retriever offline kill switch.
-
-    Parameters
-    ----------
-    monkeypatch : Any
-        Pytest fixture used to patch environment variables or dependencies.
-
-    Returns
-    -------
-    None
-        The function completes through its side effects.
-    """
-    from ansys.fluent.mcp.solve.catalog.retriever import HttpApiRetriever
-
-    monkeypatch.setenv("FLUIDS_AGENT_OFFLINE", "1")
-    r = HttpApiRetriever("https://example.invalid/retrieve")
-    hits = asyncio.run(r.retrieve("inlet velocity"))
-    assert hits == []
-
-
-def test_retriever_host_allowlist(monkeypatch):
-    """Verify that retriever host allowlist.
-
-    Parameters
-    ----------
-    monkeypatch : Any
-        Pytest fixture used to patch environment variables or dependencies.
-
-    Returns
-    -------
-    None
-        The function completes through its side effects.
-    """
-    from ansys.fluent.mcp.solve.catalog.retriever import HttpApiRetriever
-
-    monkeypatch.delenv("FLUIDS_AGENT_OFFLINE", raising=False)
-    monkeypatch.setenv("FLUIDS_AGENT_ALLOWED_LLM_HOSTS", "allowed.internal")
-    r = HttpApiRetriever("https://blocked.example/retrieve")
-    hits = asyncio.run(r.retrieve("inlet velocity"))
-    assert hits == []
+    monkeypatch.setenv("FLUIDS_MCP_VERIFY_TLS", "false")
+    assert resolve_tls_verify() is False
 
 
 if __name__ == "__main__":  # pragma: no cover

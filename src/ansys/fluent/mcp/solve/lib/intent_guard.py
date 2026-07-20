@@ -25,7 +25,7 @@ expressions and materials).
 
 By design this module:
 
-* Contains **no LLM** and **no rule-pack DSL**. Only a fixed table
+* Contains no model orchestration and no rule-pack DSL. Only a fixed table
   of code shapes that have empirically crashed PyFluent/the gRPC
   channel during in-house sessions.
 * Is **opt-out** via ``FLUIDS_MCP_INTENT_GUARD=0`` so a host that

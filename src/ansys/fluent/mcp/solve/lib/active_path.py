@@ -47,7 +47,7 @@ Two cooperating capabilities:
 2. **Reverse routing** -- given ANY proposed path + a :class:`SolverMode`,
    say whether it is active and, if not, what the correct active sibling
    is. See :func:`reroute`. This is what lets the validator hard-block a
-   wrong-path write *before* Apply and hand the LLM a deterministic fix
+   wrong-path write *before* Apply and hand clients a deterministic fix
    instead of letting the executor silently skip the step.
 
 The module has NO dependency on the agent loop or live backend; it is pure,
@@ -102,6 +102,38 @@ def _norm_multiphase(value: Any) -> str | None:
     return s
 
 
+def _norm_radiation(value: Any) -> str | None:
+    """Normalize a radiation model value to None|'p1'|'do'|'s2s'|'mc'|'rosseland'|'solar'.
+
+    ``None`` means radiation is off — the "simplest" default. Mirrors the
+    off-value handling in :func:`_norm_multiphase` so a live ``none``/``off``
+    reads as no radiation model, matching ``_apply_step_to_mode`` on the
+    fluids-mcp side.
+    """
+    if value is None:
+        return None
+    s = str(value).strip().lower()
+    if s in ("", "off", "none", "no", "false"):
+        return None
+    # Separator-robust matching: fold ``_``/``-`` to spaces so the raw model
+    # string the plan simulator stores (``"discrete-ordinates"``) reads the
+    # same as the live-state value (``"discrete ordinates"``/``"do"``).
+    t = s.replace("_", " ").replace("-", " ")
+    if "rosseland" in t:
+        return "rosseland"
+    if "solar" in t:
+        return "solar"
+    if "monte" in t or t == "mc":
+        return "mc"
+    if "discrete ordinates" in t or t == "do":
+        return "do"
+    if "s2s" in t or "surface to surface" in t:
+        return "s2s"
+    if t in ("p1", "p 1"):
+        return "p1"
+    return s
+
+
 def _flag_truthy(value: Any) -> bool:
     if isinstance(value, bool):
         return value
@@ -140,6 +172,7 @@ class SolverMode:
     turbulence_model: str | None = None
     energy: bool = False
     nita: bool = False
+    radiation_model: str | None = None
 
     @property
     def coupled(self) -> bool:
@@ -217,6 +250,11 @@ class SolverMode:
             turbulence_model=_norm_str(st.get("setup.models.viscous.model")),
             energy=_flag_truthy(st.get("setup.models.energy.enabled")),
             nita=nita,
+            radiation_model=_norm_radiation(
+                st.get("setup.models.radiation.model")
+                if st.get("setup.models.radiation.model") is not None
+                else st.get("setup.models.radiation.rad_model")
+            ),
         )
 
     @classmethod
@@ -287,6 +325,8 @@ class SolverMode:
             ("setup/models/multiphase", "models"),
             ("setup/models/viscous", "model"),
             ("setup/models/energy", "enabled"),
+            ("setup/models/radiation", "model"),
+            ("setup/models/radiation", "rad_model"),
             (
                 "solution/methods/nita/nita-settings",
                 "set_velocity_and_vof_cutoffs",
@@ -331,7 +371,7 @@ def active_urf_family(mode: SolverMode) -> UrfFamily:
     return UrfFamily.SEGREGATED
 
 
-# Canonical equation tokens used internally. The natural-language /
+# Canonical equation tokens used internally. Free-text /
 # per-family spellings normalize onto these.
 _EQ_CANON: dict[str, str] = {
     "p": "pressure",
@@ -811,6 +851,51 @@ _METHODS_MODE_GATES: tuple[tuple[str, str, Any, str], ...] = (
         None,
         "high_speed_numerics is a density-based-solver knob (compressible / high-speed physics)",
     ),
+    # Pressure-based-only stabilizer. Density-based cases have no active
+    # high_order_term_relaxation (HOTR).
+    (
+        "solution.methods.high_order_term_relaxation",
+        "pressure_based",
+        None,
+        (
+            "high_order_term_relaxation (HOTR) is a pressure-based-solver "
+            "stabilizer; density-based cases have no active "
+            "high_order_term_relaxation"
+        ),
+    ),
+    # Model sub-selectors that live under ``setup.models.*`` rather than
+    # ``solution.methods.*`` but share the "active or the mode is wrong"
+    # semantics (no correct sibling — the leaf only exists under the
+    # matching parent model). Turbulence family sub-selectors:
+    (
+        "setup.models.viscous.k_omega_model",
+        "viscous_k_omega",
+        None,
+        (
+            "the k_omega_model sub-selector is only active when "
+            "setup.models.viscous.model is a k-omega variant"
+        ),
+    ),
+    (
+        "setup.models.viscous.k_epsilon_model",
+        "viscous_k_epsilon",
+        None,
+        (
+            "the k_epsilon_model sub-selector is only active when "
+            "setup.models.viscous.model is a k-epsilon variant"
+        ),
+    ),
+    # Radiation sub-branch controls are only active under the matching
+    # radiation model (e.g. discrete-ordinates energy iterations).
+    (
+        "setup.models.radiation.discrete_ordinates",
+        "radiation_do",
+        None,
+        (
+            "discrete_ordinates.* controls are only active when "
+            "setup.models.radiation.model is discrete-ordinates (DO)"
+        ),
+    ),
 )
 
 
@@ -822,8 +907,21 @@ def _methods_facet_active(mode: SolverMode, facet: str) -> bool:
         return mode.coupled
     if facet == "density_based":
         return mode.density_based
+    if facet == "pressure_based":
+        return not mode.density_based
     if facet == "transient":
         return mode.transient
+    if facet == "viscous_k_omega":
+        return "omega" in (mode.turbulence_model or "").lower()
+    if facet == "viscous_k_epsilon":
+        return "epsilon" in (mode.turbulence_model or "").lower()
+    if facet.startswith("radiation_"):
+        # ``radiation_do`` -> "do", ``radiation_p1`` -> "p1", etc. Normalize
+        # the mode value so this tolerates both the raw model string the plan
+        # simulator stores (``"discrete-ordinates"``) and the already-
+        # normalized live-state value (``"do"``).
+        want = facet.split("_", 1)[1]
+        return _norm_radiation(mode.radiation_model) == want
     # Unknown facet — never false-block.
     return True
 
@@ -940,7 +1038,7 @@ class WriteTarget:
 
     The three consumers of active-path knowledge (the validator's
     ``inactive_path`` diagnostic, the ``resolve_active_path`` tool
-    surfaced to the LLM, and the recipe URF stagers) historically
+    surfaced to clients, and the recipe URF stagers) historically
     each maintained their OWN version of the classify → reroute →
     fetch-alternate-path pipeline. That triplication is the reason
     the same live case could produce three DIFFERENT answers for
@@ -958,7 +1056,7 @@ class WriteTarget:
     * ``needs_reroute`` — True iff ``active_path != requested_path``.
     * ``group`` / ``active_family`` — for messaging and telemetry.
     * ``reason`` — short human-readable explanation suitable for a
-      validator diagnostic and the LLM-facing tool response.
+            validator diagnostic and the client-facing tool response.
     * ``classified`` — True iff the requested path was recognized
       as belonging to a known multi-path class. When False, the
       resolver is conservative: it returns ``needs_reroute=False``
@@ -1060,8 +1158,8 @@ def resolve_write_target(mode: SolverMode, path: str) -> WriteTarget:
 
 
 # ---------------------------------------------------------------------------
-# Mode summary + write-target hints (shared by codegen prefetch and the
-# agent-loop, so the LLM sees ONE deterministic answer for "what should
+# Mode summary + write-target hints (shared by authoring hosts and the
+# agent loop, so callers see one deterministic answer for "what should
 # a write to X look like under the current live mode".
 # ---------------------------------------------------------------------------
 
@@ -1111,8 +1209,8 @@ def describe_mode(mode: SolverMode) -> dict[str, Any]:
 def write_target_hints(mode: SolverMode) -> dict[str, Any]:
     """Return canonical write-target answers for the CURRENT ``mode``.
 
-    Emits a small dict that any authoring surface (codegen prefetch,
-    agent-loop system prompt, `describe_path` fallback) can turn into
+    Emits a small dict that any authoring surface (agent-loop system prompt,
+    `describe_path` fallback, external host preflight) can turn into
     a short "when you write X, use path Y" guide. Contains ONLY facts
     derivable from ``mode`` — no live tool calls, no schema probes.
 
@@ -1187,7 +1285,7 @@ def format_mode_summary(mode: SolverMode) -> str:
     Two lines: one for the mode identity, one for the write-target
     hints (URF family, BC namespace, run command, multiphase state).
     Deliberately compact — the full JSON summary is available via
-    :func:`describe_mode` and :func:`write_target_hints` when the LLM
+    :func:`describe_mode` and :func:`write_target_hints` when a caller
     needs to inspect it.
     """
     desc = describe_mode(mode)

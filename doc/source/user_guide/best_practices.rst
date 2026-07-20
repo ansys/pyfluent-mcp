@@ -22,7 +22,6 @@ For almost every non-trivial setup change:
 
 #. **Discover**: Use ``find_api``, ``get_state``, or ``list_named_objects`` before
    writing code.
-#. **Generate**: Use ``codegen`` to produce PyFluent Python. Review the output.
 #. **Validate**: Use ``validate_code`` to catch sandbox violations before execution.
 #. **Execute**: Use ``run_code`` to apply the change.
 #. **Verify**: Use ``summarize_setup`` or ``get_state`` to confirm the result.
@@ -90,7 +89,7 @@ Boundary condition setup
 #. ``connect`` and load case/mesh.
 #. ``list_named_objects("setup.boundary_conditions.velocity_inlet")`` lists inlets.
 #. ``get_state(["setup.boundary_conditions.velocity_inlet.inlet-1"]``) reads current values.
-#. ``codegen("set inlet-1 velocity to 10 m/s")`` → ``validate_code`` → ``run_code``.
+#. ``validate_code`` → ``run_code`` applies the desired settings update.
 #. ``summarize_setup(scope="boundaries")`` verifies the boundary setup.
 
 Convergence check
