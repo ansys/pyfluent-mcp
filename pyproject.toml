@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "ansys-fluent-mcp"
-version = "0.2.dev0"
+version = "0.2.0"
 description = "Model Context Protocol (MCP) server for ANSYS Fluent, built on PyFluent."
 readme = "README.md"
 requires-python = ">=3.12,<4"
