@@ -646,6 +646,14 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
             ),
             "tools": ["screenshot"],
         },
+        "error-handling": {
+            "description": ("Tools for diagnosing and remediating product-specific errors."),
+            "skill": (
+                "Use error_remediation when a product workflow returns a "
+                "structured failure that needs a recovery recommendation."
+            ),
+            "tools": ["error_remediation"],
+        },
         "component-lifecycle": {
             "description": (
                 "Tools for activating, deactivating, updating, and "
