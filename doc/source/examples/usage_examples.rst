@@ -3,8 +3,7 @@
 Usage examples
 ==============
 
-These examples show typical PyFluent-MCP workflows you can ask an AI assistant to
-perform once the MCP server is configured.
+These examples show typical MCP workflows once the server is configured.
 
 Load a case and summarize setup
 -------------------------------
@@ -44,11 +43,11 @@ Generate and apply a boundary condition change
 **Expected tool sequence:**
 
 #. ``list_named_objects("setup.boundary_conditions.velocity_inlet")`` confirms the name.
-#. ``get_state([...])`` reads current inlet settings.
-#. ``codegen("set inlet-1 velocity to 15 m/s")`` generates PyFluent code.
+#. ``get_state("setup.boundary_conditions.velocity_inlet")`` reads current inlet settings.
+#. Generate a PyFluent settings snippet in the external orchestration layer.
 #. ``validate_code`` pre-checks the snippet.
-#. ``run_code`` applies the change.
-#. ``get_state([...])`` verifies the new value.
+#. ``run_code`` applies the deterministic settings API calls.
+#. ``get_state("setup.boundary_conditions.velocity_inlet")`` verifies the new value.
 
 Perform offline API discovery
 -----------------------------
@@ -74,24 +73,6 @@ Compare two case files
 ``compare_files(path_a="baseline.cas.h5", path_b="modified.cas.h5")``
 
 Reply with the ``summary`` markdown table from the response verbatim.
-
-Configure an LLM for code generation
-------------------------------------
-
-Before using ``codegen``, configure an LLM provider in your MCP client environment:
-
-.. code-block:: bash
-
-   export OPENAI_API_KEY="<your-key>"
-   export LLM_PROVIDER="openai"
-   export LLM_MODEL="gpt-4o"
-
-Then ask:
-
-*"Generate PyFluent code to enable the energy equation."*
-
-The assistant should call ``codegen``, show you the generated code, and only execute
-after you confirm via ``validate_code`` and ``run_code``.
 
 Next steps
 ----------

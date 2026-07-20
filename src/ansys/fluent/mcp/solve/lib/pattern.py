@@ -22,7 +22,7 @@ and ``zone_assignment.passive_zone = "*bar*|*tabzone*"``). The solver itself
 expands these patterns at runtime. This module mirrors that contract on
 the *client* side to do the following:
 
-* Recognize a pattern in user-supplied/LLM-generated identifiers.
+* Recognize a pattern in user- or host-supplied identifiers.
 * Validate a pattern by checking that it matches at least one live name.
 * Enumerate matching names for batched (multi-edit) plan steps.
 

@@ -76,7 +76,7 @@ logger = logging.getLogger("ansys.fluent.mcp.common.file_handlers")
 # recognizes ``\`` as a separator. On POSIX, ``Path('C:\\foo')`` would
 # leave the backslashes literal — that's correct for filesystem ops on
 # Linux, but here we explicitly want to translate the Windows-flavored
-# string that the LLM may have produced (e.g. when the agent runs on
+# string that the authoring host may have produced (e.g. when the host runs on
 # Linux but the Fluent solver lives on a Windows fileshare reached via
 # a backslash UNC path).
 
@@ -154,7 +154,7 @@ class FileHandler:
     probe: Callable[[Path], FileProbe]
     build_launch_args: Callable[[str, FileProbe, dict[str, Any]], dict[str, Any]]
     component: str = "solve"  # "solve" | "meshing" | "geometry"
-    description: str = ""  # surfaced to the LLM
+    description: str = ""  # surfaced to clients
     # PyFluent settings method to call on load (under session.settings.file.*).
     # Defaults to "read_case" for the Fluent case/mesh family. Data files use
     # "read_data"; Workbench projects use "read_project" (routes to

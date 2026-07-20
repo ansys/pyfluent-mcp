@@ -30,9 +30,6 @@ Optional extras:
    # HDF5 file-probe support for compare_files on .h5/.cas.h5 files
    pip install "ansys-fluent-mcp[pyfluent,file-probe]"
 
-   # Native multi-provider LLM transport (OpenAI, Azure, Anthropic, Gemini)
-   pip install "ansys-fluent-mcp[pyfluent,providers]"
-
 Install from source
 -------------------
 

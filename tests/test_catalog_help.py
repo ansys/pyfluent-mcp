@@ -14,10 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import types
 
-import ansys.fluent
+from pathlib import Path
+
+import pytest
+
 from ansys.fluent.mcp.solve.catalog import help as catalog_help
 
 
@@ -104,9 +105,14 @@ def test_build_help_map_handles_missing_and_bad_inputs(monkeypatch, tmp_path):
         The function completes through its side effects.
     """
     monkeypatch.setenv("FLUIDS_MCP_CACHE_DIR", str(tmp_path / "cache"))
-    monkeypatch.setattr(catalog_help, "_resolve_settings_file", lambda: None)
 
-    assert catalog_help.build_help_map(settings_path=None, use_cache=False) == {}
+    def missing_settings_file():
+        raise FileNotFoundError("missing mandatory settings catalog")
+
+    monkeypatch.setattr(catalog_help, "_resolve_settings_file", missing_settings_file)
+
+    with pytest.raises(FileNotFoundError, match="mandatory settings catalog"):
+        catalog_help.build_help_map(settings_path=None, use_cache=False)
     assert catalog_help.build_help_map(settings_path=tmp_path / "missing.py", use_cache=False) == {}
 
     directory = tmp_path / "settings_dir.py"
@@ -137,9 +143,27 @@ def test_resolve_settings_file_and_default_cache(monkeypatch, tmp_path):
     older.write_text("", encoding="utf-8")
     newer.write_text("", encoding="utf-8")
 
-    fake_core = types.SimpleNamespace(__file__=str(package_dir / "__init__.py"))
-    monkeypatch.setitem(sys.modules, "ansys.fluent.core", fake_core)
-    monkeypatch.setattr(ansys.fluent, "core", fake_core, raising=False)
+    class FakePackagePath:
+        def __init__(self, dist_path, target):
+            self._dist_path = dist_path
+            self._target = target
+            self.parts = dist_path.parts
+
+        def __str__(self):
+            return self._dist_path.as_posix()
+
+        def locate(self):
+            return self._target
+
+    fake_files = [
+        FakePackagePath(Path("ansys/fluent/core/generated/solver/settings_270.py"), older),
+        FakePackagePath(Path("ansys/fluent/core/generated/solver/settings_271.py"), newer),
+        FakePackagePath(
+            Path("ansys/fluent/core/generated/meshing/settings_999.py"),
+            tmp_path / "ignored.py",
+        ),
+    ]
+    monkeypatch.setattr(catalog_help.metadata, "files", lambda name: fake_files)
 
     assert catalog_help._resolve_settings_file() == newer
 

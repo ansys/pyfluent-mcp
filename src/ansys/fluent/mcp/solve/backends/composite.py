@@ -14,24 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Composite Solve backend that always connects to PyFluent.
+"""Composite backend: deterministic PyFluent solver operations.
 
 The solve leaf requires a live PyFluent solver session for code execution
 and live-model introspection.  This composite backend ensures that PyFluent
 is **always** the execution engine, regardless of how the user initiates
-the connection.
+the connection. Semantic orchestration is intentionally left to the host
+application.
 
-``codegen``/``clarify`` raise :class:`BackendUnavailableError` so the
-:class:`CodegenPipeline` (or the LLM orchestrator) generates the code
-itself.  Hosted deployments that want a managed-service code generantion/execution
-path install the internal ``fluids_one_solve`` backend, which the leaf
-discovers via the ``ansys.fluent.mcp.solve_backends`` entry point. It is
-intentionally **not** part of this open-source package.
-
-Typical usage from an LLM client::
+Typical usage from an MCP client::
 
     connect()  # launches / attaches PyFluent
-    codegen("set inlet to 323 K")  # → LLM / CodegenPipeline
     run_code(code)  # → PyFluent (always)
 """
 
@@ -41,7 +34,6 @@ import logging
 from typing import Any, Optional
 
 from ansys.fluent.mcp.common.backend import Backend
-from ansys.fluent.mcp.common.errors import BackendUnavailableError
 from ansys.fluent.mcp.common.models import ConnectResult, RunCodeResult, SessionStatus
 from ansys.fluent.mcp.solve.backends.pyfluent import PyFluentBackend
 
@@ -49,13 +41,10 @@ logger = logging.getLogger("ansys.fluent.mcp.backends.solve_composite")
 
 
 class SolveCompositeBackend(Backend):
-    """Composite backend: PyFluent for execution; LLM pipeline for codegen.
+    """Composite backend that delegates deterministic operations to PyFluent.
 
     * **Execution & live context** are always handled by an in-process
       :class:`PyFluentBackend`.
-    * **Codegen & clarify** raise :class:`BackendUnavailableError` so the
-      :class:`CodegenPipeline` (or the LLM orchestrator) falls back to
-      its own generation strategy.
     """
 
     kind = "pyfluent"
@@ -224,7 +213,6 @@ class SolveCompositeBackend(Backend):
         """
         base = self._pyfluent.status(leaf)
         notes = list(base.notes)
-        notes.append("Codegen: LLM pipeline")
         return SessionStatus(
             leaf=leaf,
             connected=self.is_connected(),
@@ -233,63 +221,6 @@ class SolveCompositeBackend(Backend):
             endpoint=self._pyfluent.endpoint,
             capabilities=base.capabilities,
             notes=notes,
-        )
-
-    # ------------------------------------------------------------------
-    # Codegen / clarify → handled by the LLM / CodegenPipeline
-    # ------------------------------------------------------------------
-
-    async def codegen(
-        self,
-        prompt: str,
-        *,
-        session_id: Optional[str] = None,
-        context: Optional[dict[str, Any]] = None,
-    ):
-        """Generate code from the provided prompt.
-
-        Parameters
-        ----------
-        prompt : str
-            Natural-language request to process.
-        session_id : Optional[str]
-            Identifier for the conversation or tool session.
-        context : Optional[dict[str, Any]]
-            Additional context passed to the backend or pipeline.
-
-        Returns
-        -------
-        None
-            The function completes through its side effects.
-        """
-        raise BackendUnavailableError(
-            "Codegen is handled by the LLM pipeline for the PyFluent backend."
-        )
-
-    async def clarify(
-        self,
-        session_id: str,
-        clarification_id: str,
-        answer: str,
-    ):
-        """Apply a clarification answer to a pending code-generation session.
-
-        Parameters
-        ----------
-        session_id : str
-            Identifier for the conversation or tool session.
-        clarification_id : str
-            Identifier for the clarification.
-        answer : str
-            Answer text supplied for the pending clarification.
-
-        Returns
-        -------
-        None
-            The function completes through its side effects.
-        """
-        raise BackendUnavailableError(
-            "Clarify is handled by the LLM pipeline for the PyFluent backend."
         )
 
     # ------------------------------------------------------------------
@@ -424,6 +355,96 @@ class SolveCompositeBackend(Backend):
             Mapping containing the operation result.
         """
         return await self._pyfluent.get_help(path)
+
+    async def probe_path(self, paths: list[str]) -> dict[str, dict[str, Any]]:
+        """Return the ``{exists, is_active, is_user_creatable, kind}`` envelope.
+
+        Delegates to PyFluent so the executor / validator can pre-flight a
+        batch of mutating writes against the same live session that will run
+        them. The base ``Backend`` raises ``BackendUnavailableError``; without
+        this delegation the ``probe_path`` / ``describe_path`` tools are dead.
+
+        Parameters
+        ----------
+        paths : list[str]
+            Fluent object paths to pre-flight.
+
+        Returns
+        -------
+        dict[str, dict[str, Any]]
+            Mapping of path to its probe envelope.
+        """
+        return await self._pyfluent.probe_path(paths)
+
+    async def describe_named_object_template(self, path: str) -> dict[str, Any] | None:
+        """Describe the child field shape of a NamedObject collection.
+
+        Delegates to PyFluent's static-settings-class walk. The base
+        ``Backend`` returns ``None`` (rendering ``template: null``); this
+        delegation surfaces the real per-field template.
+
+        Parameters
+        ----------
+        path : str
+            NamedObject collection path to inspect.
+
+        Returns
+        -------
+        dict[str, Any] | None
+            Template mapping, or ``None`` when the path is not a NamedObject
+            collection.
+        """
+        return await self._pyfluent.describe_named_object_template(path)
+
+    async def get_command_arguments(self, path: str) -> dict[str, Any] | None:
+        """Return the keyword-argument signature of a command path.
+
+        Delegates to PyFluent so ``describe_path`` can fuse the create-command
+        signature into its unified descriptor.
+
+        Parameters
+        ----------
+        path : str
+            Command path to introspect.
+
+        Returns
+        -------
+        dict[str, Any] | None
+            Argument signature, or ``None`` when the path is not a command.
+        """
+        return await self._pyfluent.get_command_arguments(path)
+
+    async def list_fields(self, *, scope: str = "any") -> dict[str, Any] | None:
+        """Enumerate solver field / variable names for reports & post.
+
+        Delegates to PyFluent; the base ``Backend`` returns ``None`` and would
+        otherwise strand the ``list_fields`` tool and any report-def / graphics
+        recipe that validates a ``field`` argument against it.
+
+        Parameters
+        ----------
+        scope : str
+            Field-info scope hint (``"any"``, ``"cell"``, ``"node"``,
+            ``"surface"``).
+
+        Returns
+        -------
+        dict[str, Any] | None
+            Mapping containing the available field names, or ``None``.
+        """
+        return await self._pyfluent.list_fields(scope=scope)
+
+    async def mesh_adjacency_probe(
+        self,
+        cellzones: list[str],
+        *,
+        bc_filter: tuple[str, ...] | None = None,
+    ) -> dict[str, list[str]]:
+        """Return ``{cellzone -> [adjacent_face_zone_names]}`` from PyFluent."""
+        return await self._pyfluent.mesh_adjacency_probe(
+            cellzones,
+            bc_filter=bc_filter,
+        )
 
     async def solver_status(self) -> dict[str, Any]:
         """Return solver status information from the backend.

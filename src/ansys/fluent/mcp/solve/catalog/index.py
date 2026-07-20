@@ -16,11 +16,7 @@
 
 """Lexical fallback over the PyFluent API catalog (the default in practice).
 
-This module is the SOLE actively-running retriever in any deployment
-that does not set ``FLUIDS_MCP_API_RETRIEVER_URL`` or
-``FLUIDS_MCP_QDRANT_URL``, which is every default install. The HTTP and
-Qdrant retrievers in :mod:`ansys.fluent.mcp.common.api_retriever` are opt-in
-and normally dormant.
+This module is the SOLE actively-running retriever for every default install.
 
 It reads ``ansys/fluent/core/generated/api_tree/api_objects.json``
 (shipped with ``ansys-fluent-core``) and offers three operations used
@@ -30,7 +26,7 @@ by orchestration:
   tokens and PyFluent class docstring tokens. (See
   :mod:`ansys.fluent.mcp.common.api_help`). Cheap, dependency free, and
   much stronger than the previous token-overlap scorer for
-  natural-language queries. For example, "temperature of incoming gas" →
+  free-text queries. For example, "temperature of incoming gas" →
   ``velocity_inlet.thermal.t`` now works because the leaf class's
   docstring contains the word *temperature*.
 * :meth:`ApiIndex.lookup`: Exact dotted-path resolution.
@@ -485,7 +481,7 @@ def _parse_line(line: str, *, help_map: Optional[dict[str, str]] = None) -> Opti
     # is a text-command escape hatch (``solver.tui.*``) that bypasses
     # every settings-API guardrail (no schema, no allowed-values, no
     # apply-time resolve). Excluding it from the search index means
-    # the retriever can never surface a TUI path to the LLM, and the
+    # the retriever can never surface a TUI path to clients, and the
     # AST validator's runtime block becomes pure defense-in-depth.
     if norm == "tui" or norm.startswith("tui.") or ".tui." in norm or norm.endswith(".tui"):
         return None

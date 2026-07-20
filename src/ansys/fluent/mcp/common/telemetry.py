@@ -16,11 +16,11 @@
 
 """Telemetry hook.
 
-Centralized place to emit per-step events from the LLM tool-loop:
+Centralized place to emit per-step events from MCP host interactions:
 
-* ``tool_call``: Every tool the LLM invoked
-* ``llm_turn``: Every LLM round-trip
-* ``codegen_end``: Final outcome of a code generation request
+* ``tool_call``: Every tool invocation
+* ``host_turn``: Every host round-trip, when the caller reports one
+* ``validation_end``: Final outcome of a validation request
 
 Default implementation logs at INFO via :mod:`logging` in a structured
 JSON line so consumers (such as Application Insights and OpenTelemetry collectors)

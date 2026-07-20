@@ -25,7 +25,7 @@
   matching used by named-object resolution (also surfaced through
   :mod:`ansys.fluent.mcp.common.backend`).
 
-These modules carry no LLM, no agent-loop, and no Fluent connection
+These modules carry no model orchestration, no agent-loop, and no Fluent connection
 state. They are pure helpers that the MCP, the backends, and the
 agent layer all share.
 """

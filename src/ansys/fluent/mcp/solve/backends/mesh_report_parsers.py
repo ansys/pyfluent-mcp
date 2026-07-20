@@ -250,7 +250,7 @@ _RAW_HARD_CAP_CHARS: int = 2000
 # Patterns that match purely internal Scheme call traces. These lines
 # appear because PyFluent's settings-API wrapper enables verbose
 # scheme-eval tracing while invoking ``mesh.check``. They carry no
-# diagnostic value to the user/LLM and dwarf the actual mesh-check
+# diagnostic value to users or clients and dwarf the actual mesh-check
 # headline lines in size — dropping them keeps ``raw`` small enough to
 # fit alongside the structured fields in the tool envelope.
 _SCHEME_TRACE_LINE_PATTERNS: tuple[re.Pattern[str], ...] = (

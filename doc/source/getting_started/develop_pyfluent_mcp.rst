@@ -49,7 +49,6 @@ connection and the per-session REPL namespace used by ``run_code``.
 - Exposes 22 MCP tools for Fluent interaction.
 - Routes live operations through the PyFluent backend.
 - Runs Python through an AST sandbox before it reaches the solver.
-- Optionally uses an LLM for ``codegen`` and ``clarify``.
 
 **Shutdown**
 
@@ -69,14 +68,13 @@ Package layout
    │   ├── common/               # Shared infrastructure
    │   │   ├── base.py           # FluidsLeafMCP
    │   │   ├── backend.py        # Backend ABC
-   │   │   ├── codegen.py        # CodegenPipeline
    │   │   ├── config.py         # FLUIDS_MCP_* env vars
-   │   │   ├── llm_wire.py       # Model-agnostic LLM transport
+   │   │   ├── network.py        # TLS and HTTP helpers
    │   │   └── validation.py     # AST sandbox
    │   └── solve/                # Fluent Solve MCP leaf
    │       ├── mcp/              # SolveMCP
    │       ├── backends/         # PyFluent backend (+ plugins)
-   │       ├── catalog/          # Schema, index, retriever
+   │       ├── catalog/          # Schema and local API search
    │       ├── lib/              # Domain tools
    │       ├── data/             # settings_271.json.gz
    │       └── skills/           # MCP-host routing skill
@@ -183,8 +181,8 @@ Domain tools are stateless backend/catalog operations registered in
 
 For a full walkthrough, see :doc:`../examples/implementing_a_tool`.
 
-Install pluggable backends
-==========================
+Install external backends
+=========================
 
 You can install packages through the ``ansys.fluent.mcp.solve_backends`` entry-point
 group to provide additional execution backends. At construction time,

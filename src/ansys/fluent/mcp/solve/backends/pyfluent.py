@@ -375,7 +375,7 @@ def _strict_validation_enabled() -> bool:
 
     Set ``FLUIDS_MCP_STRICT_VALIDATION=1`` to promote near-match Fluent
     settings-path warnings to hard ``unknown_settings_path`` errors.
-    Default off — near-matches stay warnings so the LLM can autocorrect.
+    Default off — near-matches stay warnings so clients can autocorrect.
     """
     val = os.environ.get("FLUIDS_MCP_STRICT_VALIDATION")
     return val is not None and val.strip().lower() in {"1", "true", "yes", "on"}
@@ -475,7 +475,7 @@ _VALID_UI_MODES: frozenset[str] = frozenset(
     }
 )
 
-# Stock Fluent startup defaults when the user (or LLM) omits a field.
+# Stock Fluent startup defaults when the user or host omits a field.
 # Matches Fluent/PyFluent out-of-the-box behavior: serial CPU 3ddp solver.
 FLUENT_LAUNCH_DEFAULTS: dict[str, Any] = {
     "precision": "double",
@@ -2431,7 +2431,7 @@ class PyFluentBackend(Backend):
           (``'X' object has no attribute '_has_migration_adapter'``).
         * **Property leaf** — assignment, not call.
 
-        The LLM cannot tell which is which from the traceback alone.
+        A caller cannot tell which is which from the traceback alone.
         This helper inspects the user's source AST for ``Call`` nodes
         rooted at ``solver``/``session``, resolves each to a live
         settings node, and — when the failure pattern matches one of
@@ -2671,7 +2671,7 @@ class PyFluentBackend(Backend):
 
         # Strict sandbox: block arbitrary imports / top-level names
         # outside the injected `solver`/`session` and a small builtin
-        # whitelist. Catches the worst LLM hallucinations before exec.
+        # whitelist. Catches the worst host-authored invalid snippets before exec.
         # When a caller supplies a persistent namespace they are using
         # the REPL surface explicitly — bound names from prior cells
         # would otherwise be flagged as "unknown free name". We still
@@ -2766,7 +2766,7 @@ class PyFluentBackend(Backend):
             # Jupyter-style "auto-display": if the snippet's last
             # statement is an expression, evaluate it separately and
             # print its repr (when not None and stdout was empty for
-            # that line). Lets the LLM write `solver.setup.models.energy`
+            # that line). Lets callers write `solver.setup.models.energy`
             # without an explicit print and still see the value.
             try:
                 tree = ast.parse(code, filename=filename, mode="exec")
@@ -2817,7 +2817,7 @@ class PyFluentBackend(Backend):
                 explicit = local_ns.get("__return__")
                 stdout_payload = stdout.getvalue()
                 # Post-call hint for the well-known "list_materials only
-                # shows fluids" Fluent quirk. Without this the LLM sees
+                # shows fluids" Fluent quirk. Without this callers see
                 # a list with no solids and falsely concludes those
                 # materials are absent from the database.
                 if 'Listing "fluid" materials' in stdout_payload and ("list_materials" in code):
@@ -2839,7 +2839,7 @@ class PyFluentBackend(Backend):
                     stderr=stderr.getvalue(),
                     return_value=explicit if explicit is not None else auto_value,
                 )
-            except Exception as exc:  # surface to LLM
+            except Exception as exc:  # surface to callers
                 logger.exception("PyFluent run_code failed")
                 tb = traceback.format_exc(limit=8)
                 # Dead-channel detection: classify gRPC / channel-closed
@@ -2863,7 +2863,7 @@ class PyFluentBackend(Backend):
                 # Best-effort: when the failure looks like a Settings
                 # API call-shape mistake (positional arg on a Command,
                 # ``(...)`` on a NamedObject family, etc.), append the
-                # discovered argument signature so the LLM can fix it on
+                # discovered argument signature so the caller can fix it on
                 # the next attempt instead of hallucinating workarounds.
                 hint = self._diagnose_command_call_error(code, exc)
                 stderr_payload = stderr.getvalue() + "\n" + tb
@@ -3280,7 +3280,7 @@ class PyFluentBackend(Backend):
         """
         # ``strict=True`` enforces the AST import allow-list and
         # top-level Name allow-list (``solver`` / ``session`` /
-        # ``ansys.fluent.core`` only). It catches LLM-generated
+        # ``ansys.fluent.core`` only). It catches host-generated
         # snippets that import ``os`` / ``subprocess`` / hand-rolled
         # helpers that the sandbox would reject at run time.
         result = validate_python_source(code, strict=True)
@@ -3300,7 +3300,7 @@ class PyFluentBackend(Backend):
         # promoted from warnings to a structured ``unknown_settings_path``
         # error, because such tokens almost always signal a
         # hallucinated API call rather than a typo. Paths that have a
-        # plausible nearby match stay as warnings so the LLM can
+        # plausible nearby match stay as warnings so clients can
         # autocorrect without aborting the whole snippet.
         warnings: list[str] = []
         hallucinated: list[tuple[str, str]] = []

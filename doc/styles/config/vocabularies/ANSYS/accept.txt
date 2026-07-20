@@ -40,7 +40,6 @@ PyAnsys
 CFD
 APIs
 Courant
-LiteLLM
 OpenAI
 Pluggable
 Stdout
