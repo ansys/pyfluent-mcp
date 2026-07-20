@@ -50,6 +50,7 @@ overlap the query. The docstring evidence is additive, not decisive.
 from __future__ import annotations
 
 import hashlib
+from importlib import metadata
 import json
 import logging
 import os
@@ -97,28 +98,31 @@ def _cache_dir() -> Path:
     return base
 
 
-def _resolve_settings_file() -> Optional[Path]:
+def _resolve_settings_file() -> Path:
     """Locate PyFluent's most-recent generated ``settings_<vers>.py``.
 
     Picks the highest version present so that, if a newer Fluent is
-    installed alongside, we index its catalog. Returns ``None`` when
-    PyFluent is not importable (fully offline / unit-test only).
+    installed alongside, we index its catalog. ``ansys-fluent-core`` is
+    a required dependency, so a missing distribution is allowed to fail
+    fast via ``importlib.metadata``.
 
     Returns
     -------
-    Optional[Path]
+    Path
         Result produced by the function.
     """
-    try:
-        import ansys.fluent.core as fluent_pkg  # type: ignore
-    except ImportError:
-        return None
-    gen_dir = Path(fluent_pkg.__file__).parent / "generated" / "solver"
-    if not gen_dir.is_dir():
-        return None
-    candidates = sorted(gen_dir.glob("settings_*.py"))
+    package_files = metadata.files("ansys-fluent-core") or ()
+    candidates = sorted(
+        Path(path.locate())
+        for path in package_files
+        if re.search(r"(?:^|[\\/])settings_\d+\.py$", str(path))
+        and "generated" in path.parts
+        and "solver" in path.parts
+    )
     if not candidates:
-        return None
+        raise FileNotFoundError(
+            "ansys-fluent-core must include generated solver settings_*.py files."
+        )
     return candidates[-1]
 
 
@@ -176,7 +180,7 @@ def build_help_map(
         Mapping containing the operation result.
     """
     path = settings_path or _resolve_settings_file()
-    if path is None or not path.is_file():
+    if not path.is_file():
         return {}
     try:
         stat = path.stat()

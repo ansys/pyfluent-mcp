@@ -41,7 +41,6 @@ _KNOWN_ENV_VARS: frozenset[str] = frozenset(
         "FLUIDS_MCP_VERIFY_TLS",
         "FLUIDS_MCP_API_OBJECTS_PATH",
         "FLUIDS_MCP_CACHE_DIR",
-        "FLUIDS_MCP_MAX_STEPS",
         "FLUIDS_MCP_CA_BUNDLE",
         "FLUIDS_MCP_LOG_LEVEL",
         "FLUIDS_MCP_SESSION_LOGS",
@@ -60,7 +59,6 @@ class FluidsMCPConfig:
     http_timeout: float = 300.0
     verify_tls: bool = True
     api_objects_path: Optional[str] = None
-    max_steps: int = 30
     log_level: str = "INFO"
     warnings: tuple[str, ...] = field(default_factory=tuple)
 
@@ -122,32 +120,6 @@ def _parse_float(name: str, raw: str, *, minimum: float = 0.0) -> float:
     return v
 
 
-def _parse_int(name: str, raw: str, *, minimum: int = 1) -> int:
-    """Parse an integer configuration value from text.
-
-    Parameters
-    ----------
-    name : str
-        Name of the object, module, or setting being processed.
-    raw : str
-        Raw string value to parse or validate.
-    minimum : int
-        Lowest accepted numeric value.
-
-    Returns
-    -------
-    int
-        Parsed integer value.
-    """
-    try:
-        v = int(raw)
-    except ValueError as exc:
-        raise ConfigError(f"{name}={raw!r} is not a valid integer.") from exc
-    if v < minimum:
-        raise ConfigError(f"{name}={raw!r} must be >= {minimum}.")
-    return v
-
-
 def load_config(env: Optional[dict[str, str]] = None) -> FluidsMCPConfig:
     """Read and validate every recognized environment variable.
 
@@ -190,11 +162,6 @@ def load_config(env: Optional[dict[str, str]] = None) -> FluidsMCPConfig:
             "verify server certificates. Use only on trusted networks."
         )
 
-    max_steps = 30
-    raw = src.get("FLUIDS_MCP_MAX_STEPS")
-    if raw:
-        max_steps = _parse_int("FLUIDS_MCP_MAX_STEPS", raw, minimum=1)
-
     log_level = src.get("FLUIDS_MCP_LOG_LEVEL", "INFO").upper()
     if log_level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
         raise ConfigError(
@@ -205,7 +172,6 @@ def load_config(env: Optional[dict[str, str]] = None) -> FluidsMCPConfig:
         http_timeout=http_timeout,
         verify_tls=verify_tls,
         api_objects_path=src.get("FLUIDS_MCP_API_OBJECTS_PATH"),
-        max_steps=max_steps,
         log_level=log_level,
         warnings=tuple(warnings),
     )

@@ -31,7 +31,6 @@ def test_load_config_uses_defaults_for_empty_env():
 
     assert config.http_timeout == 300.0
     assert config.verify_tls is True
-    assert config.max_steps == 30
     assert config.log_level == "INFO"
     assert config.warnings == ()
 
@@ -48,14 +47,12 @@ def test_load_config_reads_known_environment_values():
         {
             "FLUIDS_MCP_HTTP_TIMEOUT": "12.5",
             "FLUIDS_MCP_VERIFY_TLS": "off",
-            "FLUIDS_MCP_MAX_STEPS": "4",
             "FLUIDS_MCP_LOG_LEVEL": "debug",
         }
     )
 
     assert config.http_timeout == 12.5
     assert config.verify_tls is False
-    assert config.max_steps == 4
     assert config.log_level == "DEBUG"
     assert any("VERIFY_TLS is disabled" in warning for warning in config.warnings)
 
@@ -74,12 +71,25 @@ def test_load_config_warns_for_unknown_fluids_mcp_variable():
     assert "FLUIDS_MCP_QRDANT_URL" in config.warnings[0]
 
 
+def test_load_config_warns_for_agent_owned_max_steps_variables():
+    """Verify that agent-owned step caps are not pyfluent-mcp config."""
+    config = load_config(
+        {
+            "FLUIDS_MCP_LLM_MAX_STEPS": "4",
+            "FLUIDS_MCP_MAX_STEPS": "4",
+        }
+    )
+
+    assert len(config.warnings) == 2
+    assert "FLUIDS_MCP_LLM_MAX_STEPS" in config.warnings[0]
+    assert "FLUIDS_MCP_MAX_STEPS" in config.warnings[1]
+
+
 @pytest.mark.parametrize(
     ("env", "message"),
     [
         ({"FLUIDS_MCP_VERIFY_TLS": "maybe"}, "valid boolean"),
         ({"FLUIDS_MCP_HTTP_TIMEOUT": "0"}, "must be >"),
-        ({"FLUIDS_MCP_MAX_STEPS": "0"}, "must be >="),
         ({"FLUIDS_MCP_LOG_LEVEL": "trace"}, "must be one of"),
     ],
 )
@@ -110,4 +120,4 @@ def test_validate_config_returns_loaded_config():
     None
         The function completes through its side effects.
     """
-    assert validate_config({"FLUIDS_MCP_MAX_STEPS": "2"}).max_steps == 2
+    assert validate_config({"FLUIDS_MCP_HTTP_TIMEOUT": "2"}).http_timeout == 2.0
