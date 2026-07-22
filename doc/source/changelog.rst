@@ -9,6 +9,44 @@ This section contains the release notes for PyFluent-MCP.
 
 .. towncrier release notes start
 
+`0.2.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.2.0>`_ - July 20, 2026
+====================================================================================
+
+.. tab-set::
+
+
+  .. tab-item:: Added
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Guard _import_litellm against the tokenizers
+          - `#9 <https://github.com/ansys/pyfluent-mcp/pull/9>`_
+
+        * - Unified LLM provider configuration, transport diagnostics, and validator/active-path hardening
+          - `#13 <https://github.com/ansys/pyfluent-mcp/pull/13>`_
+
+        * - Python version support according to PyAnsys guidelines
+          - `#14 <https://github.com/ansys/pyfluent-mcp/pull/14>`_
+
+        * - Skip allowed_values() on inactive command arguments to avoid Scheme \"object is not active\" transcript spam
+          - `#18 <https://github.com/ansys/pyfluent-mcp/pull/18>`_
+
+        * - Slim the Fluent MCP leaf - remove in-server LLM codegen, normalize the tool surface
+          - `#19 <https://github.com/ansys/pyfluent-mcp/pull/19>`_
+
+
+  .. tab-item:: Maintenance
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Update CHANGELOG for v0.1.0
+          - `#12 <https://github.com/ansys/pyfluent-mcp/pull/12>`_
+
+
 `0.1.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.1.0>`_ - July 10, 2026
 ====================================================================================
 
