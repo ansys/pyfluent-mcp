@@ -1,0 +1,229 @@
+
+
+
+
+
+
+:class:`ApiIndex`
+=================
+
+
+.. py:class:: ansys.fluent.mcp.solve.catalog.index.ApiIndex(*, custom_path: Optional[str] = None, sessions: Iterable[str] = ('solver_session', ), help_map: Optional[dict[str, str]] = None)
+
+   
+   Lightweight searchable index over PyFluent's ``api_objects.json``.
+
+   Thread-safe lazy load. Subclass / replace via ``custom_path`` for tests.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: ApiIndex
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~lookup`
+            - Return the exact lookup.
+          * - :py:attr:`~children_of`
+            - Return immediate children of ``path``.
+          * - :py:attr:`~search`
+            - Token-overlap scoring against the API path tokens.
+
+
+   .. tab-item:: Properties
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~available`
+            - Return whether the catalog index is available.
+
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.catalog.index import ApiIndex
+
+Property detail
+---------------
+
+.. py:property:: available
+   :type: bool
+
+
+   
+   Return whether the catalog index is available.
+
+
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>`
+           Boolean result of the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+
+Method detail
+-------------
+
+.. py:method:: lookup(path: str) -> Optional[ApiEntry]
+
+   
+   Return the exact lookup.
+
+   ``path`` is the dotted path **without** the session prefix and
+   without ``["<name>"]`` instance keys.
+
+   :Parameters:
+
+       **path** : :class:`python:str`
+           Fluent object path or file-system path to inspect.
+
+
+
+   :Returns:
+
+       :obj:`Optional`\[:obj:`ApiEntry`]
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: children_of(path: str, *, max_results: int = 50) -> list[ApiEntry]
+
+   
+   Return immediate children of ``path``.
+
+   This refers to entries whose path begins with ``path.`` and has no further dots.
+
+   :Parameters:
+
+       **path** : :class:`python:str`
+           Fluent object path or file-system path to inspect.
+
+       **max_results** : :class:`python:int`
+           Max results to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:obj:`ApiEntry`]
+           Collection containing the operation results.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: search(query: str, *, top_k: int = 10, kinds: Optional[Iterable[str]] = None, under: Optional[str] = None) -> list[ApiSearchHit]
+
+   
+   Token-overlap scoring against the API path tokens.
+
+
+   :Parameters:
+
+       **query**
+           User question or property hint (e.g. ``"temperature inlet"``).
+
+       **top_k**
+           Maximum number of hits to return.
+
+       **kinds**
+           Optional set of kinds to keep (``"Parameter"``, ``"Command"`` ...).
+
+       **under**
+           Optional path prefix; restricts the search to entries below it.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:obj:`ApiSearchHit`]
+           Collection containing the operation results.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+

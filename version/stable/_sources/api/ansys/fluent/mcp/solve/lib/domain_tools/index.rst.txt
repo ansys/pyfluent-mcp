@@ -1,0 +1,137 @@
+
+
+
+
+
+
+The ``domain_tools.py`` module
+==============================
+
+.. py:module:: ansys.fluent.mcp.solve.lib.domain_tools
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: domain_tools
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~get_solve_domain_tools`
+            - Return the canonical solve-leaf domain-tool catalog.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Solve-leaf domain tools (canonical catalog).
+
+A *domain tool* is a stateless backend/catalog operation that has
+no dependency on a plan builder, journal, learned constraints, or
+recipe registry. (Those belong to the higher-level agent product that
+consumes this leaf over MCP, not here.)
+
+Each entry is a typed async function plus a name/description::
+
+    DomainTool(
+        spec=DomainToolSpec(name="mesh_quality", description="..."),
+        handler=mesh_quality_impl,
+    )
+
+The handler signature looks like this::
+
+    async def <name>_impl(
+        backend: Backend,
+        *,
+        arg1: T1,
+        arg2: T2 | None = None,
+    ) -> dict[str, Any]: ...
+
+:meth:`FluidsLeafMCP._register_one_domain_tool` synthesizes a wrapper
+whose ``inspect.Signature`` mirrors the handler minus the leading
+``backend`` parameter so that FastMCP can extract the JSON input schema
+from the wrapper.
+
+To add a tool, write a typed ``<name>_impl`` coroutine in
+``ansys.fluent.mcp.solve.lib.<area>.py`` and append a
+:class:`DomainTool` entry to :func:`get_solve_domain_tools`. No
+leaf-side changes are needed. ``SolveMCP._register_tools`` already
+registers everything this function returns.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: get_solve_domain_tools() -> list[ansys.fluent.mcp.common.domain_tools.DomainTool]
+
+   
+   Return the canonical solve-leaf domain-tool catalog.
+
+   The :meth:`FluidsLeafMCP._register_domain_tools` helper consumes
+   this list and binds each entry to ``self.tool`` with a
+   signature-preserving wrapper.
+
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:obj:`DomainTool`]
+           Collection containing the operation results.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

@@ -1,0 +1,70 @@
+
+
+
+
+
+
+The ``skills`` package
+==========================
+
+.. py:module:: ansys.fluent.mcp.solve.skills
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+
+Routing skill for the standalone ``ansys-fluent-mcp`` server.
+
+This package ships ``SKILL.md``, which targets the **MCP-exposed tool surface**.
+The 22 tools and external host (such as VS Code Copilot, Cursor, or Claude
+Desktop) sees over STDIO/HTTP. It is consumed by MCP clients that
+support agent skills/rules.
+
+DO NOT add Python code here. Keeping ``skills/`` empty of imports
+keeps this folder shippable from the MCP-only package without pulling
+in any heavier dependencies.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+

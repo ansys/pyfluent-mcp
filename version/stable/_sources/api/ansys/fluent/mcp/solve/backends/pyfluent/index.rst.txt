@@ -1,0 +1,221 @@
+
+
+
+
+
+
+The ``pyfluent.py`` module
+==========================
+
+.. py:module:: ansys.fluent.mcp.solve.backends.pyfluent
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: pyfluent
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.backends.pyfluent.PyFluentBackend`
+            - Persistent PyFluent Solver session.
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~resolve_fluent_launch_config`
+            - Merge caller overrides with stock launch defaults.
+
+
+
+    .. tab-item:: Attributes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~logger`
+            - 
+
+
+
+    .. tab-item:: Constants
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~FLUENT_LAUNCH_DEFAULTS`
+            - 
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> PyFluentBackend</api/ansys/fluent/mcp/solve/backends/pyfluent/PyFluentBackend>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+PyFluent backend for the Solve leaf.
+
+Holds a persistent ``ansys.fluent.core.Solver`` session. All live-context
+work delegates to :mod:`ansys.fluent.mcp.common.introspection` so the logic is
+*generic* and *caller-driven*. There is no hardcoded list of named-object
+collections. This matches the behavior of the legacy
+``/fluent_get_targeted_context`` endpoint in ``aali-flowkit-python``.
+
+PyFluent is an optional dependency. Install with this command::
+
+    pip install ansys-fluent-mcp[pyfluent]
+
+If Pyfluent is not importable, ``connect()`` returns a typed error instead
+of raising at import time.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: resolve_fluent_launch_config(*, precision: str = FLUENT_LAUNCH_DEFAULTS['precision'], processor_count: int = FLUENT_LAUNCH_DEFAULTS['processor_count'], ui_mode: str = FLUENT_LAUNCH_DEFAULTS['ui_mode'], product_version: Optional[str] = None, dimension: Optional[int | str] = None, mode: Optional[str] = None, gpu: Optional[bool | list[int] | str] = None, journal_file_names: Optional[str | list[str]] = None, case_file_name: Optional[str] = None, case_data_file_name: Optional[str] = None, cwd: Optional[str] = None, fluent_path: Optional[str] = None, env: Optional[dict[str, Any]] = None, graphics_driver: Optional[str] = None, scheduler_options: Optional[dict[str, Any]] = None, start_timeout: Optional[int] = None, cleanup_on_exit: Optional[bool] = None, additional_arguments: Optional[str] = None) -> dict[str, Any]
+
+   
+   Merge caller overrides with stock launch defaults.
+
+   Returns the *effective* configuration. What is actually launched
+   with is echoed back to the user. Only keys the caller explicitly
+   set (or that have non-``None`` defaults) appear. ``gpu`` stays absent
+   for CPU unless the user opted in.
+
+   :Parameters:
+
+       **precision** : :class:`python:str`
+           Precision to supply to the function.
+
+       **processor_count** : :class:`python:int`
+           Processor count to supply to the function.
+
+       **ui_mode** : :class:`python:str`
+           Ui mode to supply to the function.
+
+       **product_version** : :obj:`Optional`\[:class:`python:str`]
+           Product version to supply to the function.
+
+       **dimension** : :obj:`Optional`\[:class:`python:int` | :class:`python:str`]
+           Dimension to supply to the function.
+
+       **mode** : :obj:`Optional`\[:class:`python:str`]
+           Mode to supply to the function.
+
+       **gpu** : :obj:`Optional`\[:ref:`bool <python:bltin-boolean-values>` | :class:`python:list`\[:class:`python:int`] | :class:`python:str`]
+           GPU to supply to the function.
+
+       **journal_file_names** : :obj:`Optional`\[:class:`python:str` | :class:`python:list`\[:class:`python:str`]]
+           Journal file names to supply to the function.
+
+       **case_file_name** : :obj:`Optional`\[:class:`python:str`]
+           Case file name to supply to the function.
+
+       **case_data_file_name** : :obj:`Optional`\[:class:`python:str`]
+           Case data file name to supply to the function.
+
+       **cwd** : :obj:`Optional`\[:class:`python:str`]
+           Command to supply to the function.
+
+       **fluent_path** : :obj:`Optional`\[:class:`python:str`]
+           Fluent path to supply to the function.
+
+       **env** : :obj:`Optional`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Environment mapping to read instead of the process environment.
+
+       **graphics_driver** : :obj:`Optional`\[:class:`python:str`]
+           Graphics driver to supply to the function.
+
+       **scheduler_options** : :obj:`Optional`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Scheduler options to supply to the function.
+
+       **start_timeout** : :obj:`Optional`\[:class:`python:int`]
+           Start timeout to supply to the function.
+
+       **cleanup_on_exit** : :obj:`Optional`\[:ref:`bool <python:bltin-boolean-values>`]
+           Cleanup on exit to supply to the function.
+
+       **additional_arguments** : :obj:`Optional`\[:class:`python:str`]
+           Additional arguments to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: FLUENT_LAUNCH_DEFAULTS
+   :type:  dict[str, Any]
+
+.. py:data:: logger
+
+
+

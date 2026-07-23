@@ -1,0 +1,139 @@
+
+
+
+
+
+
+:class:`LexicalApiRetriever`
+============================
+
+
+.. py:class:: ansys.fluent.mcp.solve.catalog.retriever.LexicalApiRetriever(index: Optional[ansys.fluent.mcp.solve.catalog.index.ApiIndex] = None)
+
+   Bases: :py:obj:`ApiRetriever`
+
+
+   
+   Thin async adapter over :class:`ApiIndex.search`.
+
+   Carries no scoring logic of its own — the BM25 ranker, substring
+   bonus and depth penalty all live in
+   :mod:`ansys.fluent.mcp.common.api_index`.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: LexicalApiRetriever
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~retrieve`
+            - Retrieve API hits that match the query and filters.
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~name`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.catalog.retriever import LexicalApiRetriever
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: name
+   :value: 'lexical'
+
+
+
+
+Method detail
+-------------
+
+.. py:method:: retrieve(query: str, *, top_k: int = 10, kinds: Optional[Sequence[str]] = None, under: Optional[str] = None) -> list[ApiHit]
+   :async:
+
+
+   
+   Retrieve API hits that match the query and filters.
+
+
+   :Parameters:
+
+       **query** : :class:`python:str`
+           Search text or user request to evaluate.
+
+       **top_k** : :class:`python:int`
+           Maximum number of results to return.
+
+       **kinds** : :obj:`Optional`\[:obj:`Sequence`\[:class:`python:str`]]
+           Optional result kinds used to narrow the operation.
+
+       **under** : :obj:`Optional`\[:class:`python:str`]
+           Optional path prefix used to scope the operation.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:obj:`ApiHit`]
+           List of results produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+

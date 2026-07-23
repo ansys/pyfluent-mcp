@@ -1,0 +1,177 @@
+
+
+
+
+
+
+The ``common`` package
+==========================
+
+.. py:module:: ansys.fluent.mcp.common
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: common
+.. tab-set::
+
+
+    .. tab-item:: Submodules
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.activity_logging`
+            - Helpers for compact, redaction-safe logging of tool calls and live session interactions.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.backend`
+            - Backend abstraction.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.backend_trace`
+            - Diagnostic tracer for backend state-query calls.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.base`
+            - Base MCP server for a Fluids leaf (geometry/mesh/solve/post).
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.codegen`
+            - Pluggable code generation pipeline.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.config`
+            - Centralized environment-variable configuration for PyFluent MPP.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.conversation`
+            - In-memory conversation/clarification store with TTL.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.domain_tools`
+            - Domain-tool registration framework.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.errors`
+            - Helper module to handle errors.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.file_handlers`
+            - Modular registry mapping file suffixes to product/component handlers.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.llm_wire`
+            - Model-agnostic wire-format core for OpenAI-compatible LLM endpoints.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.models`
+            - Typed contracts shared by every Fluids MCP leaf.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.path_descriptor`
+            - Unified discovery envelope for Fluent settings paths.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.session_logging`
+            - Per-session debug logging for PyFluent-MCP.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.telemetry`
+            - Telemetry hook.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.text_match`
+            - Shared string-matching utilities for fuzzy/typo-tolerant lookup.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.timings`
+            - Lightweight in-process latency collector for the gateway.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.validation`
+            - Static code validation shared across backends.
+
+
+
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-fa-file"></span> activity_logging</api/ansys/fluent/mcp/common/activity_logging/index>
+    <span class="nf nf-fa-file"></span> backend</api/ansys/fluent/mcp/common/backend/index>
+    <span class="nf nf-fa-file"></span> backend_trace</api/ansys/fluent/mcp/common/backend_trace/index>
+    <span class="nf nf-fa-file"></span> base</api/ansys/fluent/mcp/common/base/index>
+    <span class="nf nf-fa-file"></span> codegen</api/ansys/fluent/mcp/common/codegen/index>
+    <span class="nf nf-fa-file"></span> config</api/ansys/fluent/mcp/common/config/index>
+    <span class="nf nf-fa-file"></span> conversation</api/ansys/fluent/mcp/common/conversation/index>
+    <span class="nf nf-fa-file"></span> domain_tools</api/ansys/fluent/mcp/common/domain_tools/index>
+    <span class="nf nf-fa-file"></span> errors</api/ansys/fluent/mcp/common/errors/index>
+    <span class="nf nf-fa-file"></span> file_handlers</api/ansys/fluent/mcp/common/file_handlers/index>
+    <span class="nf nf-fa-file"></span> llm_wire</api/ansys/fluent/mcp/common/llm_wire/index>
+    <span class="nf nf-fa-file"></span> models</api/ansys/fluent/mcp/common/models/index>
+    <span class="nf nf-fa-file"></span> path_descriptor</api/ansys/fluent/mcp/common/path_descriptor/index>
+    <span class="nf nf-fa-file"></span> session_logging</api/ansys/fluent/mcp/common/session_logging/index>
+    <span class="nf nf-fa-file"></span> telemetry</api/ansys/fluent/mcp/common/telemetry/index>
+    <span class="nf nf-fa-file"></span> text_match</api/ansys/fluent/mcp/common/text_match/index>
+    <span class="nf nf-fa-file"></span> timings</api/ansys/fluent/mcp/common/timings/index>
+    <span class="nf nf-fa-file"></span> validation</api/ansys/fluent/mcp/common/validation/index>
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+
+Shared infrastructure for all Fluid's MCP leaves.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+

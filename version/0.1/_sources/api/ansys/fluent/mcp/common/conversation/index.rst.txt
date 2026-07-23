@@ -1,0 +1,94 @@
+
+
+
+
+
+
+The ``conversation.py`` module
+==============================
+
+.. py:module:: ansys.fluent.mcp.common.conversation
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: conversation
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.conversation.ConversationEntry`
+            - Conversation entry for a single session.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.conversation.ConversationStore`
+            - Thread-safe TTL-bounded conversation store.
+
+
+
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> ConversationEntry</api/ansys/fluent/mcp/common/conversation/ConversationEntry>
+    <span class="nf nf-cod-symbol_class"></span> ConversationStore</api/ansys/fluent/mcp/common/conversation/ConversationStore>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+In-memory conversation/clarification store with TTL.
+
+Used to track multi-turn ``codegen`` <-> ``clarify`` interactions so the LLM
+caller can be stateless. (It only needs to keep ``session_id`` and
+``clarification_id``.)
+
+Pluggable: swap ``_now()`` and the dict for a Redis-backed implementation
+later without touching the rest of the codebase.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+

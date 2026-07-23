@@ -1,0 +1,184 @@
+
+
+
+
+
+
+:class:`FluidsMCPConfig`
+========================
+
+
+.. py:class:: ansys.fluent.mcp.common.config.FluidsMCPConfig
+
+   
+   Resolved configuration values.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: FluidsMCPConfig
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~http_timeout`
+            - 
+          * - :py:attr:`~verify_tls`
+            - 
+          * - :py:attr:`~api_retriever_url`
+            - 
+          * - :py:attr:`~api_retriever_collection`
+            - 
+          * - :py:attr:`~qdrant_url`
+            - 
+          * - :py:attr:`~qdrant_api_key`
+            - 
+          * - :py:attr:`~qdrant_collection`
+            - 
+          * - :py:attr:`~api_objects_path`
+            - 
+          * - :py:attr:`~llm_max_steps`
+            - 
+          * - :py:attr:`~llm_endpoint`
+            - 
+          * - :py:attr:`~llm_model`
+            - 
+          * - :py:attr:`~llm_auth_style`
+            - 
+          * - :py:attr:`~llm_provider`
+            - 
+          * - :py:attr:`~llm_transport`
+            - 
+          * - :py:attr:`~log_level`
+            - 
+          * - :py:attr:`~warnings`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.config import FluidsMCPConfig
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: http_timeout
+   :type:  float
+   :value: 300.0
+
+
+.. py:attribute:: verify_tls
+   :type:  bool
+   :value: True
+
+
+.. py:attribute:: api_retriever_url
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: api_retriever_collection
+   :type:  str
+   :value: 'fluent_api_collection'
+
+
+.. py:attribute:: qdrant_url
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: qdrant_api_key
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: qdrant_collection
+   :type:  str
+   :value: 'fluent_api_collection'
+
+
+.. py:attribute:: api_objects_path
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: llm_max_steps
+   :type:  int
+   :value: 30
+
+
+.. py:attribute:: llm_endpoint
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: llm_model
+   :type:  str
+   :value: 'gpt-4o-mini'
+
+
+.. py:attribute:: llm_auth_style
+   :type:  str
+   :value: 'bearer'
+
+
+.. py:attribute:: llm_provider
+   :type:  str
+   :value: 'openai'
+
+
+.. py:attribute:: llm_transport
+   :type:  str
+   :value: 'openai_compat'
+
+
+.. py:attribute:: log_level
+   :type:  str
+   :value: 'INFO'
+
+
+.. py:attribute:: warnings
+   :type:  tuple[str, Ellipsis]
+   :value: ()
+
+
+
+
+
+

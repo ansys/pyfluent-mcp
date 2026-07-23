@@ -1,0 +1,175 @@
+
+
+
+
+
+
+:class:`QdrantApiRetriever`
+===========================
+
+
+.. py:class:: ansys.fluent.mcp.solve.catalog.retriever.QdrantApiRetriever(*, url: str, collection_name: str = 'fluent_api_collection', api_key: Optional[str] = None, embed: Optional[EmbedFn] = None)
+
+   Bases: :py:obj:`ApiRetriever`
+
+
+   
+   Direct vector search against the Fluent API Qdrant collection.
+
+   The embedding step is deliberately injected: callers pass an
+   ``embed`` coroutine that turns a string into a dense vector, so
+   the choice of embedding model lives outside this module (typically
+   the same model the remote retriever service uses, e.g. configured
+   via ``FLUIDS_MCP_EMBEDDING_URL``). If ``embed`` is omitted, the
+   retriever attempts the modern Qdrant ``query_points`` text-input
+   flow, which only works when the collection has a server-side
+   embedding configured.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: QdrantApiRetriever
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~retrieve`
+            - Retrieve API hits that match the query and filters.
+          * - :py:attr:`~aclose`
+            - Close resources for the QdrantApiRetriever object.
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~name`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.catalog.retriever import QdrantApiRetriever
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: name
+   :value: 'qdrant'
+
+
+
+
+Method detail
+-------------
+
+.. py:method:: retrieve(query: str, *, top_k: int = 10, kinds: Optional[Sequence[str]] = None, under: Optional[str] = None) -> list[ApiHit]
+   :async:
+
+
+   
+   Retrieve API hits that match the query and filters.
+
+
+   :Parameters:
+
+       **query** : :class:`python:str`
+           Search text or user request to evaluate.
+
+       **top_k** : :class:`python:int`
+           Maximum number of results to return.
+
+       **kinds** : :obj:`Optional`\[:obj:`Sequence`\[:class:`python:str`]]
+           Optional result kinds used to narrow the operation.
+
+       **under** : :obj:`Optional`\[:class:`python:str`]
+           Optional path prefix used to scope the operation.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:obj:`ApiHit`]
+           List of results produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: aclose() -> None
+   :async:
+
+
+   
+   Close resources for the QdrantApiRetriever object.
+
+
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+

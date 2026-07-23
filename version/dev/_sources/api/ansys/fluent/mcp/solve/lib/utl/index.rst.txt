@@ -1,0 +1,373 @@
+
+
+
+
+
+
+The ``utl.py`` module
+=====================
+
+.. py:module:: ansys.fluent.mcp.solve.lib.utl
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: utl
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.lib.utl.PathFamily`
+            - Translate semantic operations into mode-appropriate Fluent paths.
+
+
+
+    .. tab-item:: Enums
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.lib.utl.FamilyKind`
+            - Which path family is active in the target session.
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~detect_utl_mode`
+            - Return True if UTL is currently enabled on ``backend``.
+
+
+          * - :py:obj:`~enable_utl`
+            - Enable UTL on the live session. Returns True on success.
+
+
+          * - :py:obj:`~disable_utl`
+            - Disable UTL on the live session. Returns ``True`` on success.
+
+
+          * - :py:obj:`~translate_prefix`
+            - Rewrite ``path``'s family prefix if it matches a known mapping.
+
+
+
+    .. tab-item:: Attributes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~logger`
+            - 
+
+
+
+    .. tab-item:: Constants
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~UTL_PROBE_PATH`
+            - 
+
+
+          * - :py:obj:`~STANDARD_ONLY_ROOTS`
+            - 
+
+
+          * - :py:obj:`~UTL_ONLY_ROOTS`
+            - 
+
+
+          * - :py:obj:`~UTL_PREFIX_MAP_TO_UTL`
+            - 
+
+
+          * - :py:obj:`~UTL_PREFIX_MAP_TO_STANDARD`
+            - 
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> PathFamily</api/ansys/fluent/mcp/solve/lib/utl/PathFamily>
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_enum"></span> FamilyKind</api/ansys/fluent/mcp/solve/lib/utl/FamilyKind>
+
+
+
+
+
+
+
+
+Description
+-----------
+
+UTL (Unified Topology Layer) detection, toggling, and path translation.
+
+UTL is a Fluent beta feature that exposes a *physics-grouped* settings
+namespace (``setup.physics.boundaries``,``setup.physics.volumes``,
+or ``setup.physics.interfaces``) and disables the per-zone namespace
+(``setup.boundary_conditions``, or ``setup.cell_zone_conditions``,
+``setup.mesh_interfaces``). It is toggled at runtime via the Scheme
+feature flag::
+
+    (enable-feature 'utl)
+
+There is **no PyFluent settings-API equivalent** for this toggle as of
+Fluent 27.1 and PyFluent 0.38.1he Ansys-authored UTL regression
+scripts themselves use ``solver.execute_tui("(enable-feature 'utl)")``.
+This module isolates that one Scheme call in
+:func:`enable_utl`/:func:`disable_utl` and documents the exception.
+Every other UTL interaction goes through the PyFluent settings API.
+
+The following empirical mapping was extracted from a live probe against
+Fluent 2027 R1. See ``_probe_utl.py`` in the repository root for the raw
+data.
+
+* Canonical detection signal:
+  ``solver.settings.setup.physics.is_active()``.
+* When UTL is enabled, the standard families raise
+  ``InactiveObjectError`` on write, which is a clean, typed failure
+  the executor surfaces as a validation diagnostic rather than a
+  crash.
+* Several surfaces are *mode-agnostic* (active in both modes):
+  ``solution.cell_registers``, ``results.surfaces.*``,
+  ``solution.controls.equations``, ``setup.models.*``, and the
+  scalar leaves of ``solution.report_definitions.*`` (``field``,
+  ``report_type``, ``create_report_file``, ...). Recipes that touch
+  only these surfaces work unchanged in both modes.
+* The mode-divergent surfaces collapse to four shapes:
+
+  * Namespace prefix
+  * BC-value nesting (``.thermal.value`` versus ``.value``)
+  * Value enum casing (``'temperature'`` versus ``'Temperature'``)
+  * Selector form on a handful of command   arguments (``surface_names=[…]``
+    versus ``locations={'physics':[…]}``)
+
+:class:`PathFamily` encapsulates all four shapes so a single recipe template
+can target both modes by calling family helpers rather than hard-coding paths.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: detect_utl_mode(backend: Any) -> bool | None
+   :async:
+
+
+   
+   Return True if UTL is currently enabled on ``backend``.
+
+   Returns ``None`` if the backend is not connected or the probe
+   fails (such as against a non-PyFluent backend). Callers should
+   treat ``None`` as "unknown — assume standard".
+
+   :Parameters:
+
+       **backend** : :obj:`Any`
+           Backend to supply to the function.
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>` | :data:`python:None`
+           Boolean result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: enable_utl(backend: Any) -> bool
+   :async:
+
+
+   
+   Enable UTL on the live session. Returns True on success.
+
+   Uses the one sanctioned ``execute_tui`` call for the Scheme
+   feature toggle. There is no settings-API equivalent in 27.1.
+
+   :Parameters:
+
+       **backend** : :obj:`Any`
+           Backend to supply to the function.
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>`
+           Boolean result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: disable_utl(backend: Any) -> bool
+   :async:
+
+
+   
+   Disable UTL on the live session. Returns ``True`` on success.
+
+
+   :Parameters:
+
+       **backend** : :obj:`Any`
+           Backend to supply to the function.
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>`
+           Boolean result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: translate_prefix(path: str, *, to_utl: bool) -> str
+
+   
+   Rewrite ``path``'s family prefix if it matches a known mapping.
+
+   Returns the path unchanged when no mapping applies (such as for paths
+   under ``solution.*``/``results.*``, which are mode-agnostic, or
+   leaf attribute names that differ in nesting depth and so can't
+   be rewritten by a simple prefix swap. For those, use :class:`PathFamily`
+   helpers).
+
+   :Parameters:
+
+       **path** : :class:`python:str`
+           Fluent object path or file-system path to inspect.
+
+       **to_utl** : :ref:`bool <python:bltin-boolean-values>`
+           Whether to translate the path to UTL.
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           String result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: UTL_PROBE_PATH
+   :value: 'setup.physics'
+
+
+.. py:data:: STANDARD_ONLY_ROOTS
+   :type:  tuple[str, Ellipsis]
+   :value: ('setup.boundary_conditions', 'setup.cell_zone_conditions', 'setup.mesh_interfaces')
+
+
+.. py:data:: UTL_ONLY_ROOTS
+   :type:  tuple[str, Ellipsis]
+   :value: ('setup.physics.boundaries', 'setup.physics.volumes', 'setup.physics.interfaces')
+
+
+.. py:data:: UTL_PREFIX_MAP_TO_UTL
+   :type:  dict[str, str]
+
+.. py:data:: UTL_PREFIX_MAP_TO_STANDARD
+   :type:  dict[str, str]
+
+.. py:data:: logger
+
+
+
