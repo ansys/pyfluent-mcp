@@ -9,6 +9,9 @@ This section contains the release notes for PyFluent-MCP.
 
 .. towncrier release notes start
 
+`0.2.1 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.2.1>`_ - July 31, 2026
+====================================================================================
+No significant changes.
 `0.2.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.2.0>`_ - July 20, 2026
 ====================================================================================
 
