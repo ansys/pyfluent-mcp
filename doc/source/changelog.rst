@@ -9,6 +9,51 @@ This section contains the release notes for PyFluent-MCP.
 
 .. towncrier release notes start
 
+`0.2.1 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.2.1>`_ - July 31, 2026
+====================================================================================
+
+.. tab-set::
+
+
+  .. tab-item:: Added
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Readiness for next release
+          - `#25 <https://github.com/ansys/pyfluent-mcp/pull/25>`_
+
+
+  .. tab-item:: Dependencies
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Bump the actions group across 1 directory with 20 updates
+          - `#26 <https://github.com/ansys/pyfluent-mcp/pull/26>`_
+
+        * - Bump sphinx-autodoc-typehints from 3.12.0 to 3.13.0 in the pip-deps group across 1 directory
+          - `#29 <https://github.com/ansys/pyfluent-mcp/pull/29>`_
+
+
+  .. tab-item:: Maintenance
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Update CHANGELOG for v0.2.0
+          - `#24 <https://github.com/ansys/pyfluent-mcp/pull/24>`_
+
+        * - Update pyfluent
+          - `#28 <https://github.com/ansys/pyfluent-mcp/pull/28>`_
+
+        * - Bump PyFluent MCP dependencies
+          - `#31 <https://github.com/ansys/pyfluent-mcp/pull/31>`_
+
+
 `0.2.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.2.0>`_ - July 20, 2026
 ====================================================================================
 
