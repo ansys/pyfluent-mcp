@@ -5,7 +5,7 @@
 repos:
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.12
+    rev: v0.16.0
     hooks:
       # Run the linter.
       - id: ruff-check
@@ -40,7 +40,7 @@ repos:
 
   # Type checking with mypy (official mirror)
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.0.0
+    rev: v2.3.0
     hooks:
       - id: mypy
         args: [--config-file=pyproject.toml]
@@ -57,7 +57,7 @@ repos:
 
   # Spell checking with typos
   - repo: https://github.com/crate-ci/typos
-    rev: v1.46.0
+    rev: v1.48.0
     hooks:
       - id: typos
         args: ["--config", "doc/styles/typos.toml"]
