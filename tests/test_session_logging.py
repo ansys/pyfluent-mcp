@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import builtins
 import json
 import logging
 
@@ -99,6 +100,65 @@ def test_env_snapshot_filters_and_redacts(monkeypatch):
     assert "ANSYS_TOKEN=<redacted len=12>" in snapshot
     assert "UNRELATED_SECRET" not in snapshot
     assert "pyfluent:" in snapshot
+
+
+def test_env_snapshot_uses_package_metadata_without_importing_pyfluent(monkeypatch):
+    """Verify that env snapshot reads PyFluent version without importing PyFluent.
+
+    Parameters
+    ----------
+    monkeypatch : Any
+        Pytest fixture used to patch environment variables or dependencies.
+
+    Returns
+    -------
+    None
+        The function completes through its side effects.
+    """
+    calls = []
+
+    def fake_version(name):
+        calls.append(name)
+        return "1.2.3"
+
+    real_import = builtins.__import__
+
+    def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "ansys.fluent.core" or name.startswith("ansys.fluent.core."):
+            raise AssertionError("env snapshot must not import ansys.fluent.core")
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(session_logging, "version", fake_version)
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+
+    snapshot = session_logging._gather_env_snapshot()
+
+    assert calls == ["ansys-fluent-core"]
+    assert "pyfluent: 1.2.3" in snapshot
+
+
+def test_env_snapshot_handles_missing_pyfluent_distribution(monkeypatch):
+    """Verify that env snapshot handles missing PyFluent distribution metadata.
+
+    Parameters
+    ----------
+    monkeypatch : Any
+        Pytest fixture used to patch environment variables or dependencies.
+
+    Returns
+    -------
+    None
+        The function completes through its side effects.
+    """
+
+    def missing_version(name):
+        raise session_logging.PackageNotFoundError(name)
+
+    monkeypatch.setattr(session_logging, "version", missing_version)
+
+    snapshot = session_logging._gather_env_snapshot()
+
+    assert "pyfluent: <not installed>" in snapshot
 
 
 def test_init_session_logging_creates_artifacts_and_is_idempotent(monkeypatch, tmp_path):
