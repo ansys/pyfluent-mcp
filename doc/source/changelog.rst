@@ -9,6 +9,51 @@ This section contains the release notes for PyFluent-MCP.
 
 .. towncrier release notes start
 
+`0.3.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.3.0>`_ - August 04, 2026
+======================================================================================
+
+.. tab-set::
+
+
+  .. tab-item:: Fixed
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Resolve binary crash
+          - `#37 <https://github.com/ansys/pyfluent-mcp/pull/37>`_
+
+
+  .. tab-item:: Dependencies
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Bump the actions group with 15 updates
+          - `#38 <https://github.com/ansys/pyfluent-mcp/pull/38>`_
+
+        * - Bump the pre-commit group with 3 updates
+          - `#41 <https://github.com/ansys/pyfluent-mcp/pull/41>`_
+
+
+  .. tab-item:: Maintenance
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Update CHANGELOG for v0.2.1
+          - `#34 <https://github.com/ansys/pyfluent-mcp/pull/34>`_
+
+        * - Update missing or outdated files
+          - `#35 <https://github.com/ansys/pyfluent-mcp/pull/35>`_
+
+        * - Add Dependabot support for pre-commit hook updates
+          - `#40 <https://github.com/ansys/pyfluent-mcp/pull/40>`_
+
+
 `0.2.1 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.2.1>`_ - July 31, 2026
 ====================================================================================
 
