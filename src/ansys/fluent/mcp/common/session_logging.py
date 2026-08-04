@@ -70,6 +70,7 @@ not per-conversation event streams.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from importlib.metadata import PackageNotFoundError, version
 import json
 import logging
 import os
@@ -444,11 +445,10 @@ def _gather_env_snapshot() -> str:
     lines.append(f"python: {sys.version.split()[0]}")
     lines.append(f"platform: {platform.platform()}")
     try:
-        import ansys.fluent.core as _pyfluent  # type: ignore
-
-        lines.append(f"pyfluent: {getattr(_pyfluent, '__version__', '?')}")
-    except Exception:
-        lines.append("pyfluent: <not importable>")
+        pyfluent_version = version("ansys-fluent-core")
+    except PackageNotFoundError:
+        pyfluent_version = "<not installed>"
+    lines.append(f"pyfluent: {pyfluent_version}")
     lines.append("")
     lines.append("# Environment variables")
     for key in sorted(os.environ):
