@@ -114,7 +114,7 @@ class SolveCompositeBackend(Backend):
         processor_count: int = 1,
         ui_mode: str = "gui",
         product_version: Optional[str] = None,
-        **_: Any,
+        **kwargs: Any,
     ) -> ConnectResult:
         # Always connect PyFluent — this is the execution engine.
         """Connect to the configured backend or service.
@@ -137,8 +137,8 @@ class SolveCompositeBackend(Backend):
             Fluent UI mode requested for launch.
         product_version : Optional[str]
             Fluent product version requested for launch.
-        _ : Any
-            Ignored compatibility options accepted by the backend interface.
+        kwargs : Any
+            Additional launch options accepted by the PyFluent backend.
 
         Returns
         -------
@@ -154,6 +154,7 @@ class SolveCompositeBackend(Backend):
             processor_count=processor_count,
             ui_mode=ui_mode,
             product_version=product_version,
+            **kwargs,
         )
         if pf_result.status != "ok":
             return pf_result

@@ -114,6 +114,7 @@ class ApiIndex:
         custom_path: Optional[str] = None,
         sessions: Iterable[str] = ("solver_session",),
         help_map: Optional[dict[str, str]] = None,
+        extra_entries: Optional[list["ApiEntry"]] = None,
     ) -> None:
         """Initialize the ApiIndex instance.
 
@@ -134,6 +135,7 @@ class ApiIndex:
         self._custom_path = custom_path
         self._sessions = set(sessions)
         self._help_map_override = help_map  # None → lazy default; {} → explicitly empty
+        self._extra_entries: list[ApiEntry] = list(extra_entries) if extra_entries else []
         self._lock = threading.Lock()
         self._loaded = False
         self._entries: list[ApiEntry] = []
@@ -202,6 +204,11 @@ class ApiIndex:
                     continue
                 self._entries.append(entry)
                 self._by_path[entry.path] = entry
+            # Inject caller-supplied synthetic entries (e.g. meshing workflow tasks)
+            # before building BM25 stats so they participate fully in ranking.
+            for _extra in self._extra_entries:
+                self._entries.append(_extra)
+                self._by_path.setdefault(_extra.path, _extra)
             # Build BM25 stats over the (path + doc) token bag.
             total_len = 0
             for entry in self._entries:
@@ -565,7 +572,11 @@ def _tokenise(text: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+_SOLVER_SESSIONS = ("solver_session",)
+_MESHING_SESSIONS = ("meshing_session",)
+
 _default_index: Optional[ApiIndex] = None
+_default_meshing_index: Optional[ApiIndex] = None
 _default_lock = threading.Lock()
 
 
@@ -585,6 +596,48 @@ def get_default_api_index() -> ApiIndex:
     return _default_index
 
 
+def get_meshing_api_index() -> ApiIndex:
+    """Return the default meshing API index.
+
+    Returns
+    -------
+    ApiIndex
+       Meshing API index produced by the operation.
+    """
+    global _default_meshing_index
+    if _default_meshing_index is None:
+        with _default_lock:
+            if _default_meshing_index is None:
+                from ansys.fluent.mcp.solve.catalog.meshing_workflow_entries import (
+                    get_meshing_workflow_entries,
+                )
+
+                _default_meshing_index = ApiIndex(
+                    sessions=_MESHING_SESSIONS,
+                    extra_entries=get_meshing_workflow_entries(),
+                )
+    return _default_meshing_index
+
+
+def get_api_index_for_session(session: str) -> ApiIndex:
+    """Return a default API index for a PyFluent session kind.
+
+    Parameters
+    ----------
+    session : str
+        Session kind from ``api_objects.json`` such as ``solver_session``
+        or ``meshing_session``.
+
+    Returns
+    -------
+    ApiIndex
+        API index produced by the operation.
+    """
+    if session == "meshing_session":
+        return get_meshing_api_index()
+    return get_default_api_index()
+
+
 def reset_default_api_index() -> None:
     """Test hook that drops the cached index so that the next call rebuilds.
 
@@ -593,9 +646,10 @@ def reset_default_api_index() -> None:
     None
         The function completes through its side effects.
     """
-    global _default_index
+    global _default_index, _default_meshing_index
     with _default_lock:
         _default_index = None
+        _default_meshing_index = None
 
 
 __all__ = [
@@ -603,5 +657,7 @@ __all__ = [
     "ApiSearchHit",
     "ApiIndex",
     "get_default_api_index",
+    "get_meshing_api_index",
+    "get_api_index_for_session",
     "reset_default_api_index",
 ]

@@ -550,6 +550,12 @@ def test_solve_mcp_runtime_covers_general_tool_surface(monkeypatch):
         assert connect["status"] == "ok"
         assert backend.connect_kwargs == [{"host": "127.0.0.1"}]
 
+        meshing_connect = _structured(
+            await server.call_tool("connect", {"connect_kwargs": {"mode": "meshing"}})
+        )
+        assert meshing_connect["status"] == "ok"
+        assert backend.connect_kwargs[-1] == {"mode": "meshing"}
+
         listed = _structured(
             await server.call_tool("list_named_objects", {"limit": 1, "offset": 1})
         )
