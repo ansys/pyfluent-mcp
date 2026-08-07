@@ -20,7 +20,7 @@ These entries are injected into the meshing-session :class:`ApiIndex` so
 that BM25 retrieval surfaces the correct ``workflow.TaskObject[...]``
 idiom — including default argument keys and constant string values — for
 every standard meshing task, rather than only the low-level generated
-schema paths that live in ``api_objects.json``.
+schema paths that live in ``ansys/fluent/core/generated/api_tree/api_objects.json``.
 
 Source of truth
 ---------------
