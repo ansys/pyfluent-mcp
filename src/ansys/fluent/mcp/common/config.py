@@ -1,0 +1,307 @@
+# Copyright (C) 2026 Synopsys, Inc. and ANSYS, Inc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Centralized environment-variable configuration for PyFluent MPP.
+
+Every ``FLUIDS_MCP_*`` (and a small allow-list of legacy ``LLM_*``)
+variable is read once at startup and validated. ``validate_config()``
+is called from each leaf's CLI entry point so a typo or out-of-range
+value fails fast with a clear message instead of silently corrupting
+runtime behavior later.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+import logging
+import os
+from typing import Optional
+
+logger = logging.getLogger("ansys.fluent.mcp.config")
+
+
+# Public allow-list of recognized environment variables. A startup warning is emitted
+# for any ``FLUIDS_MCP_*`` environment variable on the process that is NOT in this set
+# so users catch typos like ``FLUIDS_MCP_QRDANT_URL``.
+_KNOWN_ENV_VARS: frozenset[str] = frozenset(
+    {
+        "FLUIDS_MCP_HTTP_TIMEOUT",
+        "FLUIDS_MCP_VERIFY_TLS",
+        "FLUIDS_MCP_API_RETRIEVER_URL",
+        "FLUIDS_MCP_API_RETRIEVER_COLLECTION",
+        "FLUIDS_MCP_QDRANT_URL",
+        "FLUIDS_MCP_QDRANT_API_KEY",
+        "FLUIDS_MCP_QDRANT_COLLECTION",
+        "FLUIDS_MCP_API_OBJECTS_PATH",
+        "FLUIDS_MCP_CACHE_DIR",
+        "FLUIDS_MCP_LLM_MAX_STEPS",
+        "FLUIDS_MCP_LOG_LEVEL",
+        "FLUIDS_MCP_SESSION_LOGS",
+        "FLUIDS_MCP_DISABLE_SESSION_LOGS",
+        "FLUIDS_MCP_SESSION_LOG_DIR",
+        "FLUIDS_MCP_SESSION_LOG_LEVEL",
+        "FLUIDS_MCP_INTENT_GUARD",
+    }
+)
+
+
+@dataclass(frozen=True)
+class FluidsMCPConfig:
+    """Resolved configuration values."""
+
+    http_timeout: float = 300.0
+    verify_tls: bool = True
+    api_retriever_url: Optional[str] = None
+    api_retriever_collection: str = "fluent_api_collection"
+    qdrant_url: Optional[str] = None
+    qdrant_api_key: Optional[str] = None
+    qdrant_collection: str = "fluent_api_collection"
+    api_objects_path: Optional[str] = None
+    llm_max_steps: int = 30
+    # Resolved (env-driven) LLM endpoint/model/auth. These mirror the
+    # values :mod:`ansys.fluent.mcp.common.llm_wire` resolves at call
+    # time; surfacing them here gives one inspection point and lets
+    # ``validate_config`` fail fast on an invalid ``LLM_AUTH_STYLE``.
+    llm_endpoint: Optional[str] = None
+    llm_model: str = "gpt-4o-mini"
+    llm_auth_style: str = "bearer"
+    # Provider-agnostic transport (resolved from LLM_PROVIDER / model /
+    # endpoint). ``llm_provider`` is one of openai/azure/anthropic/gemini/
+    # compat; ``llm_transport`` is "litellm" (native vendor APIs) or
+    # "openai_compat" (direct httpx POST to a custom endpoint).
+    llm_provider: str = "openai"
+    llm_transport: str = "openai_compat"
+    log_level: str = "INFO"
+    warnings: tuple[str, ...] = field(default_factory=tuple)
+
+
+class ConfigError(ValueError):
+    """Raised when an environment variable is set to an invalid value."""
+
+
+def _parse_bool(name: str, raw: str, *, default: bool) -> bool:
+    """Parse a Boolean configuration value from text.
+
+    Parameters
+    ----------
+    name : str
+        Name of the object, module, or setting being processed.
+    raw : str
+        Raw string value to parse or validate.
+    default : bool
+        Default value used by the caller when no explicit value is available.
+
+    Returns
+    -------
+    bool
+        Parsed boolean value.
+    """
+    val = raw.strip().lower()
+    if val in {"1", "true", "yes", "on"}:
+        return True
+    if val in {"0", "false", "no", "off"}:
+        return False
+    raise ConfigError(
+        f"{name}={raw!r} is not a valid boolean (expected one of 1/0/true/false/yes/no/on/off)."
+    )
+
+
+def _parse_float(name: str, raw: str, *, minimum: float = 0.0) -> float:
+    """Parse a floating-point configuration value from text.
+
+    Parameters
+    ----------
+    name : str
+        Name of the object, module, or setting being processed.
+    raw : str
+        Raw string value to parse or validate.
+    minimum : float
+        Lowest accepted numeric value.
+
+    Returns
+    -------
+    float
+        Parsed floating-point value.
+    """
+    try:
+        v = float(raw)
+    except ValueError as exc:
+        raise ConfigError(f"{name}={raw!r} is not a valid number.") from exc
+    if v <= minimum:
+        raise ConfigError(f"{name}={raw!r} must be > {minimum}.")
+    return v
+
+
+def _parse_int(name: str, raw: str, *, minimum: int = 1) -> int:
+    """Parse an integer configuration value from text.
+
+    Parameters
+    ----------
+    name : str
+        Name of the object, module, or setting being processed.
+    raw : str
+        Raw string value to parse or validate.
+    minimum : int
+        Lowest accepted numeric value.
+
+    Returns
+    -------
+    int
+        Parsed integer value.
+    """
+    try:
+        v = int(raw)
+    except ValueError as exc:
+        raise ConfigError(f"{name}={raw!r} is not a valid integer.") from exc
+    if v < minimum:
+        raise ConfigError(f"{name}={raw!r} must be >= {minimum}.")
+    return v
+
+
+def load_config(env: Optional[dict[str, str]] = None) -> FluidsMCPConfig:
+    """Read and validate every recognized environment variable.
+
+    Pass ``env`` to inject a synthetic environment for unit tests.
+    Unknown ``FLUIDS_MCP_*`` variables produce a warning string in the
+    returned config (also logged at WARNING level), but do not abort.
+
+    Parameters
+    ----------
+    env : Optional[dict[str, str]]
+        Environment mapping to read instead of the process environment.
+
+    Returns
+    -------
+    FluidsMCPConfig
+        Result produced by the function.
+    """
+    src = os.environ if env is None else env
+    warnings: list[str] = []
+
+    # Detect typos in ``FLUIDS_MCP_*`` env vars.
+    for key in src:
+        if key.startswith("FLUIDS_MCP_") and key not in _KNOWN_ENV_VARS:
+            msg = f"Unknown environment variable {key!r} (ignored). Known variables: {sorted(_KNOWN_ENV_VARS)}"  # noqa: E501
+            warnings.append(msg)
+            logger.warning(msg)
+
+    http_timeout = 300.0
+    raw = src.get("FLUIDS_MCP_HTTP_TIMEOUT")
+    if raw:
+        http_timeout = _parse_float("FLUIDS_MCP_HTTP_TIMEOUT", raw, minimum=0.0)
+
+    verify_tls = True
+    raw = src.get("FLUIDS_MCP_VERIFY_TLS")
+    if raw is not None:
+        verify_tls = _parse_bool("FLUIDS_MCP_VERIFY_TLS", raw, default=True)
+    if not verify_tls:
+        warnings.append(
+            "FLUIDS_MCP_VERIFY_TLS is disabled; HTTP backends will not "
+            "verify server certificates. Use only on trusted networks."
+        )
+
+    llm_max_steps = 30
+    raw = src.get("FLUIDS_MCP_LLM_MAX_STEPS")
+    if raw:
+        llm_max_steps = _parse_int("FLUIDS_MCP_LLM_MAX_STEPS", raw, minimum=1)
+
+    # Resolve the model-agnostic LLM endpoint/model/auth from the shared
+    # wire module so every leaf reports the same triplet. ``env`` may be a
+    # synthetic dict in tests; resolution there is env-only (no AALI).
+    from ansys.fluent.mcp.common import llm_wire
+
+    if env is None:
+        llm_cfg = llm_wire.resolve_model_config()
+    else:
+        llm_cfg = llm_wire.ModelConfig(
+            endpoint=src.get("LLM_ENDPOINT"),
+            api_key=src.get("LLM_API_KEY"),
+            model=llm_wire.first_model_token(src.get("LLM_MODEL")) or llm_wire.DEFAULT_MODEL,
+            auth_style=(src.get("LLM_AUTH_STYLE") or "bearer").lower(),
+        )
+    if llm_cfg.auth_style not in {"bearer", "azure-api-key"}:
+        raise ConfigError(
+            f"LLM_AUTH_STYLE={llm_cfg.auth_style!r} must be one of 'bearer' or 'azure-api-key'."
+        )
+
+    # Resolve the provider-agnostic transport profile for inspection. This
+    # never raises (env-only, no network) and only surfaces the resolved
+    # provider/transport so a single config dump shows how calls will route.
+    try:
+        _profile = llm_wire.resolve_profile(
+            model=llm_cfg.model,
+            endpoint=llm_cfg.endpoint,
+            auth_style=llm_cfg.auth_style,
+            env=src,
+        )
+        llm_provider = _profile.provider
+        llm_transport = _profile.transport
+    except Exception:
+        llm_provider = "openai"
+        llm_transport = "openai_compat"
+
+    log_level = src.get("FLUIDS_MCP_LOG_LEVEL", "INFO").upper()
+    if log_level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
+        raise ConfigError(
+            f"FLUIDS_MCP_LOG_LEVEL={log_level!r} must be one of DEBUG/INFO/WARNING/ERROR/CRITICAL."
+        )
+
+    return FluidsMCPConfig(
+        http_timeout=http_timeout,
+        verify_tls=verify_tls,
+        api_retriever_url=src.get("FLUIDS_MCP_API_RETRIEVER_URL"),
+        api_retriever_collection=src.get(
+            "FLUIDS_MCP_API_RETRIEVER_COLLECTION",
+            "fluent_api_collection",
+        ),
+        qdrant_url=src.get("FLUIDS_MCP_QDRANT_URL"),
+        qdrant_api_key=src.get("FLUIDS_MCP_QDRANT_API_KEY"),
+        qdrant_collection=src.get(
+            "FLUIDS_MCP_QDRANT_COLLECTION",
+            "fluent_api_collection",
+        ),
+        api_objects_path=src.get("FLUIDS_MCP_API_OBJECTS_PATH"),
+        llm_max_steps=llm_max_steps,
+        llm_endpoint=llm_cfg.endpoint,
+        llm_model=llm_cfg.model,
+        llm_auth_style=llm_cfg.auth_style,
+        llm_provider=llm_provider,
+        llm_transport=llm_transport,
+        log_level=log_level,
+        warnings=tuple(warnings),
+    )
+
+
+def validate_config(env: Optional[dict[str, str]] = None) -> FluidsMCPConfig:
+    """Validate configuration.
+
+    Alias of :func:`load_config` that raises :class:`ConfigError` on any issue.
+    Call once from each CLI entry point.
+
+    Parameters
+    ----------
+    env : Optional[dict[str, str]]
+        Environment mapping to read instead of the process environment.
+
+    Returns
+    -------
+    FluidsMCPConfig
+        Result produced by the function.
+    """
+    return load_config(env=env)
+
+
+__all__ = ["FluidsMCPConfig", "ConfigError", "load_config", "validate_config"]

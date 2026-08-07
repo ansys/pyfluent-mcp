@@ -1,0 +1,377 @@
+
+
+
+
+
+
+The ``introspection.py`` module
+===============================
+
+.. py:module:: ansys.fluent.mcp.solve.backends.introspection
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: introspection
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~normalise_attr_path`
+            - Split a Fluent path into its attribute components.
+
+
+          * - :py:obj:`~resolve_path`
+            - Resolve a Fluent settings ``path`` against ``root`` (== solver.settings).
+
+
+          * - :py:obj:`~discover_named_objects_via_scheme`
+            - Try the Scheme ``api-get-named-object-names`` API.
+
+
+          * - :py:obj:`~discover_named_objects_via_walk`
+            - Walk the settings tree and collect every named-object collection.
+
+
+          * - :py:obj:`~collect_targeted_context`
+            - Replicate the legacy targeted-context endpoint against a live solver.
+
+
+          * - :py:obj:`~collect_global_state`
+            - Fetch state for the requested paths, defaulting to the global set.
+
+
+
+
+    .. tab-item:: Constants
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~FLUENT_GLOBAL_STATE_PATHS`
+            - 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Live introspection helpers shared by backends.
+
+These mirror the behavior of the legacy
+``/fluent_get_targeted_context`` and ``/fluent_get_state`` endpoints from
+``aali-flowkit-python``. Keeping the logic in one place keeps PyFluent and
+any future in-process backend (such as Discovery or Prime) consistent.
+
+All functions take a *root* (the ``Settings`` root of a connected solver)
+and operate on **caller-provided paths**. There are no hardcoded collection lists.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: normalise_attr_path(path: str) -> list[str]
+
+   
+   Split a Fluent path into its attribute components.
+
+   Accepts both slash/dash format (``setup/boundary-conditions/velocity-inlet``)
+   and dot/underscore format (``setup.boundary_conditions.velocity_inlet``)
+   plus indexed instances like ``...velocity_inlet[cold-in]``.
+
+   Dash-to-underscore conversion is applied only to **attribute name**
+   segments, never to text inside ``[...]`` (which is the instance key
+   and may legitimately contain dashes).
+
+   :Parameters:
+
+       **path** : :class:`python:str`
+           Fluent object path or file-system path to inspect.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:class:`python:str`]
+           Collection containing the operation results.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: resolve_path(root: Any, path: str) -> Any
+
+   
+   Resolve a Fluent settings ``path`` against ``root`` (== solver.settings).
+
+   Supports indexed segments such as ``...velocity_inlet[cold-in]`` for
+   named-object instance access. Raises ``AttributeError``/``KeyError``
+   if the path does not resolve.
+
+   Dotted segments that are not exposed as Python attributes (such as a
+   NamedObject key containing a dash, like ``phase.phase-1.momentum``)
+   are transparently re-tried as ``__getitem__`` lookups. This lets
+   callers write the same dotted form for attribute children and
+   NamedObject keys, matching how the agent expresses query predicates.
+
+   :Parameters:
+
+       **root** : :obj:`Any`
+           Root to supply to the function.
+
+       **path** : :class:`python:str`
+           Fluent object path or file-system path to inspect.
+
+
+
+   :Returns:
+
+       :obj:`Any`
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: discover_named_objects_via_scheme(solver: Any) -> Optional[dict[str, list[str]]]
+
+   
+   Try the Scheme ``api-get-named-object-names`` API.
+
+   Returns a ``{path: [names]}`` mapping if successful, otherwise ``None``
+   (Caller falls back to a recursive walk.)
+
+   Fluent's ``api-get-named-object-names`` iterates every known
+   named-object type and calls ``api-get-object-names`` on each.
+   For inactive types (such as ``setup/solid-regions`` and
+   ``setup/turbo-interfaces`` when those physics aren't enabled), the
+   inner Scheme prints ``Error: api-get-object-names: Object is
+   invalid`` to the Fluent transcript as a side-effect of
+   ``err-protect``. The return value is still complete, but the
+   transcript noise is visible to the user. The call is wrapped in
+   ``with-output-to-port (open-output-string)`` so those diagnostic
+   prints land in a discarded string sink instead of the transcript.
+   They fall back to the unwrapped form if the Scheme dialect does
+   not support that pattern.
+
+   :Parameters:
+
+       **solver** : :obj:`Any`
+           Solver to supply to the function.
+
+
+
+   :Returns:
+
+       :obj:`Optional`\[:class:`python:dict`\[:class:`python:str`, :class:`python:list`\[:class:`python:str`]]]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: discover_named_objects_via_walk(root: Any, *, max_depth: int = 4, max_entries: int = 200) -> dict[str, list[str]]
+
+   
+   Walk the settings tree and collect every named-object collection.
+
+   A node is considered a named-object collection if it exposes
+   ``get_object_names()`` (or has dictionary-like ``keys()``).
+
+   Returns a mapping of slash-separated path → list of instance names.
+
+   :Parameters:
+
+       **root** : :obj:`Any`
+           Root to supply to the function.
+
+       **max_depth** : :class:`python:int`
+           Maximum depth to supply to the function.
+
+       **max_entries** : :class:`python:int`
+           Maximum entries to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:list`\[:class:`python:str`]]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: collect_targeted_context(root: Any, *, paths_to_check: Iterable[str], named_object_types: Iterable[str] = (), instance_state_fetch: Iterable[str] = ()) -> dict[str, Any]
+
+   
+   Replicate the legacy targeted-context endpoint against a live solver.
+
+   Returns a dictionary with the following keys (all optional. Missing entries simply
+   don't appear.
+
+   * ``active_status``    : path → bool
+   * ``state_values``     : path → state value (or ``"<large_state_omitted>"``)
+   * ``child_names``      : path → list of child setting names
+   * ``named_objects``    : type_path → list of instance names
+   * ``allowed_values``   : property path → list of allowed values
+   * ``phase_property_map``: phase_name → list of property categories
+
+   :Parameters:
+
+       **root** : :obj:`Any`
+           Root to supply to the function.
+
+       **paths_to_check** : :obj:`Iterable`\[:class:`python:str`]
+           Paths to check to supply to the function.
+
+       **named_object_types** : :obj:`Iterable`\[:class:`python:str`]
+           Named object types to supply to the function.
+
+       **instance_state_fetch** : :obj:`Iterable`\[:class:`python:str`]
+           Instance state fetch to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: collect_global_state(root: Any, paths: Optional[Iterable[str]] = None) -> dict[str, Any]
+
+   
+   Fetch state for the requested paths, defaulting to the global set.
+
+   Always probes ``is_active()`` before calling ``get_state()`` so that
+   inactive objects (such as ``setup/models/viscous`` while the model is
+   not enabled) yield a structured ``{"inactive": True}`` marker rather
+   than raising the PyFluent ``object is inactive`` RuntimeError. This
+   matches the gating already done in :func:`collect_targeted_context`
+   and the ``active?`` semantics defined by the Fluent Settings API,
+   where every setting may declare an ``active?`` predicate.
+
+   :Parameters:
+
+       **root** : :obj:`Any`
+           Root to supply to the function.
+
+       **paths** : :obj:`Optional`\[:obj:`Iterable`\[:class:`python:str`]]
+           Fluent object paths to supply to the operation.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: FLUENT_GLOBAL_STATE_PATHS
+   :type:  tuple[str, Ellipsis]
+   :value: ('setup/general/solver', 'setup/models/energy', 'setup/models/viscous',...
+
+
+
+

@@ -1,0 +1,87 @@
+
+
+
+
+
+
+:class:`FamilyKind`
+===================
+
+
+.. py:class:: ansys.fluent.mcp.solve.lib.utl.FamilyKind
+
+   Bases: :py:obj:`str`, :py:obj:`enum.Enum`
+
+
+   
+   Which path family is active in the target session.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: FamilyKind
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~STANDARD`
+            - 
+          * - :py:attr:`~UTL`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.lib.utl import FamilyKind
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: STANDARD
+   :value: 'standard'
+
+
+.. py:attribute:: UTL
+   :value: 'utl'
+
+
+
+
+
+

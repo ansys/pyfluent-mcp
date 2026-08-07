@@ -1,0 +1,66 @@
+
+
+
+
+
+
+The ``data`` package
+========================
+
+.. py:module:: ansys.fluent.mcp.solve.data
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+
+Bundled static data for PyFluent-MCP.
+
+Currently houses ``settings_271.json.gz``, which is PyFluent's canonical
+settings schema for Fluent 27.1. This settings schema is used by
+``ansys.fluent.mcp.solve.catalog.schema`` for offline path/command-argument
+validation.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
