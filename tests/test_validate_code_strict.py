@@ -30,11 +30,12 @@ path of the PyFluent backend so they run on any developer machine.
 
 from __future__ import annotations
 
+import ast
 import asyncio
 
 import pytest
 
-from ansys.fluent.mcp.solve.backends.pyfluent import PyFluentBackend
+from ansys.fluent.mcp.solve.backends.pyfluent import PyFluentBackend, _extract_settings_paths
 
 
 def _run(coro):
@@ -166,6 +167,23 @@ def test_scan_reflection_allows_normal_assignment():
 
     code = "solver.setup.models.energy.enabled = True\n"
     assert not _scan_reflection_writes(code)
+
+
+def test_extract_settings_paths_includes_meshing_workflow_roots():
+    """Meshing workflow paths should be catalog-validated like solver settings."""
+    tree = ast.parse(
+        """
+session.workflow.InitializeWorkflow(WorkflowType="Watertight Geometry")
+session.workflow.TaskObject["Import Geometry"].Arguments.set_state({"LengthUnit": "in"})
+session.PartManagement.InputFileChanged(FilePath="x.pmdb")
+"""
+    )
+
+    paths = set(_extract_settings_paths(tree))
+
+    assert "workflow.InitializeWorkflow" in paths
+    assert "workflow.TaskObject.Arguments.set_state" in paths
+    assert "PartManagement.InputFileChanged" in paths
 
 
 def test_strict_validation_env_helper(monkeypatch):

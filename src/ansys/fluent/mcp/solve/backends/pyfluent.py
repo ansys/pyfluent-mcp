@@ -70,7 +70,19 @@ from ansys.fluent.mcp.solve.lib import intent_guard as _intent_guard
 # Settings-path extraction helpers (used by validate_code)
 # ---------------------------------------------------------------------------
 
-_SETTINGS_ROOTS: frozenset[str] = frozenset({"setup", "solution", "results", "file", "mesh"})
+_SETTINGS_ROOTS: frozenset[str] = frozenset(
+    {
+        "setup",
+        "solution",
+        "results",
+        "file",
+        "mesh",
+        "workflow",
+        "TaskObject",
+        "PartManagement",
+        "PMFileManagement",
+    }
+)
 
 
 def _chain_from_ast_node(node: ast.AST) -> list[str]:
@@ -106,8 +118,8 @@ def _chain_from_ast_node(node: ast.AST) -> list[str]:
 def _extract_settings_paths(tree: ast.AST) -> list[str]:
     """Walk the AST and collect normalized Fluent settings API paths.
 
-    Looks for attribute chains that pass through a known settings root
-    (``setup``, ``solution``, ``results``, ``file``, ``mesh``).
+    Looks for attribute chains that pass through a known settings or
+    meshing workflow root (``setup``, ``solution``, ``workflow``, etc.).
     The ``settings`` level injected by ``solver.settings.<root>`` is
     stripped so the returned paths match the api_objects.json format.
 
@@ -877,6 +889,7 @@ class PyFluentBackend(Backend):
         self.endpoint: Optional[str] = None
         self._solver: Any = None
         self._mode: Optional[str] = None  # "launch" | "attach"
+        self._session_kind = "solver_session"
         # Single-flight lock around every solver-touching coroutine. The
         # PyFluent gRPC channel is not safe under concurrent access from
         # the same process; serialize to avoid interleaved RPCs.
@@ -1026,6 +1039,7 @@ class PyFluentBackend(Backend):
         norm_gpu = effective.get("gpu")
         norm_mode = effective.get("mode")
         norm_journal = effective.get("journal_file_names")
+        session_kind = "meshing_session" if norm_mode == "meshing" else "solver_session"
 
         def _do_connect() -> Any:
             """Connect to the configured backend or service.
@@ -1099,7 +1113,15 @@ class PyFluentBackend(Backend):
 
         try:
             async with self._lock:
-                self._solver = await asyncio.to_thread(_do_connect)
+                connect_task = asyncio.create_task(asyncio.to_thread(_do_connect))
+                try:
+                    self._solver = await asyncio.shield(connect_task)
+                    self._session_kind = session_kind
+                except asyncio.CancelledError:
+                    self._solver = await connect_task
+                    self._session_kind = session_kind
+                    self.close_sync()
+                    raise
         except Exception as exc:  # boundary
             logger.exception("PyFluent connect failed")
             return ConnectResult(
@@ -1159,6 +1181,7 @@ class PyFluentBackend(Backend):
             prev_endpoint = self.endpoint
             self._solver = None
             self.endpoint = None
+            self._session_kind = "solver_session"
             self.invalidate_cache()
 
             def _do_close() -> None:
@@ -1213,6 +1236,7 @@ class PyFluentBackend(Backend):
         # the underlying ``.exit()`` raises mid-shutdown.
         self._solver = None
         self.endpoint = None
+        self._session_kind = "solver_session"
         try:
             if hasattr(solver, "exit"):
                 solver.exit()
@@ -1247,6 +1271,43 @@ class PyFluentBackend(Backend):
         """
         solver = self._require()
         return getattr(solver, "settings", solver)
+
+    async def find_api(
+        self,
+        query: str,
+        *,
+        top_k: int = 10,
+        kinds: list[str] | None = None,
+        under: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Retrieve API candidates from the active PyFluent session catalog.
+
+        Parameters
+        ----------
+        query : str
+            Search query supplied by the caller.
+        top_k : int
+            Maximum number of search hits to return.
+        kinds : list[str] | None
+            Optional API object kinds used to filter search results.
+        under : str | None
+            Optional root path used to constrain API search results.
+
+        Returns
+        -------
+        list[dict[str, Any]]
+            Collection containing ranked API hits.
+        """
+        from ansys.fluent.mcp.solve.catalog.retriever import get_api_retriever_for_session
+
+        retriever = get_api_retriever_for_session(self._session_kind)
+        hits = await retriever.retrieve(query, top_k=top_k, kinds=kinds, under=under)
+        if not hits:
+            raise BackendUnavailableError(
+                "No API retriever returned results. "
+                "Install pyfluent and ensure the lexical API index is available."
+            )
+        return [h.to_tool_dict() for h in hits]
 
     # ------------------------------------------------------------------
     # Intent-guard probes (best-effort, never raise into the guard)
@@ -3308,9 +3369,9 @@ class PyFluentBackend(Backend):
             tree = ast.parse(code)
             paths = _extract_settings_paths(tree)
             if paths:
-                from ansys.fluent.mcp.solve.catalog.index import get_default_api_index
+                from ansys.fluent.mcp.solve.catalog.index import get_api_index_for_session
 
-                index = get_default_api_index()
+                index = get_api_index_for_session(self._session_kind)
                 if index.available:
                     for path in sorted(set(paths)):
                         if index.lookup(path) is None:

@@ -19,6 +19,7 @@ import asyncio
 import builtins
 from pathlib import Path
 import sys
+import threading
 from types import SimpleNamespace
 
 import pytest
@@ -718,6 +719,38 @@ def test_pyfluent_connect_import_failure_launch_failure_and_close_fallback(monke
     failed = asyncio.run(backend.connect())
     assert failed.status == "error"
     assert failed.error_code == "pyfluent_connect_failed"
+
+    class LaunchedSession:
+        def __init__(self):
+            self.exited = False
+
+        def exit(self):
+            self.exited = True
+
+    launched = LaunchedSession()
+    launch_started = threading.Event()
+    release_launch = threading.Event()
+
+    def blocking_launch_fluent(**_kwargs):
+        launch_started.set()
+        release_launch.wait(timeout=5)
+        return launched
+
+    fake_core.launch_fluent = blocking_launch_fluent
+    cancel_backend = pyfluent.PyFluentBackend()
+
+    async def cancel_connect_after_launch_starts():
+        task = asyncio.create_task(cancel_backend.connect(mode="meshing"))
+        await asyncio.to_thread(launch_started.wait, 5)
+        task.cancel()
+        release_launch.set()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    asyncio.run(cancel_connect_after_launch_starts())
+    assert launched.exited is True
+    assert cancel_backend._solver is None
+    assert cancel_backend._session_kind == "solver_session"
 
     class CloseOnlySession:
         def __init__(self, fail=False):
@@ -1609,11 +1642,13 @@ def test_pyfluent_validate_code_semantic_warnings(monkeypatch):
             """
             return [Hit()]
 
-    monkeypatch.setattr(pyfluent, "get_default_api_index", lambda: FakeIndex(), raising=False)
+    monkeypatch.setattr(
+        pyfluent, "get_api_index_for_session", lambda _session: FakeIndex(), raising=False
+    )
     monkeypatch.setitem(
         sys.modules,
         "ansys.fluent.mcp.solve.catalog.index",
-        SimpleNamespace(get_default_api_index=lambda: FakeIndex()),
+        SimpleNamespace(get_api_index_for_session=lambda _session: FakeIndex()),
     )
 
     backend = pyfluent.PyFluentBackend()

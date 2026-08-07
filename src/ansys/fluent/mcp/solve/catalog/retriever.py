@@ -32,7 +32,11 @@ import logging
 import threading
 from typing import Any, Optional, Sequence
 
-from ansys.fluent.mcp.solve.catalog.index import ApiIndex, get_default_api_index
+from ansys.fluent.mcp.solve.catalog.index import (
+    ApiIndex,
+    get_api_index_for_session,
+    get_default_api_index,
+)
 
 logger = logging.getLogger("ansys.fluent.mcp.api_retriever")
 
@@ -253,6 +257,25 @@ def get_default_api_retriever() -> ApiRetriever:
     return _default_retriever
 
 
+def get_api_retriever_for_session(session: str) -> ApiRetriever:
+    """Return an API retriever scoped to a PyFluent session kind.
+
+    Parameters
+    ----------
+    session : str
+        Session kind from ``api_objects.json`` such as ``solver_session``
+        or ``meshing_session``.
+
+    Returns
+    -------
+    ApiRetriever
+        Retriever produced by the operation.
+    """
+    if session == "solver_session":
+        return get_default_api_retriever()
+    return LexicalApiRetriever(get_api_index_for_session(session))
+
+
 def set_default_api_retriever(retriever: Optional[ApiRetriever]) -> None:
     """Test/integration hook to override the default.
 
@@ -276,5 +299,6 @@ __all__ = [
     "ApiRetriever",
     "LexicalApiRetriever",
     "get_default_api_retriever",
+    "get_api_retriever_for_session",
     "set_default_api_retriever",
 ]

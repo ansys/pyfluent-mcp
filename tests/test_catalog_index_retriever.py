@@ -22,6 +22,7 @@ from ansys.fluent.mcp.solve.catalog.index import ApiIndex, _normalise_path, _par
 from ansys.fluent.mcp.solve.catalog.retriever import (
     ApiHit,
     LexicalApiRetriever,
+    get_api_retriever_for_session,
 )
 
 
@@ -176,6 +177,33 @@ def test_lexical_retriever_and_api_hit_tool_dict(tmp_path):
         "kind": "Parameter",
         "score": 1.2346,
     }
+
+
+def test_api_index_can_scope_meshing_session(tmp_path):
+    """Verify that meshing API paths can be indexed independently."""
+    path = _api_objects_file(tmp_path)
+    solver_index = ApiIndex(custom_path=str(path), help_map={})
+    meshing_index = ApiIndex(custom_path=str(path), sessions=("meshing_session",), help_map={})
+
+    assert solver_index.lookup("workflow.task") is None
+    assert meshing_index.lookup("workflow.task").session == "meshing_session"
+    assert [hit.entry.path for hit in meshing_index.search("workflow", top_k=3)] == [
+        "workflow.task"
+    ]
+
+
+def test_session_scoped_retriever_uses_meshing_index(monkeypatch, tmp_path):
+    """Verify that meshing retrievers search ``meshing_session`` entries."""
+    path = _api_objects_file(tmp_path)
+
+    def fake_index_for_session(session):
+        return ApiIndex(custom_path=str(path), sessions=(session,), help_map={})
+
+    monkeypatch.setattr(catalog_retriever, "get_api_index_for_session", fake_index_for_session)
+
+    hits = asyncio.run(get_api_retriever_for_session("meshing_session").retrieve("workflow"))
+
+    assert [hit.path for hit in hits] == ["workflow.task"]
 
 
 def test_default_api_index_singleton_can_be_reset(monkeypatch):
