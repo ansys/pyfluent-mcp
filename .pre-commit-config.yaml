@@ -5,7 +5,7 @@
 repos:
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.0
+    rev: v0.16.1
     hooks:
       # Run the linter.
       - id: ruff-check
@@ -57,7 +57,7 @@ repos:
 
   # Spell checking with typos
   - repo: https://github.com/crate-ci/typos
-    rev: v1.48.0
+    rev: v1.49.0
     hooks:
       - id: typos
         args: ["--config", "doc/styles/typos.toml"]
