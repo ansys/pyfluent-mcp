@@ -157,13 +157,13 @@ jobs:
       packages: read # Required to pull ghcr.io/ansys/fluent container image from GitHub Container Registry
     env:
       ANSYSLMD_LICENSE_FILE: "1055@${{ secrets.LICENSE_SERVER }}"
-      FLUENT_IMAGE_TAG: "v27.1.latest"
+      FLUENT_IMAGE_TAG: "v27.1.232"
       PYFLUENT_HIDE_LOG_SECRETS: "1"
       PYFLUENT_LAUNCH_FLUENT_TIMEOUT: "180"
       PYFLUENT_TIMEOUT_FORCE_EXIT: "30"
       PYFLUENT_LAUNCH_CONTAINER: "1"
       PYFLUENT_CONTAINER_INSECURE_MODE: "1"
-      FLUENT_CONTAINER_IMAGE: "ghcr.io/ansys/fluent:v27.1.latest"
+      FLUENT_CONTAINER_IMAGE: "ghcr.io/ansys/fluent:v27.1.232"
       FLUENT_MCP_INTEGRATION_DIMENSION: "2"
       FLUENT_MCP_INTEGRATION_PRECISION: "double"
       FLUENT_MCP_INTEGRATION_PROCESSORS: "1"
