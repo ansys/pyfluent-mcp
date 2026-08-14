@@ -4,7 +4,7 @@ Tools and capabilities
 Tool surface
 ------------
 
-PyFluent-MCP exposes **22 tools** organized into 6 groups:
+PyFluent-MCP exposes **25 tools** organized into 6 groups:
 
 .. list-table::
    :header-rows: 1
@@ -13,7 +13,7 @@ PyFluent-MCP exposes **22 tools** organized into 6 groups:
    * - Group
      - Tools
    * - Connection & session
-     - ``connect``, ``disconnect``, ``session_status``, ``solver_status``
+     - ``connect``, ``disconnect``, ``session_status``, ``solver_status``, ``manage_fluent``
    * - Schema discovery
      - ``find_api``, ``get_help``, ``get_state``, ``get_targeted_context``
    * - Named objects
@@ -23,7 +23,9 @@ PyFluent-MCP exposes **22 tools** organized into 6 groups:
    * - Reporting & inspection
      - ``summarize_setup``, ``simulation_report``, ``screenshot``
    * - Domain tools
-     - ``mesh_quality``, ``list_fields``, ``compare_files``
+     - ``mesh_quality``, ``list_fields``, ``compare_files``, ``probe_path``,
+       ``get_active_status``, ``get_allowed_values``,
+       ``describe_named_object_template``, ``describe_path``
 
 Live versus offline tools
 -------------------------
@@ -35,10 +37,12 @@ Live versus offline tools
 
 **Live-session tools** require PyFluent and a connected Fluent solver:
 
-- ``connect``, ``disconnect``, ``session_status``, ``solver_status``
+- ``connect``, ``disconnect``, ``session_status``, ``solver_status``, ``manage_fluent``
 - ``get_state``, ``get_targeted_context``, named-object tools
 - ``run_code``, ``summarize_setup``, ``simulation_report``, ``screenshot``
-- ``mesh_quality``, ``list_fields``, ``compare_files``
+- ``mesh_quality``, ``list_fields``, ``compare_files``, ``probe_path``,
+  ``get_active_status``, ``get_allowed_values``,
+  ``describe_named_object_template``, ``describe_path``
 
 Using the tools
 ---------------
@@ -75,6 +79,16 @@ Use ``find_api`` for ranked path search over the settings tree:
 Use ``get_state`` to read live values and ``list_named_objects`` to enumerate named
 collections (boundary conditions, cell zones, materials, and so on).
 
+Use ``probe_path`` to check whether settings paths exist, are active in the
+current solver mode, and can be created. Use ``get_active_status`` for focused
+active/inactive checks and ``get_allowed_values`` before writing enum or menu-style
+settings.
+
+Use ``describe_named_object_template`` to inspect the fields, defaults, read-only
+state, and allowed values for a new object under a named-object collection. Use
+``describe_path`` when one consolidated descriptor is more useful than separate
+path probes.
+
 Code execution
 ~~~~~~~~~~~~~~
 
@@ -87,8 +101,21 @@ untrusted code.
 Domain tools
 ~~~~~~~~~~~~
 
-``mesh_quality`` returns live skewness, orthogonal quality, and aspect-ratio
-metrics. Route all "show mesh quality / skewness / check mesh" intents here.
+PyFluent-MCP supports two mesh-related workflows: running Fluent meshing
+workflows and inspecting loaded meshes from solver sessions.
+
+Use ``mesh_quality`` for all solver-side requests about mesh counts, skewness,
+orthogonal quality, aspect ratio, or Fluent mesh checks. It returns a structured
+payload with ``cell_count``, ``face_count``, ``node_count``, quality metrics, and
+optional ``mesh.check`` topology diagnostics when ``include_check=true``. Treat
+``None`` values as unavailable data, not as passing values.
+
+Quality metrics and ``mesh.check`` answer different questions. Quality metrics
+summarize numeric mesh quality. ``mesh.check`` is a topology preflight for issues
+such as non-positive volumes, face handedness, and boundary-pair consistency.
+Route all "show mesh quality / skewness / check mesh" intents to
+``mesh_quality`` rather than ``run_code``, ``summarize_setup``, or
+``simulation_report``.
 
 ``list_fields`` enumerates scalar/vector fields available in the loaded case.
 
@@ -99,13 +126,28 @@ without touching the live workspace session. Requires the ``file-probe`` extra f
 Workflow examples
 -----------------
 
+Generate a mesh from geometry
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#. ``connect(connect_kwargs={"mode": "meshing", "precision": "double"})`` launches
+   Fluent in meshing mode.
+#. ``find_api("workflow initialize watertight geometry", under="workflow")`` discovers
+   workflow tasks.
+#. ``validate_code`` checks the generated meshing commands.
+#. ``run_code`` executes workflow steps such as geometry import, local sizing,
+   surface mesh generation, boundary layers, volume mesh generation, and mesh checks.
+#. ``run_code`` can switch to solver mode when the mesh is ready for setup.
+
+The API catalog includes common entries for Watertight Geometry,
+Fault-tolerant Meshing, and 2D Meshing workflows.
+
 Load a case and inspect setup
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #. ``connect`` launches or attaches to Fluent.
 #. ``run_code`` loads a case file.
 #. ``summarize_setup`` gets a compact digest of models, BCs, and materials.
-#. ``mesh_quality`` checks mesh quality metrics.
+#. ``mesh_quality(include_check=true)`` checks mesh counts, quality metrics, and topology diagnostics.
 
 Generate and apply a settings change
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
