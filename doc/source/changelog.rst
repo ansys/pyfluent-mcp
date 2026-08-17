@@ -9,6 +9,64 @@ This section contains the release notes for PyFluent-MCP.
 
 .. towncrier release notes start
 
+`0.4.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.4.0>`_ - August 14, 2026
+======================================================================================
+
+.. tab-set::
+
+
+  .. tab-item:: Added
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Integrate meshing workflow
+          - `#45 <https://github.com/ansys/pyfluent-mcp/pull/45>`_
+
+
+  .. tab-item:: Documentation
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Update \`\`CONTRIBUTORS.md\`\` with the latest contributors
+          - `#46 <https://github.com/ansys/pyfluent-mcp/pull/46>`_
+
+        * - Add meshing docs
+          - `#51 <https://github.com/ansys/pyfluent-mcp/pull/51>`_
+
+
+  .. tab-item:: Dependencies
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Bump the pip-deps group with 2 updates
+          - `#47 <https://github.com/ansys/pyfluent-mcp/pull/47>`_
+
+        * - Bump the pre-commit group with 2 updates
+          - `#48 <https://github.com/ansys/pyfluent-mcp/pull/48>`_
+
+        * - Bump the actions group with 17 updates
+          - `#49 <https://github.com/ansys/pyfluent-mcp/pull/49>`_
+
+
+  .. tab-item:: Maintenance
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Update CHANGELOG for v0.3.0
+          - `#42 <https://github.com/ansys/pyfluent-mcp/pull/42>`_
+
+        * - Bump development version to 0.4.dev0
+          - `#43 <https://github.com/ansys/pyfluent-mcp/pull/43>`_
+
+
 `0.3.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.3.0>`_ - August 04, 2026
 ======================================================================================
 
