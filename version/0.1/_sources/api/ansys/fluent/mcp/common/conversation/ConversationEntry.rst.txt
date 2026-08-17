@@ -1,0 +1,106 @@
+
+
+
+
+
+
+:class:`ConversationEntry`
+==========================
+
+
+.. py:class:: ansys.fluent.mcp.common.conversation.ConversationEntry
+
+   
+   Conversation entry for a single session.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: ConversationEntry
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~session_id`
+            - 
+          * - :py:attr:`~created_at`
+            - 
+          * - :py:attr:`~updated_at`
+            - 
+          * - :py:attr:`~history`
+            - 
+          * - :py:attr:`~pending_clarification`
+            - 
+          * - :py:attr:`~extra`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.conversation import ConversationEntry
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: session_id
+   :type:  str
+
+.. py:attribute:: created_at
+   :type:  float
+
+.. py:attribute:: updated_at
+   :type:  float
+
+.. py:attribute:: history
+   :type:  list[dict[str, Any]]
+   :value: []
+
+
+.. py:attribute:: pending_clarification
+   :type:  Optional[dict[str, Any]]
+   :value: None
+
+
+.. py:attribute:: extra
+   :type:  dict[str, Any]
+
+
+
+
+

@@ -1,0 +1,141 @@
+
+
+
+
+
+
+:class:`ApiHit`
+===============
+
+
+.. py:class:: ansys.fluent.mcp.solve.catalog.retriever.ApiHit
+
+   
+   One ranked candidate returned by a retriever.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: ApiHit
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~to_tool_dict`
+            - Convert the object to a tool response dictionary.
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~path`
+            - 
+          * - :py:attr:`~kind`
+            - 
+          * - :py:attr:`~score`
+            - 
+          * - :py:attr:`~raw`
+            - 
+          * - :py:attr:`~payload`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.catalog.retriever import ApiHit
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: path
+   :type:  str
+
+.. py:attribute:: kind
+   :type:  str
+
+.. py:attribute:: score
+   :type:  float
+
+.. py:attribute:: raw
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: payload
+   :type:  Optional[dict[str, Any]]
+   :value: None
+
+
+
+
+Method detail
+-------------
+
+.. py:method:: to_tool_dict() -> dict[str, Any]
+
+   
+   Convert the object to a tool response dictionary.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+

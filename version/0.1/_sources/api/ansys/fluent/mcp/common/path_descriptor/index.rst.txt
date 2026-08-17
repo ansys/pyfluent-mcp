@@ -1,0 +1,145 @@
+
+
+
+
+
+
+The ``path_descriptor.py`` module
+=================================
+
+.. py:module:: ansys.fluent.mcp.common.path_descriptor
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: path_descriptor
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.path_descriptor.CommandArgument`
+            - Single keyword argument of a Fluent settings command.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.path_descriptor.PathDescriptor`
+            - One-envelope description of a Fluent settings path.
+
+
+
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> CommandArgument</api/ansys/fluent/mcp/common/path_descriptor/CommandArgument>
+    <span class="nf nf-cod-symbol_class"></span> PathDescriptor</api/ansys/fluent/mcp/common/path_descriptor/PathDescriptor>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Unified discovery envelope for Fluent settings paths.
+
+Before this module the leaf published four separate probes
+(``probe_path``, ``get_active_status``, ``get_allowed_values``,
+``describe_named_object_template``) plus a couple of higher-level tools
+(``find_api``, ``get_targeted_context``) and every one of them returned
+a *different* payload shape. The agent-side validator, the recipe
+grounder, and the LLM tool-call handlers all built their own view of a
+path by stitching those envelopes together, and each stitching layer
+disagreed with the others on edge cases:
+
+* ``probe_path`` returned ``kind='NamedObject'`` while
+  ``describe_named_object_template`` returned ``child_class='<class
+  name>'`` — callers had to know both.
+* ``get_allowed_values`` returned ``[...]`` for a bounded enum, ``None``
+  for a free-form string, ``None`` for a missing path, and raised for
+  a mode-pruned path. Those three ``None`` cases had different semantics
+  and the caller had to disambiguate by calling ``probe_path`` first.
+* Commands (``kind='Command'``) had no unified way to publish their
+  keyword-argument signature; only the live PyFluent backend's
+  ``get_command_arguments`` accessor knew them, and it was invoked
+  ad-hoc.
+
+:class:`PathDescriptor` collapses all of that into one frozen dataclass
+that every discovery tool, every validator guard, and every recipe
+grounder consumes. Fields default to ``None`` (meaning "unknown /
+unavailable"), never to a sentinel like ``[]`` that a caller might
+misread as "empty allowed set".
+
+The envelope is DELIBERATELY additive to the existing tools — the
+per-probe responses still ship their historical shape so nothing on
+the wire breaks, and :class:`PathDescriptor` is composed on top from
+those responses via :meth:`PathDescriptor.from_batch`.
+
+Example
+-------
+::
+
+    from ansys.fluent.mcp.common.path_descriptor import PathDescriptor
+
+    desc = PathDescriptor(
+        path="setup.models.viscous.model",
+        kind="Parameter",
+        exists=True,
+        is_active=True,
+        allowed_values=(
+            "laminar",
+            "inviscid",
+            "k-epsilon",
+            "k-omega",
+            "les",
+            "des",
+            "reynolds-stress",
+            "transition-sst",
+            "spalart-allmaras",
+        ),
+    )
+    assert desc.is_bounded_enum
+    assert "k-omega" in desc.allowed_values
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+

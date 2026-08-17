@@ -1,0 +1,101 @@
+
+
+
+
+
+
+:class:`GuardFinding`
+=====================
+
+
+.. py:class:: ansys.fluent.mcp.solve.lib.intent_guard.GuardFinding
+
+   
+   Single signature hit on a snippet.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: GuardFinding
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~signature`
+            - 
+          * - :py:attr:`~severity`
+            - 
+          * - :py:attr:`~message`
+            - 
+          * - :py:attr:`~suggestion`
+            - 
+          * - :py:attr:`~line`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.lib.intent_guard import GuardFinding
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: signature
+   :type:  str
+
+.. py:attribute:: severity
+   :type:  str
+
+.. py:attribute:: message
+   :type:  str
+
+.. py:attribute:: suggestion
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: line
+   :type:  Optional[int]
+   :value: None
+
+
+
+
+
+
