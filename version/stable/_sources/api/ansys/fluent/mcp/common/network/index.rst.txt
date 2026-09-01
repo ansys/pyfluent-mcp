@@ -1,0 +1,125 @@
+
+
+
+
+
+
+The ``network.py`` module
+=========================
+
+.. py:module:: ansys.fluent.mcp.common.network
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: network
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~env_flag`
+            - Return a normalized boolean environment flag.
+
+
+          * - :py:obj:`~resolve_tls_verify`
+            - Resolve TLS verification configuration from environment.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Utilities for resolving network-related environment configuration.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: env_flag(name: str, *, default: bool = False) -> bool
+
+   
+   Return a normalized boolean environment flag.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: resolve_tls_verify(env: dict[str, str] | None = None) -> bool | str
+
+   
+   Resolve TLS verification configuration from environment.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

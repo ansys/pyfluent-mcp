@@ -1,0 +1,93 @@
+
+
+
+
+
+
+:class:`SolveMCP`
+=================
+
+
+.. py:class:: ansys.fluent.mcp.solve.mcp.SolveMCP(*, expose_tools: Optional[Iterable[str]] = None, default_backend_kind: Optional[str] = None, **fastmcp_kwargs: Any)
+
+   Bases: :py:obj:`ansys.fluent.mcp.common.base.FluidsLeafMCP`
+
+
+   
+   Solve MCP leaf: Fluent solver codegen and live-context tools.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: SolveMCP
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~leaf_name`
+            - 
+          * - :py:attr:`~default_backend_kind`
+            - 
+          * - :py:attr:`~component_label`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.mcp import SolveMCP
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: leaf_name
+   :value: 'solve'
+
+
+.. py:attribute:: default_backend_kind
+   :value: 'pyfluent'
+
+
+.. py:attribute:: component_label
+   :value: 'fluent'
+
+
+
+
+
+

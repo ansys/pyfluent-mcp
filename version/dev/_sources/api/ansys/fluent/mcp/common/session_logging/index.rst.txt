@@ -1,0 +1,372 @@
+
+
+
+
+
+
+The ``session_logging.py`` module
+=================================
+
+.. py:module:: ansys.fluent.mcp.common.session_logging
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: session_logging
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~register_log_root`
+            - Register an extra logger root for the session file handler.
+
+
+          * - :py:obj:`~init_session_logging`
+            - Set up a session log folder and attach a file handler.
+
+
+          * - :py:obj:`~get_session_log_dir`
+            - Return the active session log directory, if any.
+
+
+          * - :py:obj:`~get_latest_log_path`
+            - Return the path to ``<base>/latest.log`` if it exists.
+
+
+          * - :py:obj:`~get_latest_session_dir`
+            - Return the path from ``<base>/latest_session.txt``, if present.
+
+
+          * - :py:obj:`~shutdown_session_logging`
+            - Detach and close the session file handler.
+
+
+
+
+    .. tab-item:: Constants
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ENV_ENABLE`
+            - 
+
+
+          * - :py:obj:`~ENV_DISABLE`
+            - 
+
+
+          * - :py:obj:`~ENV_BASE_DIR`
+            - 
+
+
+          * - :py:obj:`~ENV_LEVEL`
+            - 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Per-session debug logging for PyFluent-MCP.
+
+When the gateway (or any long-running entry point) starts, this module
+creates a per-session folder and attaches a DEBUG-level file handler to
+this package's root logger (``ansys.fluent.mcp``). An optional
+higher-level layer that shares the process can add its own root via
+:func:`register_log_root` so a single ``session.log`` captures the whole
+stack. This package never names or imports that layer. All child
+loggers propagate up to the handler, so tool calls, plan executions,
+``run_code`` snippets, client turns, and validator decisions are all
+captured in one place without touching individual call sites.
+
+Goals
+-----
+* **Self-service diagnostics**: When reporting a problem, a user is
+  asked to attach the session folder and have the full picture
+  (logs, recorded tool arguments, and last ``run_code`` snippets via the existing
+  RunLogger, environment snapshot).
+* **Off by default for embedded use**: The library import path stays
+  silent. The handler is only attached when an entry point explicitly
+  calls :func:`init_session_logging`. (The gateway and the CLI both
+  do.)
+* **Easy to disable**: Setting ``FLUIDS_MCP_DISABLE_SESSION_LOGS=1``
+  short-circuits the call. Safe in regulated environments where local
+  log files must not be created.
+
+Layout
+------
+Default base directory:
+
+* Windows: ``%APPDATA%\\Ansys\\v271\\fluent\\aisol``
+* macOS / Linux: ``~/.ansys/v271/fluent/aisol``
+
+Override with ``FLUIDS_MCP_SESSION_LOG_DIR=<path>``. (The path is used
+verbatim. The sessions still get their own subfolders inside it).
+
+Each session creates ``<base>/<session_id>/`` containing:
+
+* ``session.log``: DEBUG-level text log of every
+  ``ansys.fluent.mcp.*`` module (plus any extra roots registered via
+  :func:`register_log_root`) through Python's logging.
+* ``env.txt``: Snapshot of process environment variables relevant to the server
+  (``FLUIDS_*``, ``ANSYS_*``, ``AWP_ROOT*``, ``PYFLUENT_*``,
+  ``FLUENT_*``) plus Python/OS/PyFluent versions.
+* ``meta.json``: Small JSON file with session identifier, start time, log
+  base, and gateway host/port (if known).
+
+The :class:`agent.loop.run_log.RunLogger` continues to write
+per-conversation JSONL files under ``<state_dir>/runs/`` exactly as
+before. The new session folder is for *cross-cutting* diagnostics,
+not per-conversation event streams.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: register_log_root(name: str) -> None
+
+   
+   Register an extra logger root for the session file handler.
+
+   Inversion-of-control hook: a higher-level layer running in the same
+   process (such as an agent product with its own top-level package logger)
+   calls this at import time to have its records captured in the same
+   ``session.log``, without this package ever importing or naming that
+   layer. Idempotent. If a session handler is already attached, the new
+   root is wired up immediately so registration order does not matter.
+
+   :Parameters:
+
+       **name** : :class:`python:str`
+           Name of the object, module, or setting being processed.
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: init_session_logging(*, session_id: Optional[str] = None, extra_meta: Optional[dict[str, object]] = None) -> Optional[pathlib.Path]
+
+   
+   Set up a session log folder and attach a file handler.
+
+   Returns the resolved session directory, or ``None`` when disabled
+   via :data:`ENV_DISABLE`. Safe to call multiple times. Subsequent
+   calls return the existing directory without re-attaching handlers.
+
+   :Parameters:
+
+       **session_id** : :obj:`Optional`\[:class:`python:str`]
+           Session identifier to supply to the function.
+
+       **extra_meta** : :obj:`Optional`\[:class:`python:dict`\[:class:`python:str`, :obj:`object`]]
+           Extra metadata to supply to the function.
+
+
+
+   :Returns:
+
+       :obj:`Optional`\[:obj:`Path`]
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: get_session_log_dir() -> Optional[pathlib.Path]
+
+   
+   Return the active session log directory, if any.
+
+
+
+
+
+   :Returns:
+
+       :obj:`Optional`\[:obj:`Path`]
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: get_latest_log_path() -> Optional[pathlib.Path]
+
+   
+   Return the path to ``<base>/latest.log`` if it exists.
+
+   This is the stable pointer the user can ``Get-Content``/``tail``
+   without needing to know the session identifier. Returns ``None`` if
+   session logging has never run on this machine.
+
+
+
+
+   :Returns:
+
+       :obj:`Optional`\[:obj:`Path`]
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: get_latest_session_dir() -> Optional[pathlib.Path]
+
+   
+   Return the path from ``<base>/latest_session.txt``, if present.
+
+   Use this from a separate process (such as a CLI command) to find the
+   most recent ``serve`` session directory without scanning timestamps.
+
+
+
+
+   :Returns:
+
+       :obj:`Optional`\[:obj:`Path`]
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: shutdown_session_logging() -> None
+
+   
+   Detach and close the session file handler.
+
+   Used by tests. In production, the handler outlives the process by design.
+
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: ENV_ENABLE
+   :value: 'FLUIDS_MCP_SESSION_LOGS'
+
+
+.. py:data:: ENV_DISABLE
+   :value: 'FLUIDS_MCP_DISABLE_SESSION_LOGS'
+
+
+.. py:data:: ENV_BASE_DIR
+   :value: 'FLUIDS_MCP_SESSION_LOG_DIR'
+
+
+.. py:data:: ENV_LEVEL
+   :value: 'FLUIDS_MCP_SESSION_LOG_LEVEL'
+
+
+
+

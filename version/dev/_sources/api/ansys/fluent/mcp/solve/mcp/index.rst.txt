@@ -1,0 +1,115 @@
+
+
+
+
+
+
+The ``mcp`` package
+=======================
+
+.. py:module:: ansys.fluent.mcp.solve.mcp
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: mcp
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.mcp.SolveMCP`
+            - Solve MCP leaf: Fluent solver live-context and execution tools.
+
+
+
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> SolveMCP</api/ansys/fluent/mcp/solve/mcp/SolveMCP>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+
+Solve MCP leaf provides Fluent solver live-context and execution tools.
+
+This module physically hosts the :class:`SolveMCP` class. The parent
+package ``ansys.fluent.mcp.solve`` re-exports the class so both
+import paths (``from ansys.fluent.mcp.solve import SolveMCP`` and
+``from ansys.fluent.mcp.solve.mcp import SolveMCP``) resolve to the
+same class. This subpackage is the entire MCP-only surface. The
+agent loop, planner, and recipes are not part of this package.
+
+This open-source leaf ships only the PyFluent backend. It always
+connects to PyFluent for code execution and live-model introspection.
+Additional backends (such as the internal Fluids One managed-service ``fluids_one_solve``
+backend) are contributed by other installed packages through the
+``ansys.fluent.mcp.solve_backends`` entry-point group and merged into
+the backend registry at construction time.
+
+Usage::
+
+    connect()  # launch / attach PyFluent
+    connect(ip="...", port=12345)  # attach to a remote solver
+    run_code(code)  # always executed via PyFluent
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+
