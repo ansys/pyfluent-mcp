@@ -1,7 +1,7 @@
 # PyFluent-MCP
 
 [![PyAnsys](https://img.shields.io/badge/Py-Ansys-ffc107.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABDklEQVQ4jWNgoDfg5+OQgMJ/0AqCqXGQMEBAwBEKQj5gGDjQsA80UeCDscxrD4YhGsgABEELnC5zAwAu6ACKQDAQzNBFwAAVdgFEAnfDiQAATyIBaAFgCbkAI5DQwAVGAYkAMA4gHgg2AC+AAgQIABggagAqyAD4AACkR7cEdcEBQOPjIvAEtRDoAbYLANQAZGsBEAFeBwCsAY0HgGCAAEQTaDj7xQABItJ+S3DsQAAAABJRU5ErkJggg==)](https://docs.pyansys.com/)
-[![Python](https://img.shields.io/badge/Python-3.12%2B-blue)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.13-blue)](https://www.python.org/)
 [![Apache](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 PyFluent-MCP (`ansys-fluent-mcp`) gives you a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
@@ -65,9 +65,9 @@ You can use 20 tools exposed by the server:
 
 | Requirement | When needed | Notes |
 |-------------|-------------|-------|
-| Python 3.12 or later | Always | 3.12, 3.13, and 3.14 supported |
+| Python 3.12 or 3.13 | Always | Capped below 3.14 by the pinned `ansys-fluent-core` (see below) |
 | Core runtime dependencies | Always (installed automatically) | `ansys-common-mcp`, `fastmcp`, `httpx`, `pydantic` |
-| [PyFluent](https://fluent.docs.pyansys.com/) (`ansys-fluent-core` 0.27 or later) | To drive a live Fluent session (`connect`, `run_code`, `get_state`, `mesh_quality`, …) | Installed automatically as a required dependency |
+| [PyFluent](https://fluent.docs.pyansys.com/) (`ansys-fluent-core` `>=0.37.2,<0.38`) | To drive a live Fluent session (`connect`, `run_code`, `get_state`, `mesh_quality`, …) | Installed automatically. Pinned to the 0.37.x line, the last that supports Fluent 2024 R1 (24.1); 0.38+ requires Fluent 2024 R2 |
 | A licensed local ANSYS Fluent installation | To actually launch/attach a solver | PyFluent talks to this Fluent installation over gRPC |
 | `h5py` 3.0 or later | Only for `compare_files` on `.h5`/`.cas.h5` files | The `file-probe` extra |
 
@@ -151,10 +151,17 @@ You configure the server through `FLUIDS_MCP_*` environment variables. Common va
 ### Connecting to Fluent 2024 R1 (24.1) and other older releases
 
 The `connect` tool delegates to PyFluent, so it can attach to any Fluent
-release the installed `ansys-fluent-core` supports. To attach to a running
-Fluent 24.1 session, start Fluent's gRPC server (in the Fluent GUI:
-**File → Applications → Server → Start...**, or launch with
-`fluent 3ddp -sifile=server.txt`) and call `connect` with either the
+release the installed `ansys-fluent-core` supports. This project pins
+`ansys-fluent-core` to `>=0.37.2,<0.38` — the last line that still
+supports Fluent 2024 R1 (24.1); `ansys-fluent-core` 0.38 raised its floor
+to Fluent 2024 R2. That pin also caps Python at 3.13 (0.37.x requires
+`<3.14`). If you do **not** need 24.1 and want newer Fluent / PyFluent,
+relax the pin to `ansys-fluent-core>=0.41` and restore Python 3.14 in
+`pyproject.toml`.
+
+To attach to a running Fluent 24.1 session, start Fluent's gRPC server
+(in the Fluent GUI: **File → Applications → Server → Start...**, or launch
+with `fluent 3ddp -sifile=server.txt`) and call `connect` with either the
 `server_info_file` or the `ip`/`port`/`password` reported there.
 
 The bundled offline settings schema is generated from a newer Fluent

@@ -7,7 +7,9 @@ name = "ansys-fluent-mcp"
 version = "0.5.dev0"
 description = "Model Context Protocol (MCP) server for ANSYS Fluent, built on PyFluent."
 readme = "README.md"
-requires-python = ">=3.12,<4"
+# Capped at <3.14 because ansys-fluent-core is pinned to the 0.37.x line
+# (the last that supports Fluent 2024 R1 / 24.1) and 0.37.x requires <3.14.
+requires-python = ">=3.12,<3.14"
 authors = [{ name = "ANSYS, Inc.", email = "pyansys.core@ansys.com" }]
 maintainers = [{ name = "ANSYS, Inc.", email = "pyansys.core@ansys.com" }]
 license = "Apache-2.0"
@@ -28,7 +30,6 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Physics",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -37,7 +38,10 @@ classifiers = [
 
 dependencies = [
     "ansys-common-mcp>=0.3.3",
-    "ansys-fluent-core>=0.41.0",
+    # 0.37.x is the last ansys-fluent-core line that supports Fluent 2024 R1
+    # (24.1); 0.38+ raised the floor to Fluent 2024 R2. See the "Connecting to
+    # Fluent 2024 R1" section in the README.
+    "ansys-fluent-core>=0.37.2,<0.38",
     "httpx>=0.27",
     "pydantic>=2",
 ]
@@ -46,7 +50,7 @@ dependencies = [
 file-probe = ["h5py>=3"]
 tests = [
     "ansys-common-mcp==0.3.3",
-    "ansys-fluent-core==0.41.0",
+    "ansys-fluent-core==0.37.2",
     "httpx==0.28.1",
     "h5py==3.16.0",
     "pydantic==2.13.4",
