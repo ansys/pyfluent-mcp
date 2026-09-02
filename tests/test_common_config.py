@@ -112,6 +112,32 @@ def test_load_config_rejects_invalid_values(env, message):
         load_config(env)
 
 
+def test_load_config_reads_fluent_version():
+    """``FLUIDS_MCP_FLUENT_VERSION`` is normalized to the compact form."""
+    assert load_config({"FLUIDS_MCP_FLUENT_VERSION": "24.1"}).fluent_version == "241"
+    assert load_config({"FLUIDS_MCP_FLUENT_VERSION": "v25_2"}).fluent_version == "252"
+    assert load_config({}).fluent_version is None
+    assert load_config({"FLUIDS_MCP_FLUENT_VERSION": " "}).fluent_version is None
+
+
+def test_load_config_rejects_bad_fluent_version():
+    """A value with too few digits is a clear error, not a silent pass."""
+    with pytest.raises(ConfigError, match="not a recognized Fluent"):
+        load_config({"FLUIDS_MCP_FLUENT_VERSION": "24"})
+
+
+def test_settings_json_and_fluent_version_are_known_vars():
+    """Neither documented variable trips the unknown-variable warning."""
+    config = load_config(
+        {
+            "FLUIDS_MCP_SETTINGS_JSON": "/tmp/settings.json",
+            "FLUIDS_MCP_FLUENT_VERSION": "241",
+        }
+    )
+    assert config.warnings == ()
+    assert config.settings_json == "/tmp/settings.json"
+
+
 def test_validate_config_returns_loaded_config():
     """Verify that validate config returns loaded config.
 

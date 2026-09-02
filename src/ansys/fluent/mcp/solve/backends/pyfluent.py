@@ -866,6 +866,60 @@ def _filter_launch_kwargs(
     return out
 
 
+def _probe_fluent_version(solver: Any) -> Optional[str]:
+    """Return the live session's Fluent version as a compact ``"NNN"`` string.
+
+    Tries, in order, the several accessors PyFluent has exposed across
+    releases:
+
+    * ``solver.get_fluent_version()`` — returns a ``FluentVersion`` enum
+      on modern PyFluent (its ``.value`` is ``"24.1.0"``-style).
+    * ``solver._version`` — the settings-API root carries ``"241"``.
+    * ``solver.scheme.eval("(inquire-release)")`` — Scheme fallback,
+      stable back to very old Fluent, yields ``"24.1.0"``.
+
+    Any failure returns ``None``; callers treat the version as unknown.
+
+    Parameters
+    ----------
+    solver : Any
+        Connected PyFluent session object.
+
+    Returns
+    -------
+    Optional[str]
+        Compact ``"NNN"`` version, or ``None`` when it cannot be read.
+    """
+    from ansys.fluent.mcp.solve.catalog.schema import normalize_fluent_version
+
+    getter = getattr(solver, "get_fluent_version", None)
+    if callable(getter):
+        try:
+            raw = getter()
+            candidate = getattr(raw, "value", None) or getattr(raw, "name", None) or raw
+            normalized = normalize_fluent_version(str(candidate))
+            if normalized:
+                return normalized
+        except Exception as exc:
+            logger.debug("get_fluent_version() failed: %s", exc, exc_info=True)
+
+    raw_attr = getattr(solver, "_version", None)
+    normalized = normalize_fluent_version(str(raw_attr)) if raw_attr else None
+    if normalized:
+        return normalized
+
+    scheme = getattr(solver, "scheme", None)
+    if scheme is not None and hasattr(scheme, "eval"):
+        try:
+            normalized = normalize_fluent_version(str(scheme.eval("(inquire-release)")))
+            if normalized:
+                return normalized
+        except Exception as exc:
+            logger.debug("(inquire-release) failed: %s", exc, exc_info=True)
+
+    return None
+
+
 class PyFluentBackend(Backend):
     """Persistent PyFluent Solver session."""
 
@@ -890,6 +944,9 @@ class PyFluentBackend(Backend):
         self._solver: Any = None
         self._mode: Optional[str] = None  # "launch" | "attach"
         self._session_kind = "solver_session"
+        # Compact ``"NNN"`` Fluent version reported by the live session
+        # (e.g. ``"241"`` for 2024 R1). Populated on connect, best-effort.
+        self._fluent_version: Optional[str] = None
         # Single-flight lock around every solver-touching coroutine. The
         # PyFluent gRPC channel is not safe under concurrent access from
         # the same process; serialize to avoid interleaved RPCs.
@@ -1134,15 +1191,31 @@ class PyFluentBackend(Backend):
         # Fresh session → drop every cache from any prior session.
         self.invalidate_live_caches()
         self.invalidate_mesh_cache()
+
+        # Record the live Fluent version so the offline settings-schema
+        # checks target the release we actually attached to (e.g. 2024 R1
+        # rather than the newest bundled snapshot). Best-effort: an
+        # unknown version simply leaves the checks on their default. The
+        # probe may issue a blocking gRPC call, so keep it off the loop.
+        try:
+            self._fluent_version = await asyncio.to_thread(
+                _probe_fluent_version, self._solver
+            )
+        except Exception as exc:  # never fail a connect over the version probe
+            logger.debug("Fluent version probe failed: %s", exc, exc_info=True)
+            self._fluent_version = None
+        self._pin_runtime_schema_version(self._fluent_version)
+
         try:
             from ansys.fluent.mcp.common.activity_logging import SESSION_LOGGER
 
             SESSION_LOGGER.info(
-                "session connected mode=%s endpoint=%s precision=%s "
+                "session connected mode=%s endpoint=%s fluent_version=%s precision=%s "
                 "processor_count=%s dimension=%s solver_mode=%s "
                 "gpu=%r journals=%s case=%s",
                 self._mode,
                 self.endpoint,
+                self._fluent_version or "unknown",
                 effective["precision"],
                 effective["processor_count"],
                 norm_dimension,
@@ -1153,11 +1226,14 @@ class PyFluentBackend(Backend):
             )
         except Exception as exc:
             logger.debug("Failed to log session connect: %s", exc, exc_info=True)
+        version_note = (
+            f" (Fluent {self._fluent_version})" if self._fluent_version else ""
+        )
         return ConnectResult(
             status="ok",
             backend_kind=self.kind,
             endpoint=self.endpoint,
-            message=f"Connected via {self._mode}",
+            message=f"Connected via {self._mode}{version_note}",
         )
 
     async def disconnect(self) -> None:
@@ -1182,6 +1258,7 @@ class PyFluentBackend(Backend):
             self._solver = None
             self.endpoint = None
             self._session_kind = "solver_session"
+            self._fluent_version = None
             self.invalidate_cache()
 
             def _do_close() -> None:
@@ -1201,6 +1278,7 @@ class PyFluentBackend(Backend):
                     logger.exception("Error closing PyFluent session")
 
             await asyncio.to_thread(_do_close)
+        self._clear_runtime_schema_version()
         try:
             from ansys.fluent.mcp.common.activity_logging import SESSION_LOGGER
 
@@ -1237,6 +1315,7 @@ class PyFluentBackend(Backend):
         self._solver = None
         self.endpoint = None
         self._session_kind = "solver_session"
+        self._fluent_version = None
         try:
             if hasattr(solver, "exit"):
                 solver.exit()
@@ -1244,6 +1323,25 @@ class PyFluentBackend(Backend):
                 solver.close()
         except Exception:  # best-effort sync close
             logger.exception("Error closing PyFluent session in close_sync()")
+        self._clear_runtime_schema_version()
+
+    @staticmethod
+    def _pin_runtime_schema_version(version: str | None) -> None:
+        """Point the offline settings-schema checks at ``version``.
+
+        ``None`` clears the pin (e.g. on disconnect). Best-effort: the
+        schema layer is optional and any failure is swallowed.
+        """
+        try:
+            from ansys.fluent.mcp.solve.catalog.schema import set_runtime_fluent_version
+
+            set_runtime_fluent_version(version)
+        except Exception as exc:  # schema layer is optional
+            logger.debug("could not update pinned schema version: %s", exc, exc_info=True)
+
+    def _clear_runtime_schema_version(self) -> None:
+        """Drop the schema version pinned from the (now closed) session."""
+        self._pin_runtime_schema_version(None)
 
     # ------------------------------------------------------------------
     # Helpers

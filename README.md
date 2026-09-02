@@ -143,9 +143,48 @@ You configure the server through `FLUIDS_MCP_*` environment variables. Common va
 | Variable | Effect |
 |----------|--------|
 | `FLUIDS_MCP_SETTINGS_JSON` | Override the bundled settings schema with an external file |
+| `FLUIDS_MCP_FLUENT_VERSION` | Target Fluent release for offline checks (`24.1`, `241` or `v24_1`) |
 | `FLUIDS_MCP_LOG_LEVEL` | Set the log level (default `INFO`) |
 | `FLUIDS_MCP_DISABLE_SESSION_LOGS` | Set to `1` to disable session logs |
 | `FLUIDS_MCP_MAX_STEPS` | Set a cap on MCP tool-loop iterations (default `30`) |
+
+### Connecting to Fluent 2024 R1 (24.1) and other older releases
+
+The `connect` tool delegates to PyFluent, so it can attach to any Fluent
+release the installed `ansys-fluent-core` supports. To attach to a running
+Fluent 24.1 session, start Fluent's gRPC server (in the Fluent GUI:
+**File → Applications → Server → Start...**, or launch with
+`fluent 3ddp -sifile=server.txt`) and call `connect` with either the
+`server_info_file` or the `ip`/`port`/`password` reported there.
+
+The bundled offline settings schema is generated from a newer Fluent
+release, so `validate_code`, `describe_path`, and `find_api` can report
+paths that do not exist in 24.1. On connect the server reads the live
+Fluent version and narrows those checks to it automatically. For fully
+accurate offline checks, export a 24.1 snapshot once on a machine with
+Fluent 24.1 installed:
+
+```python
+import gzip, json, pathlib
+import ansys.fluent.core as pyfluent
+
+solver = pyfluent.launch_fluent(product_version="24.1", mode="solver")
+# Full settings tree (the same structure the bundled snapshots use).
+static_info = solver.settings.get_static_info()
+out = pathlib.Path("settings_241.json.gz")
+with gzip.open(out, "wt", encoding="utf-8") as fh:
+    json.dump(static_info, fh)
+solver.exit()
+```
+
+The exact accessor for the raw settings tree varies slightly between
+PyFluent versions (`solver.settings.get_static_info()`,
+`solver._settings_service.get_static_info()`, or the
+`ansys.fluent.core.codegen` helpers) -- any of them produce a compatible
+JSON document. Then point the server at it with
+`FLUIDS_MCP_SETTINGS_JSON=/path/to/settings_241.json.gz`, or drop the file
+into `src/ansys/fluent/mcp/solve/data/` and set
+`FLUIDS_MCP_FLUENT_VERSION=241`.
 
 ## Host ownership and architecture boundaries
 

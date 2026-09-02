@@ -31,6 +31,14 @@ loader is lazy and lru-cached.
 Override the bundled file by setting ``FLUIDS_MCP_SETTINGS_JSON`` to
 an absolute path (``.json`` or ``.json.gz``). This is useful for testing a
 newer Fluent build before rolling a new vendored snapshot.
+
+Which vendored snapshot is used can also be selected by version:
+``FLUIDS_MCP_FLUENT_VERSION`` (``"241"``, ``"24.1"`` and ``"v24_1"`` are all
+accepted) picks ``settings_<version>.json.gz`` from the data directory. When
+the MCP server attaches to a live solver it also records the reported Fluent
+version and, unless the environment variable is set, uses that as the default
+so static checks line up with the connected release. If no matching snapshot
+is bundled the loader returns ``None`` and static checks degrade gracefully.
 """
 
 from __future__ import annotations
@@ -43,12 +51,115 @@ import json
 import logging
 import os
 from pathlib import Path
+import re
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_VERSION = "271"
+# Newest Fluent release this package ships a vendored ``settings_<v>.json.gz``
+# snapshot for. Used as the fallback when nothing else pins a version.
+_BUNDLED_VERSION = "271"
 _OVERRIDE_ENV = "FLUIDS_MCP_SETTINGS_JSON"
+_VERSION_ENV = "FLUIDS_MCP_FLUENT_VERSION"
+
+# Matches only strings that genuinely look like a Fluent version, so a
+# stray ``repr()`` (e.g. of a mock session) can't be mistaken for one:
+#   "24.1"  "24.1.0"  "v24_1"  "2024R1"  "241"
+_VERSION_RE = re.compile(
+    r"""^\s*
+    (?:
+        v?(?P<yy>\d{2})[._](?P<rr>\d)(?:[._]\d+)?   # 24.1 / v24_1 / 24.1.0
+      | (?:20)?(?P<yy2>\d{2})[rR](?P<rr2>\d)        # 2024R1 / 24R1
+      | (?P<compact>\d{3})                          # 241
+    )
+    \s*$""",
+    re.VERBOSE,
+)
+
+
+def normalize_fluent_version(value: str | None) -> str | None:
+    """Normalize a Fluent version to the compact ``"NNN"`` form.
+
+    Accepts the forms seen in the wild: ``"24.1"`` (dotted), ``"v24_1"``
+    (PyFluent ``FluentVersion`` enum), ``"24.1.0"`` (Scheme
+    ``inquire-release``), ``"2024R1"`` and the already-compact ``"241"``.
+    Returns ``None`` for anything that does not clearly look like a
+    version.
+
+    Parameters
+    ----------
+    value : str | None
+        Raw version string.
+
+    Returns
+    -------
+    str | None
+        Compact ``"NNN"`` string, or ``None`` when unparseable.
+    """
+    if not value:
+        return None
+    match = _VERSION_RE.match(str(value))
+    if match is None:
+        return None
+    if match.group("compact"):
+        return match.group("compact")
+    yy = match.group("yy") or match.group("yy2")
+    rr = match.group("rr") or match.group("rr2")
+    return f"{yy}{rr}"
+
+
+def _env_version() -> str | None:
+    """Return the version pinned by ``FLUIDS_MCP_FLUENT_VERSION``, if any."""
+    return normalize_fluent_version(os.getenv(_VERSION_ENV))
+
+
+# Runtime-observed Fluent version (set by the PyFluent backend on connect).
+# Only consulted when the environment variable is not set.
+_runtime_version: str | None = None
+
+
+def set_runtime_fluent_version(value: str | None) -> None:
+    """Record the Fluent version reported by a live session.
+
+    Pass ``None`` (e.g. on disconnect) to clear it. A non-empty value
+    that is not version-shaped is ignored and the current value kept.
+
+    Parameters
+    ----------
+    value : str | None
+        Version string in any form :func:`normalize_fluent_version` accepts,
+        or ``None`` to clear.
+    """
+    global _runtime_version
+    if value is None:
+        normalized: str | None = None
+    else:
+        normalized = normalize_fluent_version(value)
+        if normalized is None:
+            logger.debug("ignoring unrecognized runtime Fluent version: %r", value)
+            return
+    if normalized != _runtime_version:
+        _runtime_version = normalized
+        # A different target version invalidates any cached parse.
+        load_settings_schema.cache_clear()
+
+
+def default_schema_version() -> str:
+    """Resolve which schema version the offline checks should use.
+
+    Precedence: ``FLUIDS_MCP_FLUENT_VERSION`` env var, then the version
+    reported by the connected solver, then the newest bundled snapshot.
+
+    Returns
+    -------
+    str
+        Compact ``"NNN"`` version string.
+    """
+    return _env_version() or _runtime_version or _BUNDLED_VERSION
+
+
+# Backwards-compatible alias: some call sites / tests import this name.
+_DEFAULT_VERSION = _BUNDLED_VERSION
 
 
 @dataclass(frozen=True)
@@ -170,15 +281,20 @@ def _normalise_path(path: str) -> str:
     return ".".join(out_parts)
 
 
-def _locate_default_data() -> Path | None:
-    """Find the bundled gzipped schema, returning ``None`` if missing.
+def _locate_default_data(version: str = _BUNDLED_VERSION) -> Path | None:
+    """Find a bundled gzipped schema by version, returning ``None`` if missing.
+
+    Parameters
+    ----------
+    version : str
+        Compact ``"NNN"`` Fluent version, e.g. ``"271"`` or ``"241"``.
 
     Returns
     -------
     Path | None
         Result produced by the function.
     """
-    name = f"settings_{_DEFAULT_VERSION}.json.gz"
+    name = f"settings_{version}.json.gz"
     try:
         res = resources.files("ansys.fluent.mcp.solve.data").joinpath(name)
         # On editable installs ``res`` is a Path-like; ``is_file`` works
@@ -462,23 +578,38 @@ class SettingsSchema:
 # module-level loader
 # ----------------------------------------------------------------------
 @lru_cache(maxsize=4)
-def load_settings_schema(version: str = _DEFAULT_VERSION) -> SettingsSchema | None:
-    """Load the schema for a version. Currently only ``"271"`` is bundled.
+def load_settings_schema(version: str | None = None) -> SettingsSchema | None:
+    """Load the offline settings schema for a Fluent version.
 
-    Honors ``FLUIDS_MCP_SETTINGS_JSON`` for ad-hoc overrides. Returns
-    ``None`` (and logs at INFO) if no schema can be located. Callers
-    must treat schema-based checks as best-effort.
+    ``version`` accepts any form :func:`normalize_fluent_version` handles
+    (``"241"``, ``"24.1"``, ``"v24_1"``). When omitted it is resolved via
+    :func:`default_schema_version` (env var, then connected-solver version,
+    then the newest bundled snapshot).
+
+    Honors ``FLUIDS_MCP_SETTINGS_JSON`` for ad-hoc file overrides. Returns
+    ``None`` (and logs at INFO) if no schema can be located for the
+    requested version -- callers must treat schema-based checks as
+    best-effort. ``settings_271.json.gz`` ships with the package; other
+    versions require a vendored ``settings_<v>.json.gz`` or the env
+    override.
 
     Parameters
     ----------
-    version : str
-        Version to supply to the function.
+    version : str | None
+        Target Fluent version, or ``None`` to auto-resolve.
 
     Returns
     -------
     SettingsSchema | None
         Collection containing the operation results.
     """
+    if version is None:
+        resolved = default_schema_version()
+    else:
+        # An explicit request is honored as-is: a recognizable version is
+        # normalized, anything else is used verbatim as the snapshot token
+        # (and simply won't be found unless vendored / overridden).
+        resolved = normalize_fluent_version(version) or version
     override = os.getenv(_OVERRIDE_ENV)
     src_path: Path | None = None
     if override:
@@ -487,10 +618,18 @@ def load_settings_schema(version: str = _DEFAULT_VERSION) -> SettingsSchema | No
             src_path = cand
         else:
             logger.warning("%s set but file missing: %s", _OVERRIDE_ENV, override)
-    if src_path is None and version == _DEFAULT_VERSION:
-        src_path = _locate_default_data()
     if src_path is None:
-        logger.info("settings schema not located for version %s; static checks disabled", version)
+        src_path = _locate_default_data(resolved)
+    if src_path is None and resolved != _BUNDLED_VERSION:
+        logger.info(
+            "no bundled settings schema for Fluent %s; "
+            "set %s to an exported settings_%s.json[.gz] for offline checks",
+            resolved,
+            _OVERRIDE_ENV,
+            resolved,
+        )
+    if src_path is None:
+        logger.info("settings schema not located for version %s; static checks disabled", resolved)
         return None
     try:
         raw = _load_raw(src_path)

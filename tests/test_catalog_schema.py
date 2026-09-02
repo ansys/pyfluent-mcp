@@ -175,7 +175,7 @@ def test_load_settings_schema_returns_none_for_missing_or_bad_override(tmp_path,
     """
     load_settings_schema.cache_clear()
     monkeypatch.setenv(schema._OVERRIDE_ENV, str(tmp_path / "missing.json"))
-    monkeypatch.setattr(schema, "_locate_default_data", lambda: None)
+    monkeypatch.setattr(schema, "_locate_default_data", lambda *args, **kwargs: None)
     assert load_settings_schema("test") is None
 
     bad_path = tmp_path / "bad.json"
@@ -183,3 +183,31 @@ def test_load_settings_schema_returns_none_for_missing_or_bad_override(tmp_path,
     load_settings_schema.cache_clear()
     monkeypatch.setenv(schema._OVERRIDE_ENV, str(bad_path))
     assert load_settings_schema("test") is None
+
+
+def test_normalize_fluent_version_accepts_common_forms():
+    """The version normalizer folds every form seen in the wild to ``"NNN"``."""
+    assert schema.normalize_fluent_version("24.1") == "241"
+    assert schema.normalize_fluent_version("241") == "241"
+    assert schema.normalize_fluent_version("v24_1") == "241"
+    assert schema.normalize_fluent_version("24.1.0") == "241"
+    assert schema.normalize_fluent_version("  25.2  ") == "252"
+    assert schema.normalize_fluent_version(None) is None
+    assert schema.normalize_fluent_version("nope") is None
+
+
+def test_default_schema_version_precedence(monkeypatch):
+    """Env var wins over the connected-solver version, which wins over bundled."""
+    monkeypatch.delenv(schema._VERSION_ENV, raising=False)
+    schema.set_runtime_fluent_version(None)
+    assert schema.default_schema_version() == schema._BUNDLED_VERSION
+
+    schema.set_runtime_fluent_version("24.1")
+    assert schema.default_schema_version() == "241"
+
+    monkeypatch.setenv(schema._VERSION_ENV, "v25_2")
+    assert schema.default_schema_version() == "252"
+
+    monkeypatch.delenv(schema._VERSION_ENV, raising=False)
+    schema.set_runtime_fluent_version(None)
+    load_settings_schema.cache_clear()

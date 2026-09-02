@@ -27,9 +27,34 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import logging
 import os
+import re
 from typing import Optional
 
 logger = logging.getLogger("ansys.fluent.mcp.config")
+
+# ``24.1`` / ``v24_1`` / ``24.1.0`` / ``2024R1`` / ``241`` -> ``"241"``.
+_FLUENT_VERSION_RE = re.compile(
+    r"^\s*(?:"
+    r"v?(?P<yy>\d{2})[._](?P<rr>\d)(?:[._]\d+)?"
+    r"|(?:20)?(?P<yy2>\d{2})[rR](?P<rr2>\d)"
+    r"|(?P<compact>\d{3})"
+    r")\s*$"
+)
+
+
+def _parse_fluent_version(raw: str) -> Optional[str]:
+    """Return the compact ``"NNN"`` Fluent version, or ``None`` if unset/blank."""
+    if not raw or not raw.strip():
+        return None
+    match = _FLUENT_VERSION_RE.match(raw)
+    if match is None:
+        raise ConfigError(
+            f"FLUIDS_MCP_FLUENT_VERSION={raw!r} is not a recognized Fluent "
+            'version (expected e.g. "24.1", "241" or "v24_1").'
+        )
+    if match.group("compact"):
+        return match.group("compact")
+    return f"{match.group('yy') or match.group('yy2')}{match.group('rr') or match.group('rr2')}"
 
 
 # Public allow-list of recognized environment variables. A startup warning is emitted
@@ -40,6 +65,8 @@ _KNOWN_ENV_VARS: frozenset[str] = frozenset(
         "FLUIDS_MCP_HTTP_TIMEOUT",
         "FLUIDS_MCP_VERIFY_TLS",
         "FLUIDS_MCP_API_OBJECTS_PATH",
+        "FLUIDS_MCP_FLUENT_VERSION",
+        "FLUIDS_MCP_SETTINGS_JSON",
         "FLUIDS_MCP_CACHE_DIR",
         "FLUIDS_MCP_CA_BUNDLE",
         "FLUIDS_MCP_LOG_LEVEL",
@@ -59,6 +86,8 @@ class FluidsMCPConfig:
     http_timeout: float = 300.0
     verify_tls: bool = True
     api_objects_path: Optional[str] = None
+    fluent_version: Optional[str] = None
+    settings_json: Optional[str] = None
     log_level: str = "INFO"
     warnings: tuple[str, ...] = field(default_factory=tuple)
 
@@ -168,10 +197,14 @@ def load_config(env: Optional[dict[str, str]] = None) -> FluidsMCPConfig:
             f"FLUIDS_MCP_LOG_LEVEL={log_level!r} must be one of DEBUG/INFO/WARNING/ERROR/CRITICAL."
         )
 
+    fluent_version = _parse_fluent_version(src.get("FLUIDS_MCP_FLUENT_VERSION", ""))
+
     return FluidsMCPConfig(
         http_timeout=http_timeout,
         verify_tls=verify_tls,
         api_objects_path=src.get("FLUIDS_MCP_API_OBJECTS_PATH"),
+        fluent_version=fluent_version,
+        settings_json=src.get("FLUIDS_MCP_SETTINGS_JSON"),
         log_level=log_level,
         warnings=tuple(warnings),
     )
