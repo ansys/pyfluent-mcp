@@ -1,0 +1,115 @@
+
+
+
+
+
+
+:class:`ConnectResult`
+======================
+
+
+.. py:class:: ansys.fluent.mcp.common.models.ConnectResult(/, **data: Any)
+
+   Bases: :py:obj:`pydantic.BaseModel`
+
+
+   
+   Result of a ``connect`` call.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: ConnectResult
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~status`
+            - 
+          * - :py:attr:`~backend_kind`
+            - 
+          * - :py:attr:`~endpoint`
+            - 
+          * - :py:attr:`~candidates`
+            - 
+          * - :py:attr:`~message`
+            - 
+          * - :py:attr:`~error_code`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.models import ConnectResult
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: status
+   :type:  Literal['ok', 'needs_selection', 'error']
+
+.. py:attribute:: backend_kind
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: endpoint
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: candidates
+   :type:  list[ConnectionTarget]
+   :value: None
+
+
+.. py:attribute:: message
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: error_code
+   :type:  Optional[str]
+   :value: None
+
+
+
+
+
+

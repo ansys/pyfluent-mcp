@@ -1,0 +1,114 @@
+
+
+
+
+
+
+:class:`Telemetry`
+==================
+
+
+.. py:class:: ansys.fluent.mcp.common.telemetry.Telemetry
+
+   Bases: :py:obj:`abc.ABC`
+
+
+   
+   Pluggable telemetry sink.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+.. py:currentmodule:: Telemetry
+
+Overview
+--------
+
+.. tab-set::
+
+   .. tab-item:: Abstract methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~emit`
+            - Emit a telemetry event.
+
+
+
+
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.telemetry import Telemetry
+
+
+
+Method detail
+-------------
+
+.. py:method:: emit(event: str, fields: dict[str, Any]) -> None
+   :abstractmethod:
+
+
+   
+   Emit a telemetry event.
+
+
+   :Parameters:
+
+       **event** : :class:`python:str`
+           Telemetry or logging event name to record.
+
+       **fields** : :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Structured fields attached to the telemetry event.
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+

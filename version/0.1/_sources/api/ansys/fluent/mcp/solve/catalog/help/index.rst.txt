@@ -1,0 +1,205 @@
+
+
+
+
+
+
+The ``help.py`` module
+======================
+
+.. py:module:: ansys.fluent.mcp.solve.catalog.help
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: help
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~build_help_map`
+            - Return ``{leaf_python_name: docstring}`` for the active PyFluent.
+
+
+          * - :py:obj:`~get_default_help_map`
+            - Process-wide cached help map, which falls back to an empty dictionary.
+
+
+          * - :py:obj:`~reset_default_help_map`
+            - Test hook for clearing the in-process help map cache.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Docstring extractor for PyFluent's generated ``settings_<version>.py``.
+
+The bundled ``api_objects.json`` carries only ``(path, kind)`` tuples,
+which is fine for exact-path lookup but useless for natural-language
+queries such as *"temperature of incoming gas"*. The relevant leaf is
+spelled ``velocity_inlet.thermal.t``, and the token ``t`` does not match
+any English word.
+
+PyFluent does, however, ship a one-paragraph class docstring with every
+generated settings class. Indexing those docstrings into the lexical
+fallback closes most of the recall gap to an embedding-based retriever
+without adding a vector store.
+
+This module extracts ``leaf_python_name -> docstring`` from the
+generated module **by regex**. Importing the 3.4 MB module is slow and
+has side effects unwanted at retrieval time. The parsed map is
+cached to disk so the regex is paid once per (PyFluent version,
+ansys-fluent-mcp version) combination.
+
+Multiple classes can share a leaf name. For example, ``temperature`` appears as
+a child of ``wall``, ``mass_flow_inlet``, ``radiator``, and more. The map
+stores the deduplicated union of all docstrings for a given leaf,
+joined by ``\\n\\n``. The lexical scorer then tokenizes that blob and
+uses it as additional bag-of-words evidence for any path whose leaf
+matches.
+
+This is approximate. A query that hits via the ``wall``-specific
+docstring may also boost ``radiator``-rooted paths sharing the leaf.
+That's an acceptable trade for the cost (~50 LOC, no extra dependency)
+because the eventual ranker still prefers paths whose path tokens
+overlap the query. The docstring evidence is additive, not decisive.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: build_help_map(*, settings_path: Optional[pathlib.Path] = None, use_cache: bool = True) -> dict[str, str]
+
+   
+   Return ``{leaf_python_name: docstring}`` for the active PyFluent.
+
+   The parsed map is memoized to ``$CACHE_DIR/api_help_<hash>.json``
+   keyed on the absolute path of the settings file plus its mtime, so
+   a PyFluent upgrade transparently rebuilds the cache while normal
+   process starts read it back in less than 10 ms.
+
+   :Parameters:
+
+       **settings_path** : :obj:`Optional`\[:obj:`Path`]
+           Settings path to supply to the function.
+
+       **use_cache** : :ref:`bool <python:bltin-boolean-values>`
+           Use cache to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:str`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: get_default_help_map() -> dict[str, str]
+
+   
+   Process-wide cached help map, which falls back to an empty dictionary.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:str`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: reset_default_help_map() -> None
+
+   
+   Test hook for clearing the in-process help map cache.
+
+
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

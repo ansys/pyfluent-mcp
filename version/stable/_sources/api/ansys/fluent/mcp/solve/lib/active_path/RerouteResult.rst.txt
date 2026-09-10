@@ -1,0 +1,104 @@
+
+
+
+
+
+
+:class:`RerouteResult`
+======================
+
+
+.. py:class:: ansys.fluent.mcp.solve.lib.active_path.RerouteResult
+
+   
+   Result of checking a proposed path against the live mode.
+
+   ``active=True`` means the path is fine to write as-is. ``active=False``
+   means the path is in a known multi-path class and is INACTIVE under the
+   current mode; ``correct_path`` carries the active sibling when it can be
+   derived deterministically (else ``None``), and ``reason`` is a short
+   human-readable explanation suitable for a validator diagnostic.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: RerouteResult
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~active`
+            - 
+          * - :py:attr:`~correct_path`
+            - 
+          * - :py:attr:`~reason`
+            - 
+          * - :py:attr:`~group`
+            - 
+          * - :py:attr:`~active_family`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.lib.active_path import RerouteResult
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: active
+   :type:  bool
+
+.. py:attribute:: correct_path
+   :type:  str | None
+
+.. py:attribute:: reason
+   :type:  str
+
+.. py:attribute:: group
+   :type:  str | None
+
+.. py:attribute:: active_family
+   :type:  str | None
+   :value: None
+
+
+
+
+
+

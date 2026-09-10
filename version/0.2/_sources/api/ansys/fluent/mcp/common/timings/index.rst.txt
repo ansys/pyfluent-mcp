@@ -1,0 +1,156 @@
+
+
+
+
+
+
+The ``timings.py`` module
+=========================
+
+.. py:module:: ansys.fluent.mcp.common.timings
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: timings
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.timings.TimingsCollector`
+            - Process-wide singleton. Thread-safe. No async is required.
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~get_collector`
+            - Return the collector.
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> TimingsCollector</api/ansys/fluent/mcp/common/timings/TimingsCollector>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Lightweight in-process latency collector for the gateway.
+
+The attribute "the system feels slow" must be attributed to the right layer:
+HTTP endpoint, tool dispatch, or live Fluent backend call. Doing that
+with logs alone is hard because the user has to scroll a noisy file.
+This module keeps a fixed-size counter table per scope and exposes
+it through ``GET /v1/diagnostics/timings``.
+
+Design constraints
+------------------
+
+* **Always-on, near-zero overhead.** A timed block does one
+  ``time.perf_counter()`` pair plus three dictionary updates under a single
+  ``threading.Lock``. No allocations per call are made beyond the key string
+  the caller already has.
+* **Bounded memory.** Each scope (``http``/``tool``/ ``backend``)
+  keeps at most ``_MAX_KEYS`` distinct keys (1024). When the table is
+  full, new keys are silently dropped. Stale-but-bounded is preferred over
+  unbounded growth.
+* **No external deps.** Stdlib only. The collector is importable from
+  any module without pulling in FastAPI, PyFluent, or asyncio.
+* **Reset on demand.** ``GET /v1/diagnostics/timings?reset=true``
+  clears the counters automatically so the user can take a fresh sample
+  around a specific user action.
+
+Records kept per (scope, key)
+-----------------------------
+
+* ``count``: Number of completed calls.
+* ``total_ms``: Cumulative wall time.
+* ``min_ms`` / ``max_ms``: Extremes.
+* ``last_ms``: Most recent sample (helps catch cold-start outliers).
+* ``errors``: Number of calls that left the timed block via an
+  exception. The elapsed time is still recorded so a slow failure
+  doesn't disappear from the table.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: get_collector() -> TimingsCollector
+
+   
+   Return the collector.
+
+
+
+
+
+   :Returns:
+
+       :obj:`TimingsCollector`
+           TimingsCollector produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

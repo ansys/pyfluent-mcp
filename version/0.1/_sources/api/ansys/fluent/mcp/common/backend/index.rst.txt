@@ -1,0 +1,89 @@
+
+
+
+
+
+
+The ``backend.py`` module
+=========================
+
+.. py:module:: ansys.fluent.mcp.common.backend
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: backend
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.backend.Backend`
+            - Common interface for all backends.
+
+
+
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> Backend</api/ansys/fluent/mcp/common/backend/Backend>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Backend abstraction.
+
+Every leaf has one or more backends. A backend is the thing that actually
+talks to a Fluids product (Fluent solver, Fluent meshing, Discovery, Prime,
+or the Fluids One service). Tools are LLM-facing; backends are
+implementation-facing.
+
+A backend implements only the operations its product supports. Unsupported
+operations raise `BackendUnavailableError` so the typed-error guard converts them
+to a clean error code instead of a 500.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+

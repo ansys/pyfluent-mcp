@@ -1,0 +1,102 @@
+
+
+
+
+
+
+:class:`AaliChatModel`
+======================
+
+
+.. py:class:: ansys.fluent.mcp.common.llm_wire.AaliChatModel
+
+   
+   A single resolved chat-model entry from the AALI model's configuration.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: AaliChatModel
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~endpoint`
+            - 
+          * - :py:attr:`~api_key`
+            - 
+          * - :py:attr:`~model`
+            - 
+          * - :py:attr:`~model_type`
+            - 
+          * - :py:attr:`~auth_style`
+            - 
+          * - :py:attr:`~source`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.llm_wire import AaliChatModel
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: endpoint
+   :type:  str
+
+.. py:attribute:: api_key
+   :type:  str | None
+
+.. py:attribute:: model
+   :type:  str
+
+.. py:attribute:: model_type
+   :type:  str
+
+.. py:attribute:: auth_style
+   :type:  str
+
+.. py:attribute:: source
+   :type:  pathlib.Path
+
+
+
+
+

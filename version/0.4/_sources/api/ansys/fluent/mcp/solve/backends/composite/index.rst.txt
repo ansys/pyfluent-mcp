@@ -1,0 +1,108 @@
+
+
+
+
+
+
+The ``composite.py`` module
+===========================
+
+.. py:module:: ansys.fluent.mcp.solve.backends.composite
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: composite
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.backends.composite.SolveCompositeBackend`
+            - Composite backend that delegates deterministic operations to PyFluent.
+
+
+
+
+
+
+    .. tab-item:: Attributes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~logger`
+            - 
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> SolveCompositeBackend</api/ansys/fluent/mcp/solve/backends/composite/SolveCompositeBackend>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Composite backend: deterministic PyFluent solver operations.
+
+The solve leaf requires a live PyFluent solver session for code execution
+and live-model introspection.  This composite backend ensures that PyFluent
+is **always** the execution engine, regardless of how the user initiates
+the connection. Semantic orchestration is intentionally left to the host
+application.
+
+Typical usage from an MCP client::
+
+    connect()  # launches / attaches PyFluent
+    run_code(code)  # → PyFluent (always)
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:data:: logger
+
+
+

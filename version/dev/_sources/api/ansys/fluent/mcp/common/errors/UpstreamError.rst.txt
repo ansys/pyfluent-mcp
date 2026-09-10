@@ -1,0 +1,81 @@
+
+
+
+
+
+
+:class:`UpstreamError`
+======================
+
+
+.. py:exception:: ansys.fluent.mcp.common.errors.UpstreamError(message: str, *, details: dict[str, Any] | None = None)
+
+   Bases: :py:obj:`FluidsMCPError`
+
+
+   
+   Raised when a backend call fails due to an upstream error (for example, a network issue).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: UpstreamError
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~error_code`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.errors import UpstreamError
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: error_code
+   :value: 'upstream_error'
+
+
+
+
+
+

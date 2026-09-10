@@ -1,0 +1,200 @@
+
+
+
+
+
+
+The ``intent_guard.py`` module
+==============================
+
+.. py:module:: ansys.fluent.mcp.solve.lib.intent_guard
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: intent_guard
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.lib.intent_guard.GuardFinding`
+            - Single signature hit on a snippet.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.lib.intent_guard.GuardReport`
+            - Collection of findings for a snippet.
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~is_enabled`
+            - Honor ``FLUIDS_MCP_INTENT_GUARD`` (default ON).
+
+
+          * - :py:obj:`~evaluate`
+            - Evaluate code against intent-guard risk signatures.
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> GuardFinding</api/ansys/fluent/mcp/solve/lib/intent_guard/GuardFinding>
+    <span class="nf nf-cod-symbol_class"></span> GuardReport</api/ansys/fluent/mcp/solve/lib/intent_guard/GuardReport>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Static, Fluent-specific risk classifier for ``run_code`` snippets.
+
+This module is **stateless**. It does NOT plan, schedule, or track
+history. It only inspects a single snippet's AST against a fixed
+table of Fluent-specific crash signatures and (optionally) performs
+a single intra-snippet topological reorder when use-before-create is
+detected for a small set of well-known dependencies (such as named
+expressions and materials).
+
+By design this module:
+
+* Contains **no LLM** and **no rule-pack DSL**. Only a fixed table
+  of code shapes that have empirically crashed PyFluent/the gRPC
+  channel during in-house sessions.
+* Is **opt-out** via ``FLUIDS_MCP_INTENT_GUARD=0`` so a host that
+  prefers its own planner can disable it entirely.
+* Never imports ``ansys.fluent.core``. It pure ``ast`` walks only
+  so that it is safe to evaluate before a solver session exists.
+* Returns the same ``RunCodeResult`` envelope the rest of the leaf
+  uses, with one of three new ``error_code`` values:
+  ``risk_blocked``, ``sequence_error``, ``and solver_disconnected``.
+  (The third is set by :mod:`pyfluent` backend, not here.)
+
+This is a defense-in-depth layer **at the execution boundary**, in
+scope for the standalone leaf. It is NOT a planner. Higher-level
+planning, recipes, and journaling remain out of scope.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: is_enabled(env: Optional[dict[str, str]] = None) -> bool
+
+   
+   Honor ``FLUIDS_MCP_INTENT_GUARD`` (default ON).
+
+
+   :Parameters:
+
+       **env** : :class:`python:dict`\[:class:`python:str`, :class:`python:str`], :obj:`optional`
+           Environment mapping to inspect. When omitted, ``os.environ`` is used.
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>`
+           ``False`` only when the environment value is ``0``, ``false``,
+           ``no``, or ``off``. Otherwise, ``True``.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: evaluate(code: str, *, live_named_objects: Optional[Mapping[str, Iterable[str]]] = None, iterating: bool = False) -> GuardReport
+
+   
+   Evaluate code against intent-guard risk signatures.
+
+
+   :Parameters:
+
+       **code** : :class:`python:str`
+           Python code or command text to execute or validate.
+
+       **live_named_objects** : :obj:`Optional`\[:obj:`Mapping`\[:class:`python:str`, :obj:`Iterable`\[:class:`python:str`]]]
+           Live named objects to supply to the function.
+
+       **iterating** : :ref:`bool <python:bltin-boolean-values>`
+           Whether to enable or apply iterating.
+
+
+
+   :Returns:
+
+       :obj:`GuardReport`
+           GuardReport produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

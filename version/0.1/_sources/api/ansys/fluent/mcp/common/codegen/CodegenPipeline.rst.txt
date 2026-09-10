@@ -1,0 +1,177 @@
+
+
+
+
+
+
+:class:`CodegenPipeline`
+========================
+
+
+.. py:class:: ansys.fluent.mcp.common.codegen.CodegenPipeline(*, store: ansys.fluent.mcp.common.conversation.ConversationStore)
+
+   
+   Default pipeline: delegate to the backend.
+
+   Subclass and override `generate`/`clarify` to add LLM orchestration,
+   retrieval, validation passes, etc.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: CodegenPipeline
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~generate`
+            - Generate code for the requested conversation state.
+          * - :py:attr:`~clarify`
+            - Apply a clarification answer to a pending code-generation session.
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~store`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.codegen import CodegenPipeline
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: store
+
+
+
+Method detail
+-------------
+
+.. py:method:: generate(*, backend: ansys.fluent.mcp.common.backend.Backend, prompt: str, session_id: Optional[str] = None, context: Optional[dict[str, Any]] = None) -> ansys.fluent.mcp.common.models.CodegenResult
+   :async:
+
+
+   
+   Generate code for the requested conversation state.
+
+
+   :Parameters:
+
+       **backend** : :obj:`Backend`
+           Backend instance for performing the operation.
+
+       **prompt** : :class:`python:str`
+           Natural-language request to process.
+
+       **session_id** : :obj:`Optional`\[:class:`python:str`]
+           Identifier for the conversation or tool session.
+
+       **context** : :obj:`Optional`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Additional context to pass to the backend or pipeline.
+
+
+
+   :Returns:
+
+       :obj:`CodegenResult`
+           CodegenResult produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: clarify(*, backend: ansys.fluent.mcp.common.backend.Backend, session_id: str, clarification_id: str, answer: str) -> ansys.fluent.mcp.common.models.CodegenResult
+   :async:
+
+
+   
+   Apply a clarification answer to a pending code-generation session.
+
+
+   :Parameters:
+
+       **backend** : :obj:`Backend`
+           Backend instance for performing the operation.
+
+       **session_id** : :class:`python:str`
+           Identifier for the conversation or tool session.
+
+       **clarification_id** : :class:`python:str`
+           Identifier for the clarification.
+
+       **answer** : :class:`python:str`
+           Answer text supplied for the pending clarification.
+
+
+
+   :Returns:
+
+       :obj:`CodegenResult`
+           CodegenResult produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+

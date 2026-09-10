@@ -1,0 +1,196 @@
+
+
+
+
+
+
+The ``index.py`` module
+=======================
+
+.. py:module:: ansys.fluent.mcp.solve.catalog.index
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: index
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.catalog.index.ApiEntry`
+            - One row of ``api_objects.json``.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.catalog.index.ApiSearchHit`
+            - One search hit from the index.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.catalog.index.ApiIndex`
+            - Lightweight searchable index over PyFluent's ``api_objects.json``.
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~get_default_api_index`
+            - Return the default API index.
+
+
+          * - :py:obj:`~reset_default_api_index`
+            - Test hook that drops the cached index so that the next call rebuilds.
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> ApiEntry</api/ansys/fluent/mcp/solve/catalog/index/ApiEntry>
+    <span class="nf nf-cod-symbol_class"></span> ApiSearchHit</api/ansys/fluent/mcp/solve/catalog/index/ApiSearchHit>
+    <span class="nf nf-cod-symbol_class"></span> ApiIndex</api/ansys/fluent/mcp/solve/catalog/index/ApiIndex>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Lexical fallback over the PyFluent API catalog (the default in practice).
+
+This module is the SOLE actively-running retriever for every default install.
+
+It reads ``ansys/fluent/core/generated/api_tree/api_objects.json``
+(shipped with ``ansys-fluent-core``) and offers three operations used
+by orchestration:
+
+* :meth:`ApiIndex.search`: **BM25** ranking over the union of path
+  tokens and PyFluent class docstring tokens. (See
+  :mod:`ansys.fluent.mcp.common.api_help`). Cheap, dependency free, and
+  much stronger than the previous token-overlap scorer for
+  free-text queries. For example, "temperature of incoming gas" →
+  ``velocity_inlet.thermal.t`` now works because the leaf class's
+  docstring contains the word *temperature*.
+* :meth:`ApiIndex.lookup`: Exact dotted-path resolution.
+* :meth:`ApiIndex.children_of`: Immediate API children of a path
+  For example, used to walk a boundary condition kind to enumerate
+  its property leaves.
+
+The scoring formula follows. Also see :func:`_score_entry`)::
+
+    bm25(query_tokens, entry_tokens)
+      + 0.25 * (#query_token substring matches in path)
+      - 0.05 * (path depth in dots)
+
+The substring bonus preserves the historic behavior where exact
+segment matches (``energy`` → ``setup.models.energy``) outrank deeper
+family matches. The depth penalty discourages picking generic
+ancestors over leaf parameters.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: get_default_api_index() -> ApiIndex
+
+   
+   Return the default API index.
+
+
+
+
+
+   :Returns:
+
+       :obj:`ApiIndex`
+           API index produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: reset_default_api_index() -> None
+
+   
+   Test hook that drops the cached index so that the next call rebuilds.
+
+
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

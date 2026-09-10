@@ -1,0 +1,93 @@
+
+
+
+
+
+
+:class:`DomainTool`
+===================
+
+
+.. py:class:: ansys.fluent.mcp.common.domain_tools.DomainTool
+
+   
+   A registered domain tool — spec plus typed async handler.
+
+   Instances of this dataclass live in each leaf's
+   ``products/<leaf>/lib/domain_tools.py`` module and are passed
+   to :meth:`FluidsLeafMCP._register_domain_tools` during the
+   leaf's ``_register_tools()`` override.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: DomainTool
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~spec`
+            - 
+          * - :py:attr:`~handler`
+            - 
+          * - :py:attr:`~requires_live_session`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.domain_tools import DomainTool
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: spec
+   :type:  DomainToolSpec
+
+.. py:attribute:: handler
+   :type:  DomainToolHandler
+
+.. py:attribute:: requires_live_session
+   :type:  bool
+   :value: False
+
+
+
+
+
+

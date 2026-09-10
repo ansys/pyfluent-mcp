@@ -1,0 +1,879 @@
+
+
+
+
+
+
+The ``active_path.py`` module
+=============================
+
+.. py:module:: ansys.fluent.mcp.solve.lib.active_path
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: active_path
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.lib.active_path.SolverMode`
+            - A snapshot of the live solver mode facets that gate path selection.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.lib.active_path.PathInfo`
+            - Classification of a concrete path within a multi-path group.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.lib.active_path.RerouteResult`
+            - Result of checking a proposed path against the live mode.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.lib.active_path.WriteTarget`
+            - Canonical resolution of "where should a write to ``requested_path`` land".
+
+
+
+    .. tab-item:: Enums
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.lib.active_path.UrfFamily`
+            - The active under-relaxation family for a given solver mode.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.lib.active_path.PathGroup`
+            - The multi-path class a concrete path belongs to.
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~is_coupled_scheme`
+            - Return True for coupled-family pressure-velocity schemes (hyphen-tolerant).
+
+
+          * - :py:obj:`~active_urf_family`
+            - Return the URF family that is ACTIVE under ``mode``.
+
+
+          * - :py:obj:`~urf_path`
+            - Return the ACTIVE concrete URF path for ``equation`` under ``mode``.
+
+
+          * - :py:obj:`~classify_path`
+            - Classify ``path`` into a known multi-path group, or ``None``.
+
+
+          * - :py:obj:`~reroute`
+            - Check ``path`` against ``mode`` and, if inactive, point to the fix.
+
+
+          * - :py:obj:`~path_family`
+            - Return the :class:`PathFamily` translator for ``mode``.
+
+
+          * - :py:obj:`~bc_root`
+            - Active boundary-condition namespace root.
+
+
+          * - :py:obj:`~cz_root`
+            - Active cell-zone namespace root.
+
+
+          * - :py:obj:`~interface_root`
+            - Active mesh-interface namespace root.
+
+
+          * - :py:obj:`~bc_path`
+            - Active indexed BC node path (e.g. ``...wall['hw']``).
+
+
+          * - :py:obj:`~cz_path`
+            - Active indexed cell-zone node path.
+
+
+          * - :py:obj:`~run_calculation_path`
+            - Active run-calculation command path (steady vs transient).
+
+
+          * - :py:obj:`~multiphase_volume_fraction_path`
+            - Per-phase BC volume-fraction path under the active namespace.
+
+
+          * - :py:obj:`~multiphase_bc_phase_path`
+            - Return the per-phase BC leaf path under the active namespace.
+
+
+          * - :py:obj:`~classify_methods_gate`
+            - Return ``(facet_name, human_description)`` for a mode-gated methods prefix.
+
+
+          * - :py:obj:`~resolve_write_target`
+            - Return the canonical :class:`WriteTarget` for a proposed write.
+
+
+          * - :py:obj:`~describe_mode`
+            - Return a compact JSON-safe summary of ``mode``.
+
+
+          * - :py:obj:`~write_target_hints`
+            - Return canonical write-target answers for the CURRENT ``mode``.
+
+
+          * - :py:obj:`~format_mode_summary`
+            - Return a short human-readable summary of ``mode`` for prompts.
+
+
+
+
+    .. tab-item:: Constants
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~MULTI_PATH_CLASSES`
+            - 
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> SolverMode</api/ansys/fluent/mcp/solve/lib/active_path/SolverMode>
+    <span class="nf nf-cod-symbol_class"></span> PathInfo</api/ansys/fluent/mcp/solve/lib/active_path/PathInfo>
+    <span class="nf nf-cod-symbol_class"></span> RerouteResult</api/ansys/fluent/mcp/solve/lib/active_path/RerouteResult>
+    <span class="nf nf-cod-symbol_class"></span> WriteTarget</api/ansys/fluent/mcp/solve/lib/active_path/WriteTarget>
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_enum"></span> UrfFamily</api/ansys/fluent/mcp/solve/lib/active_path/UrfFamily>
+    <span class="nf nf-cod-symbol_enum"></span> PathGroup</api/ansys/fluent/mcp/solve/lib/active_path/PathGroup>
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Active-path resolver — one deterministic primitive for mode-dependent paths.
+
+Fluent exposes the *same logical setting* at MULTIPLE physical paths whose
+ACTIVE one depends on the live solver mode. Writing the wrong sibling is
+silently rejected (``InactiveObjectError`` / "the object cannot be edited").
+The canonical example is under-relaxation factors (URFs), whose family
+depends on the pressure-velocity coupling scheme:
+
+* segregated (SIMPLE / SIMPLEC / PISO / Fractional Step) ->
+  ``solution.controls.under_relaxation['<eq>']`` (a NamedObject family)
+* coupled, no pseudo-transient ->
+  ``solution.controls.p_v_controls.explicit_*_under_relaxation`` (scalars)
+  + ``solution.controls.relaxation_factor['<eq>']``
+* coupled + pseudo-transient ->
+  ``solution.controls.pseudo_time_explicit_relaxation_factor
+  .global_dt_pseudo_relax['<eq>']``
+
+Historically this knowledge was scattered across recipe URF stagers
+(``stage_under_relaxation_auto``), the agent ``resolve_active_path`` tool,
+the validator's ``inactive_path`` diagnostic, and per-recipe ``is_utl``
+branches. This module is the SINGLE source of truth, shared by the OSS
+leaf and the agent monorepo.
+
+Two cooperating capabilities:
+
+1. **Forward resolution** -- given a :class:`SolverMode` + a logical
+   setting (e.g. a URF equation, a BC family/name, the run command),
+   return the concrete *active* path. See :func:`urf_path`,
+   :func:`bc_path`, :func:`run_calculation_path`, ...
+
+2. **Reverse routing** -- given ANY proposed path + a :class:`SolverMode`,
+   say whether it is active and, if not, what the correct active sibling
+   is. See :func:`reroute`. This is what lets the validator hard-block a
+   wrong-path write *before* Apply and hand clients a deterministic fix
+   instead of letting the executor silently skip the step.
+
+The module has NO dependency on the agent loop or live backend; it is pure,
+deterministic Fluent-path knowledge. Build the :class:`SolverMode` from a
+live state snapshot (:meth:`SolverMode.from_state`) and pass it in.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: is_coupled_scheme(flow_scheme: str | None) -> bool
+
+   
+   Return True for coupled-family pressure-velocity schemes (hyphen-tolerant).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: active_urf_family(mode: SolverMode) -> UrfFamily
+
+   
+   Return the URF family that is ACTIVE under ``mode``.
+
+   * coupled + pseudo-transient -> per-equation pseudo-time family
+   * coupled (no pseudo)        -> explicit scalar + relaxation_factor
+   * segregated                 -> under_relaxation NamedObject family
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: urf_path(mode: SolverMode, equation: str) -> str
+
+   
+   Return the ACTIVE concrete URF path for ``equation`` under ``mode``.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   .. rubric:: Examples
+
+   >>> urf_path(SolverMode(), "pressure")
+   "solution.controls.under_relaxation['pressure']"
+   >>> urf_path(SolverMode(flow_scheme="Coupled"), "momentum")
+   'solution.controls.p_v_controls.explicit_momentum_under_relaxation'
+   >>> urf_path(SolverMode(flow_scheme="Coupled", pseudo_transient=True), "k")
+   "solution.controls.pseudo_time_explicit_relaxation_factor.global_dt_pseudo_relax['k']"
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: classify_path(path: str) -> PathInfo | None
+
+   
+   Classify ``path`` into a known multi-path group, or ``None``.
+
+   ``None`` means the path is not a known mode-dependent setting, so
+   callers should treat it as "we can't reason about activation here"
+   and NOT block it.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: reroute(path: str, mode: SolverMode) -> RerouteResult
+
+   
+   Check ``path`` against ``mode`` and, if inactive, point to the fix.
+
+   Deterministic and conservative: returns ``active=True`` for any path
+   that is not a recognized multi-path setting, so it never false-blocks
+   an ordinary write.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: path_family(mode: SolverMode) -> ansys.fluent.mcp.solve.lib.utl.PathFamily
+
+   
+   Return the :class:`PathFamily` translator for ``mode``.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: bc_root(mode: SolverMode) -> str
+
+   
+   Active boundary-condition namespace root.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: cz_root(mode: SolverMode) -> str
+
+   
+   Active cell-zone namespace root.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: interface_root(mode: SolverMode) -> str
+
+   
+   Active mesh-interface namespace root.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: bc_path(mode: SolverMode, family: str, name: str) -> str
+
+   
+   Active indexed BC node path (e.g. ``...wall['hw']``).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: cz_path(mode: SolverMode, family: str, name: str) -> str
+
+   
+   Active indexed cell-zone node path.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: run_calculation_path(mode: SolverMode) -> str
+
+   
+   Active run-calculation command path (steady vs transient).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: multiphase_volume_fraction_path(mode: SolverMode, bc_family: str, bc_name: str, phase_key: str, *, leaf: str = 'volume_fraction') -> str
+
+   
+   Per-phase BC volume-fraction path under the active namespace.
+
+   ``leaf`` defaults to the inlet ``volume_fraction`` value leaf; pass a
+   different scoped leaf (e.g. ``backflow_volume_fraction``) as needed.
+   Kept for backward compatibility; new callers should prefer the more
+   general :func:`multiphase_bc_phase_path`.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: multiphase_bc_phase_path(mode: SolverMode, bc_family: str, bc_name: str, phase_key: str, *, leaf: str, scope: str = 'multiphase', value_suffix: bool = True) -> str
+
+   
+   Return the per-phase BC leaf path under the active namespace.
+
+   On multiphase cases Fluent splits BC leaves into two tiers:
+
+   * **Mixture-level** leaves (``momentum.*``, ``turbulence.*``,
+     ``dpm.*``, ...) live directly on the BC's top namespace and are
+     set once per BC — call :func:`bc_path` for those.
+   * **Per-phase** leaves (``volume_fraction``, ``granular_temperature``,
+     per-phase turbulence / DPM / species knobs, ...) live under
+     ``phase['<phase-key>'].<scope>.<leaf>`` on the BC. Writing them
+     under a NON-matching phase key is silently rejected.
+
+   This helper composes the per-phase path for ANY leaf (not just
+   ``volume_fraction`` as the legacy helper did) so multiphase-aware
+   callers do not need to string-format the path themselves. It also
+   handles the ``.value`` suffix that Fluent applies to numeric leaves
+   (``volume_fraction.value``) while allowing structural leaves that
+   do NOT carry the suffix (``turbulence.turb_intensity``) via
+   ``value_suffix=False``.
+
+   :Parameters:
+
+       **mode**
+           Live solver mode (drives UTL vs standard root selection).
+
+       **bc_family**
+           BC family (e.g. ``"velocity_inlet"``, ``"pressure_outlet"``,
+           ``"mass_flow_inlet"``, ``"wall"``).
+
+       **bc_name**
+           Named-object key on the BC family (e.g. ``"inlet1"``).
+
+       **phase_key**
+           Phase-name key as stored on ``setup.models.multiphase.phases``
+           (typically a user-visible string like ``"water-liquid"`` or
+           Fluent's default ``"phase-1"``).
+
+       **leaf**
+           The per-phase leaf name relative to ``<scope>`` (e.g.
+           ``"volume_fraction"``, ``"granular_temperature"``,
+           ``"turb_intensity"``, ``"backflow_volume_fraction"``).
+
+       **scope**
+           Container under which the leaf lives on the phase branch;
+           Fluent uses ``"multiphase"`` for VOF / mixture / eulerian
+           volume-fraction / granular knobs (the default). Turbulence
+           per-phase leaves live under ``"turbulence"``; DPM per-phase
+           under ``"dpm"``.
+
+       **value_suffix**
+           Append ``.value`` to the path. True for numeric quantities
+           (the common case), False for structural / enum leaves.
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           The concrete active per-phase BC path.
+
+
+
+
+
+
+
+
+
+
+   .. rubric:: Examples
+
+   >>> multiphase_bc_phase_path(
+   ...     SolverMode(),
+   ...     "velocity_inlet",
+   ...     "inlet1",
+   ...     "water-liquid",
+   ...     leaf="volume_fraction",
+   ... )
+   "setup.boundary_conditions.velocity_inlet['inlet1'].phase['water-liquid'].multiphase.volume_fraction.value"
+
+   >>> multiphase_bc_phase_path(
+   ...     SolverMode(utl=True),
+   ...     "wall",
+   ...     "hw",
+   ...     "primary",
+   ...     leaf="turb_intensity",
+   ...     scope="turbulence",
+   ...     value_suffix=False,
+   ... )
+   "setup.physics.boundaries.wall['hw'].phase['primary'].turbulence.turb_intensity"
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: classify_methods_gate(path: str) -> tuple[str, str] | None
+
+   
+   Return ``(facet_name, human_description)`` for a mode-gated methods prefix.
+
+   If ``path`` starts with a known ``solution.methods.*`` mode-gated
+   prefix, return the facet + description tuple; otherwise return
+   ``None``.
+
+   Consumers should call :func:`_methods_facet_active` (or replicate
+   its logic) to decide whether the gate is currently satisfied. This
+   is complementary to :func:`classify_path` — the latter handles
+   URF / BC / CZ / interface / run families and returns a
+   :class:`PathInfo`; this helper covers ``solution.methods.*`` where
+   the "correct sibling" concept does not apply (the path is either
+   active or the mode is wrong).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: resolve_write_target(mode: SolverMode, path: str) -> WriteTarget
+
+   
+   Return the canonical :class:`WriteTarget` for a proposed write.
+
+   Combines :func:`classify_path` + :func:`reroute` (multi-path
+   families) with :func:`classify_methods_gate` (``solution.methods.*``
+   mode-gated leaves) behind one call so every consumer produces the
+   same answer. When the path is not a recognized multi-path or
+   mode-gated setting, returns a "pass-through" :class:`WriteTarget`
+   with ``needs_reroute=False`` and ``classified=False`` — that is
+   the signal to fall back to the default schema-only check.
+
+   :Parameters:
+
+       **mode**
+           Live solver mode facets (build via :meth:`SolverMode.from_state`).
+
+       **path**
+           Proposed write path (bracket-indexed forms accepted).
+
+
+
+   :Returns:
+
+       :obj:`WriteTarget`
+           Canonical resolution. When ``needs_reroute`` is True,
+           ``active_path`` carries the sibling to write instead (or,
+           if a deterministic active path cannot be derived, equals
+           ``requested_path`` and the caller should surface the
+           ``reason`` verbatim rather than silently proceeding).
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: describe_mode(mode: SolverMode) -> dict[str, Any]
+
+   
+   Return a compact JSON-safe summary of ``mode``.
+
+   Suitable for embedding in a system prompt or a debug payload.
+   Fields:
+
+   * ``time`` — ``"steady"`` or ``"transient"``.
+   * ``solver_type`` — ``"pressure-based"`` or ``"density-based"``.
+   * ``flow_scheme`` — the raw p-v coupling string (may be None).
+   * ``coupled`` — bool.
+   * ``pseudo_transient`` — bool.
+   * ``urf_family`` — active URF family enum value.
+   * ``bc_namespace`` / ``cz_namespace`` / ``interface_namespace``
+     — ``"utl"`` or ``"standard"``.
+   * ``multiphase`` — ``None`` for single-phase, else
+     ``{model, phases}``.
+   * ``turbulence_model`` / ``energy`` — passthrough.
+   * ``nita`` — bool.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: write_target_hints(mode: SolverMode) -> dict[str, Any]
+
+   
+   Return canonical write-target answers for the CURRENT ``mode``.
+
+   Emits a small dict that any authoring surface (agent-loop system prompt,
+   `describe_path` fallback, external host preflight) can turn into
+   a short "when you write X, use path Y" guide. Contains ONLY facts
+   derivable from ``mode`` — no live tool calls, no schema probes.
+
+   Keys:
+
+   * ``urf_family`` — active URF family enum value.
+   * ``urf_root`` — the container path (segregated NamedObject root,
+     coupled scalar prefix, or pseudo-time NamedObject root).
+   * ``urf_key_template`` — how to index into that root
+     (``"['<equation>']"`` for NamedObject families, ``""`` for
+     scalar leaves under the coupled-explicit family).
+   * ``run_calculation_path`` — active iterate command.
+   * ``bc_root`` / ``cz_root`` / ``interface_root`` — active namespace
+     roots.
+   * ``multiphase`` — ``None`` for single-phase, else a per-phase
+     write-guidance dict:
+
+     * ``model`` — VOF / Mixture / Eulerian.
+     * ``phases`` — ordered list.
+     * ``mixture_level_bc_template`` —
+       ``"<bc_root>.<family>['<name>'].<leaf>"``.
+     * ``per_phase_bc_template`` —
+       ``"<bc_root>.<family>['<name>'].phase['<phase>'].multiphase.<leaf>"``.
+     * ``per_phase_bc_note`` — "which BC leaves are per-phase vs mixture-level
+       varies by model — call describe_path to confirm".
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: format_mode_summary(mode: SolverMode) -> str
+
+   
+   Return a short human-readable summary of ``mode`` for prompts.
+
+   Two lines: one for the mode identity, one for the write-target
+   hints (URF family, BC namespace, run command, multiphase state).
+   Deliberately compact — the full JSON summary is available via
+   :func:`describe_mode` and :func:`write_target_hints` when a caller
+   needs to inspect it.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: MULTI_PATH_CLASSES
+   :type:  tuple[dict[str, Any], Ellipsis]
+
+
+

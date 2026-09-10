@@ -1,0 +1,110 @@
+
+
+
+
+
+
+:class:`ApiEntry`
+=================
+
+
+.. py:class:: ansys.fluent.mcp.solve.catalog.index.ApiEntry
+
+   
+   One row of ``api_objects.json``.
+
+   ``tokens`` is the union of path tokens and docstring tokens for
+   the leaf class (when a PyFluent docstring is available). ``doc``
+   is the raw docstring blob for diagnostics; the scorer only ever
+   looks at ``tokens``.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: ApiEntry
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~raw`
+            - 
+          * - :py:attr:`~path`
+            - 
+          * - :py:attr:`~kind`
+            - 
+          * - :py:attr:`~session`
+            - 
+          * - :py:attr:`~tokens`
+            - 
+          * - :py:attr:`~doc`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.catalog.index import ApiEntry
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: raw
+   :type:  str
+
+.. py:attribute:: path
+   :type:  str
+
+.. py:attribute:: kind
+   :type:  str
+
+.. py:attribute:: session
+   :type:  str
+
+.. py:attribute:: tokens
+   :type:  list[str]
+   :value: []
+
+
+.. py:attribute:: doc
+   :type:  str
+   :value: ''
+
+
+
+
+
+

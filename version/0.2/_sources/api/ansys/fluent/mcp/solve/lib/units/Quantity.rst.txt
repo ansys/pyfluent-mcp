@@ -1,0 +1,161 @@
+
+
+
+
+
+
+:class:`Quantity`
+=================
+
+
+.. py:class:: ansys.fluent.mcp.solve.lib.units.Quantity
+
+   
+   A parsed numeric value with its unit and CFD quantity classification.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: Quantity
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~to_default`
+            - Convert this quantity into the Fluent default unit for its quantity.
+          * - :py:attr:`~to_dict`
+            - Convert the object to a dictionary representation.
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~value`
+            - 
+          * - :py:attr:`~unit`
+            - 
+          * - :py:attr:`~quantity`
+            - 
+          * - :py:attr:`~raw`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.lib.units import Quantity
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: value
+   :type:  float
+
+.. py:attribute:: unit
+   :type:  str
+
+.. py:attribute:: quantity
+   :type:  str
+
+.. py:attribute:: raw
+   :type:  str
+
+
+
+Method detail
+-------------
+
+.. py:method:: to_default() -> Quantity
+
+   
+   Convert this quantity into the Fluent default unit for its quantity.
+
+
+
+
+
+   :Returns:
+
+       'Quantity'
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: to_dict() -> dict[str, object]
+
+   
+   Convert the object to a dictionary representation.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`object`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+

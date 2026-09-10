@@ -1,0 +1,49 @@
+
+
+
+
+
+
+:class:`LLMTransportError`
+==========================
+
+
+.. py:exception:: ansys.fluent.mcp.common.llm_wire.LLMTransportError
+
+   Bases: :py:obj:`RuntimeError`
+
+
+   
+   Raised when an LLM transport call fails (network/provider error).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.llm_wire import LLMTransportError
+
+
+
+
+

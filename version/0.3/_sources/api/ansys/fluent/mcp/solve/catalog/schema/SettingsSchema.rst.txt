@@ -1,0 +1,229 @@
+
+
+
+
+
+
+:class:`SettingsSchema`
+=======================
+
+
+.. py:class:: ansys.fluent.mcp.solve.catalog.schema.SettingsSchema(raw: dict[str, Any], *, source: str = '<bundled>')
+
+   
+   Indexed view over the static settings schema.
+
+   Indexing is built once at construction. Resolution is
+   ``O(depth)`` over the snake_case path components, with kebab and
+   snake spellings accepted interchangeably.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: SettingsSchema
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~resolve`
+            - Resolve a snake_case (or kebab-case) dotted path.
+          * - :py:attr:`~lookup_command`
+            - Resolve a command call path like ``solution.run_calculation.iterate``.
+
+
+   .. tab-item:: Properties
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~source`
+            - Return the source associated with the catalog node.
+          * - :py:attr:`~node_count`
+            - Return the number of nodes in the catalog tree.
+
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.catalog.schema import SettingsSchema
+
+Property detail
+---------------
+
+.. py:property:: source
+   :type: str
+
+
+   
+   Return the source associated with the catalog node.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           String value produced by the helper.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:property:: node_count
+   :type: int
+
+
+   
+   Return the number of nodes in the catalog tree.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:int`
+           Configured integer limit used by the helper.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+
+Method detail
+-------------
+
+.. py:method:: resolve(path: str) -> SettingsNode | None
+
+   
+   Resolve a snake_case (or kebab-case) dotted path.
+
+   Bracketed member selectors (``...wall["w1"]``) are stripped
+   and the schema descends through the NamedObject's element
+   envelope automatically — so
+   ``resolve("setup.boundary_conditions.wall.thermal")`` returns
+   the *element-level* node for wall thermal, not the container.
+
+   Dot-form member keys are also supported:
+   ``solution.controls.under_relaxation.pressure`` resolves to
+   the ``under_relaxation`` member envelope (Fluent rejects new
+   keys here at runtime, but the schema can't know which keys
+   the user has created — so we accept any token after a
+   NamedObject as a member-key access).
+
+   :Parameters:
+
+       **path** : :class:`python:str`
+           Fluent object path or file-system path to inspect.
+
+
+
+   :Returns:
+
+       :obj:`SettingsNode` | :data:`python:None`
+           Collection containing the operation results.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: lookup_command(path: str) -> CommandSpec | None
+
+   
+   Resolve a command call path like ``solution.run_calculation.iterate``.
+
+   Splits the trailing segment as the command name and looks it
+   up on the parent node's ``commands`` (then ``queries`` as a
+   fallback).
+
+   :Parameters:
+
+       **path** : :class:`python:str`
+           Fluent object path or file-system path to inspect.
+
+
+
+   :Returns:
+
+       :obj:`CommandSpec` | :data:`python:None`
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+

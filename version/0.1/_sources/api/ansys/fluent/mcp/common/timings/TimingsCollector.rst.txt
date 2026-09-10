@@ -1,0 +1,267 @@
+
+
+
+
+
+
+:class:`TimingsCollector`
+=========================
+
+
+.. py:class:: ansys.fluent.mcp.common.timings.TimingsCollector
+
+   
+   Process-wide singleton. Thread-safe. No async is required.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: TimingsCollector
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~record`
+            - Record timing information for an operation.
+          * - :py:attr:`~time`
+            - Context manager: ``with timings.time('tool', name): ...``.
+          * - :py:attr:`~snapshot`
+            - Return a JSON-friendly view, sorted by the ``total_ms`` description per scope.
+          * - :py:attr:`~summary`
+            - One row per scope with totals, providing a cheap top-line metric.
+          * - :py:attr:`~uptime_s`
+            - Return process uptime in seconds.
+          * - :py:attr:`~reset`
+            - Reset collected timing information.
+
+
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.timings import TimingsCollector
+
+
+
+Method detail
+-------------
+
+.. py:method:: record(scope: str, key: str, elapsed_ms: float, *, errored: bool = False) -> None
+
+   
+   Record timing information for an operation.
+
+
+   :Parameters:
+
+       **scope** : :class:`python:str`
+           Scope to supply to the function.
+
+       **key** : :class:`python:str`
+           Key for looking up or storing the associated value.
+
+       **elapsed_ms** : :class:`python:float`
+           Elapsed milliseconds to supply to the function.
+
+       **errored** : :ref:`bool <python:bltin-boolean-values>`
+           Whether to enable or apply errored.
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: time(scope: str, key: str) -> Iterator[None]
+
+   
+   Context manager: ``with timings.time('tool', name): ...``.
+
+
+   :Parameters:
+
+       **scope** : :class:`python:str`
+           Scope to limit the field or API lookup.
+
+       **key** : :class:`python:str`
+           Key to supply to the function.
+
+
+
+   :Returns:
+
+       :obj:`Iterator`\[:data:`python:None`]
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: snapshot() -> dict[str, list[dict[str, float | int | str]]]
+
+   
+   Return a JSON-friendly view, sorted by the ``total_ms`` description per scope.
+
+   This approach ensures the slow paths sit at the top.
+
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:list`\[:class:`python:dict`\[:class:`python:str`, :class:`python:float` | :class:`python:int` | :class:`python:str`]]]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: summary() -> dict[str, dict[str, float | int]]
+
+   
+   One row per scope with totals, providing a cheap top-line metric.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:dict`\[:class:`python:str`, :class:`python:float` | :class:`python:int`]]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: uptime_s() -> float
+
+   
+   Return process uptime in seconds.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:float`
+           Floating-point result produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: reset() -> None
+
+   
+   Reset collected timing information.
+
+
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+
