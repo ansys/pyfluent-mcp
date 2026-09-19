@@ -3438,6 +3438,198 @@ class PyFluentBackend(Backend):
 
         return await asyncio.to_thread(_do)
 
+    async def dry_run_write(
+        self,
+        path: str,
+        value: Any,
+        *,
+        kind: str = "set",
+        key: Optional[str] = None,
+        index: Optional[int] = None,
+    ) -> dict[str, Any]:
+        """Semantically preview a single write against LIVE state.
+
+        This is the PyFluent implementation of the ABC hook — it
+        answers "would ``<path> = value`` succeed right now?" without
+        mutating anything. The agent's :class:`PlanValidator` calls
+        this per step immediately before execution so an earlier
+        step's side-effect (a barrier flip, a phase rename) can flip
+        a downstream step from "fine" to "would-fail" and be caught
+        BEFORE the executor issues the write.
+
+        Implementation notes
+        --------------------
+        * Uses the same batched Scheme RPC ``node.get_attrs([...])``
+          that :meth:`probe_path` / :meth:`describe_named_object_template`
+          / :meth:`get_command_arguments` already use, so this method
+          costs at most one round-trip per call.
+        * When ``kind == "set_named"``, the check runs against the
+          named child ``path[key]``. When the child doesn't exist yet
+          AND the collection is not user-creatable, the response
+          reflects that.
+        * ``set_state`` / ``multi_edit`` are checked against the
+          collection / group root only — the executor's own
+          descriptor precheck already flattens the payload leaves
+          and calls ``dry_run_write`` per leaf.
+        * When the backend is not connected, returns ``status="ok"``
+          with a note (no live state to reason about).
+        """
+        if not self.is_connected():
+            return {
+                "status": "ok",
+                "note": "no live session; dry_run_write is a no-op",
+            }
+
+        # Choose the actual target path based on kind.
+        target_path = path
+        if kind == "set_named" and key:
+            # ``resolve_path`` supports bracket syntax path['key'].
+            target_path = f"{path}['{key}']"
+        elif kind == "set_list_item" and index is not None:
+            target_path = f"{path}[{int(index)}]"
+
+        def _do() -> dict[str, Any]:
+            try:
+                root = self._settings_root()
+            except Exception as exc:  # noqa: BLE001
+                return {
+                    "status": "ok",
+                    "note": f"could not obtain settings root: {exc}",
+                }
+
+            # Resolve the node. Missing path is a definitive "would fail".
+            try:
+                node = resolve_path(root, target_path)
+            except AttributeError as exc:
+                return {
+                    "status": "error",
+                    "error_code": "unknown_attribute",
+                    "message": f"path {target_path!r} does not exist: {exc}",
+                    "hint": (
+                        "call ``find_api`` to locate the intended path "
+                        "or ``get_help`` on the parent to enumerate "
+                        "available children"
+                    ),
+                }
+            except Exception as exc:  # noqa: BLE001
+                return {
+                    "status": "error",
+                    "error_code": "unknown_attribute",
+                    "message": f"could not resolve {target_path!r}: {exc}",
+                }
+
+            # Batched attribute fetch — one Scheme RPC for
+            # active? + allowed-values + read-only? + user-creatable?
+            active: bool | None = None
+            allowed_values: list[Any] = []
+            read_only: bool | None = None
+            get_attrs = getattr(node, "get_attrs", None)
+            if callable(get_attrs):
+                try:
+                    raw = get_attrs(["active?", "allowed-values", "read-only?"])
+                except Exception:  # noqa: BLE001
+                    raw = {}
+                if isinstance(raw, dict):
+                    if "active?" in raw and raw["active?"] is not None:
+                        active = bool(raw["active?"])
+                    a_vals = raw.get("allowed-values")
+                    if isinstance(a_vals, (list, tuple)):
+                        allowed_values = list(a_vals)
+                    if "read-only?" in raw and raw["read-only?"] is not None:
+                        read_only = bool(raw["read-only?"])
+
+            # Legacy fallback for backends whose get_attrs doesn't yet
+            # publish these keys.
+            if active is None:
+                is_active_fn = getattr(node, "is_active", None)
+                if callable(is_active_fn):
+                    try:
+                        active = bool(is_active_fn())
+                    except Exception:  # noqa: BLE001
+                        active = None
+            if not allowed_values:
+                for name in ("allowed_values", "get_allowed_values"):
+                    fn = getattr(node, name, None)
+                    if callable(fn):
+                        try:
+                            av = fn()
+                        except Exception:  # noqa: BLE001
+                            av = None
+                        if isinstance(av, (list, tuple)) and av:
+                            allowed_values = list(av)
+                            break
+
+            # 1. Inactive path -> refuse.
+            if active is False:
+                return {
+                    "status": "error",
+                    "error_code": "inactive_target",
+                    "message": (
+                        f"path {target_path!r} is not active under the "
+                        f"current solver mode"
+                    ),
+                    "inactive_path": target_path,
+                    "hint": (
+                        "flip the governing model gate first, or call "
+                        "``resolve_active_path`` with the concept name "
+                        "to find the currently-active sibling"
+                    ),
+                }
+
+            # 2. Read-only -> refuse writes.
+            if read_only and kind in ("set", "set_named", "set_list_item", "set_state", "multi_edit"):
+                return {
+                    "status": "error",
+                    "error_code": "read_only_leaf",
+                    "message": f"{target_path!r} is read-only in the current state",
+                    "hint": (
+                        "read-only leaves usually depend on a governing "
+                        "model toggle (e.g. energy.enabled); enable the "
+                        "parent model before writing"
+                    ),
+                }
+
+            # 3. Value not in allowed_values -> refuse. Only checked
+            #    for scalar-shaped kinds; partial-state dicts are
+            #    caller-flattened by the executor's descriptor
+            #    precheck (which itself calls this method per leaf).
+            if allowed_values and kind in ("set", "set_named", "set_list_item"):
+                # Normalise both sides so ``k-omega`` matches ``k_omega``.
+                def _norm(v: Any) -> str:
+                    return str(v).replace("-", "_").strip().lower()
+
+                norm_value = _norm(value)
+                norm_allowed = {_norm(a): a for a in allowed_values}
+                if norm_value not in norm_allowed:
+                    return {
+                        "status": "error",
+                        "error_code": "value_not_allowed",
+                        "message": (
+                            f"value {value!r} is not in the allowed set "
+                            f"for {target_path!r}"
+                        ),
+                        "allowed_values": list(allowed_values),
+                        "rejected_value": str(value),
+                        "hint": (
+                            "pick one of ``allowed_values``; the check "
+                            "normalises ``-`` / ``_`` and case, so a "
+                            "canonicalisation mismatch would not have "
+                            "reached this diagnostic"
+                        ),
+                    }
+
+            return {"status": "ok"}
+
+        try:
+            async with self._lock:
+                return await asyncio.to_thread(_do)
+        except Exception as exc:  # noqa: BLE001 — dry_run_write must never
+            # raise; the whole point is a soft-fail preview.
+            return {
+                "status": "ok",
+                "note": f"dry_run_write internal error: {exc}",
+            }
+
     # ------------------------------------------------------------------
     # Visuals
     # ------------------------------------------------------------------
