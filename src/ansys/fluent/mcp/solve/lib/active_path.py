@@ -75,6 +75,22 @@ from ansys.fluent.mcp.solve.lib.utl import (
 #: (everything else is segregated). Case- and separator-insensitive.
 _COUPLED_FLOW_SCHEMES: frozenset[str] = frozenset({"coupled", "phase coupled simple"})
 
+_RUN_PARAM_STEADY: tuple[str, ...] = (
+    "solution.run_calculation.parameters.iter_count",
+    "solution.run_calculation.parameters.iterations",
+)
+
+_RUN_PARAM_TRANSIENT: tuple[str, ...] = (
+    "solution.run_calculation.parameters.time_step_count",
+    "solution.run_calculation.parameters.time_step_size",
+    "solution.run_calculation.parameters.max_iter_per_time_step",
+    "solution.run_calculation.parameters.number_of_time_steps",
+    "solution.run_calculation.parameters.adaptive_time_stepping",
+    "solution.run_calculation.parameters.extrapolate_vars",
+    "solution.run_calculation.transient_controls",
+    "solution.run_calculation.pseudo_time_settings",
+)
+
 
 def is_coupled_scheme(flow_scheme: str | None) -> bool:
     """Return True for coupled-family pressure-velocity schemes (hyphen-tolerant)."""
@@ -532,6 +548,27 @@ def classify_path(path: str) -> PathInfo | None:
     if p.startswith("solution.run_calculation.iterate"):
         return PathInfo(PathGroup.RUN, "iterate", None)
 
+    # --- run calculation parameters / transient controls -------------
+    #
+    # These leaves are steady- OR transient-only in Fluent's tree:
+    #   ``.parameters.iter_count``      -> steady
+    #   ``.parameters.max_iter_per_time_step`` -> transient
+    #   ``.parameters.time_step_count``      -> transient
+    #   ``.parameters.time_step_size``       -> transient
+    #   ``.parameters.adaptive_time_stepping``-> transient
+    #   ``.transient_controls.*``            -> transient
+    #   ``.parameters.number_of_time_steps`` -> transient (older alias)
+    #
+    # Classify them under PathGroup.RUN with a family tag that mirrors
+    # the required time regime so ``reroute`` can point the caller at
+    # the sibling that is active under the current mode.
+    for prefix in _RUN_PARAM_STEADY:
+        if p == prefix or p.startswith(prefix + "."):
+            return PathInfo(PathGroup.RUN, "iterate", None)
+    for prefix in _RUN_PARAM_TRANSIENT:
+        if p == prefix or p.startswith(prefix + "."):
+            return PathInfo(PathGroup.RUN, "dual_time_iterate", None)
+
     return None
 
 
@@ -569,6 +606,7 @@ def reroute(path: str, mode: SolverMode) -> RerouteResult:
     that is not a recognized multi-path setting, so it never false-blocks
     an ordinary write.
     """
+    p = str(path)
     info = classify_path(path)
     if info is None:
         return _ACTIVE
@@ -615,13 +653,42 @@ def reroute(path: str, mode: SolverMode) -> RerouteResult:
         want_cmd = "dual_time_iterate" if mode.transient else "iterate"
         if info.family == want_cmd:
             return _ACTIVE
+
+        # For the top-level command paths (``iterate`` /
+        # ``dual_time_iterate``) the correct sibling IS the other
+        # command — arg names differ but the intent is preserved and
+        # the caller can drop unsupported args on retry.
+        if p == f"solution.run_calculation.{info.family}" or p.startswith(
+            f"solution.run_calculation.{info.family}."
+        ):
+            regime = "steady" if info.family == "iterate" else "transient"
+            return RerouteResult(
+                active=False,
+                correct_path=f"solution.run_calculation.{want_cmd}",
+                reason=(
+                    f"'{info.family}' is the {regime} run command but the live session is "
+                    f"{'transient' if mode.transient else 'steady'}"
+                ),
+                group=info.group.value,
+                active_family=want_cmd,
+            )
+
+        # For parameters / transient_controls leaves, there is NO
+        # semantically-equivalent sibling under the other regime
+        # (a steady session has no ``time_step_count`` concept, a
+        # transient session has no ``iter_count``). Surface the
+        # mismatch as ``active=False`` with ``correct_path=None`` so
+        # the agent's executor treats it as ``inactive_skipped`` and
+        # the deferred_intent / _ACTIVATION_GUIDANCE machinery can
+        # suggest the correct flip (change solver.time first).
+        regime = "steady" if info.family == "iterate" else "transient"
         return RerouteResult(
             active=False,
-            correct_path=f"solution.run_calculation.{want_cmd}",
+            correct_path=None,
             reason=(
-                f"'{info.family}' is the {'steady' if info.family == 'iterate' else 'transient'} "
-                f"run command but the live session is "
-                f"{'transient' if mode.transient else 'steady'}"
+                f"{p!r} is a {regime} run-calculation leaf but the live session is "
+                f"{'transient' if mode.transient else 'steady'}; flip "
+                f"``setup.general.solver.time`` before writing this leaf"
             ),
             group=info.group.value,
             active_family=want_cmd,
