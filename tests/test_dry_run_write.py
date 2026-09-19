@@ -24,8 +24,6 @@ from __future__ import annotations
 
 import asyncio
 
-import pytest
-
 from ansys.fluent.mcp.common.backend import Backend
 from ansys.fluent.mcp.common.models import ConnectResult
 
@@ -73,9 +71,7 @@ def _run(coro):
 
 def test_abc_default_dry_run_write_returns_ok() -> None:
     b = _NoOpBackend()
-    result = _run(
-        b.dry_run_write("setup.models.viscous.model", "anything")
-    )
+    result = _run(b.dry_run_write("setup.models.viscous.model", "anything"))
     assert result["status"] == "ok"
     # ABC default surfaces a note field so callers know it's a no-op.
     assert "note" in result or result["status"] == "ok"
@@ -98,9 +94,7 @@ def test_dry_run_write_accepts_all_step_kinds() -> None:
 
 def test_override_backend_blocks_bad_value() -> None:
     b = _OverrideBackend()
-    result = _run(
-        b.dry_run_write("setup.models.viscous.model", "foo")
-    )
+    result = _run(b.dry_run_write("setup.models.viscous.model", "foo"))
     assert result["status"] == "error"
     assert result["error_code"] == "value_not_allowed"
     assert result["allowed_values"] == ["k-omega", "k-epsilon"]
@@ -109,15 +103,11 @@ def test_override_backend_blocks_bad_value() -> None:
 
 def test_override_backend_passes_good_value() -> None:
     b = _OverrideBackend()
-    result = _run(
-        b.dry_run_write("setup.models.viscous.model", "k-omega")
-    )
+    result = _run(b.dry_run_write("setup.models.viscous.model", "k-omega"))
     assert result["status"] == "ok"
 
 
 def test_override_backend_passes_other_paths() -> None:
     b = _OverrideBackend()
-    result = _run(
-        b.dry_run_write("setup.general.solver.time", "transient")
-    )
+    result = _run(b.dry_run_write("setup.general.solver.time", "transient"))
     assert result["status"] == "ok"

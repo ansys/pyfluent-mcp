@@ -3565,8 +3565,7 @@ class PyFluentBackend(Backend):
                     "status": "error",
                     "error_code": "inactive_target",
                     "message": (
-                        f"path {target_path!r} is not active under the "
-                        f"current solver mode"
+                        f"path {target_path!r} is not active under the current solver mode"
                     ),
                     "inactive_path": target_path,
                     "hint": (
@@ -3577,7 +3576,8 @@ class PyFluentBackend(Backend):
                 }
 
             # 2. Read-only -> refuse writes.
-            if read_only and kind in ("set", "set_named", "set_list_item", "set_state", "multi_edit"):
+            write_kinds = ("set", "set_named", "set_list_item", "set_state", "multi_edit")
+            if read_only and kind in write_kinds:
                 return {
                     "status": "error",
                     "error_code": "read_only_leaf",
@@ -3605,8 +3605,7 @@ class PyFluentBackend(Backend):
                         "status": "error",
                         "error_code": "value_not_allowed",
                         "message": (
-                            f"value {value!r} is not in the allowed set "
-                            f"for {target_path!r}"
+                            f"value {value!r} is not in the allowed set for {target_path!r}"
                         ),
                         "allowed_values": list(allowed_values),
                         "rejected_value": str(value),

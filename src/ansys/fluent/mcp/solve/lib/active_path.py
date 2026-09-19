@@ -75,6 +75,22 @@ from ansys.fluent.mcp.solve.lib.utl import (
 #: (everything else is segregated). Case- and separator-insensitive.
 _COUPLED_FLOW_SCHEMES: frozenset[str] = frozenset({"coupled", "phase coupled simple"})
 
+_RUN_PARAM_STEADY: tuple[str, ...] = (
+    "solution.run_calculation.parameters.iter_count",
+    "solution.run_calculation.parameters.iterations",
+)
+
+_RUN_PARAM_TRANSIENT: tuple[str, ...] = (
+    "solution.run_calculation.parameters.time_step_count",
+    "solution.run_calculation.parameters.time_step_size",
+    "solution.run_calculation.parameters.max_iter_per_time_step",
+    "solution.run_calculation.parameters.number_of_time_steps",
+    "solution.run_calculation.parameters.adaptive_time_stepping",
+    "solution.run_calculation.parameters.extrapolate_vars",
+    "solution.run_calculation.transient_controls",
+    "solution.run_calculation.pseudo_time_settings",
+)
+
 
 def is_coupled_scheme(flow_scheme: str | None) -> bool:
     """Return True for coupled-family pressure-velocity schemes (hyphen-tolerant)."""
@@ -546,20 +562,6 @@ def classify_path(path: str) -> PathInfo | None:
     # Classify them under PathGroup.RUN with a family tag that mirrors
     # the required time regime so ``reroute`` can point the caller at
     # the sibling that is active under the current mode.
-    _RUN_PARAM_STEADY: tuple[str, ...] = (
-        "solution.run_calculation.parameters.iter_count",
-        "solution.run_calculation.parameters.iterations",
-    )
-    _RUN_PARAM_TRANSIENT: tuple[str, ...] = (
-        "solution.run_calculation.parameters.time_step_count",
-        "solution.run_calculation.parameters.time_step_size",
-        "solution.run_calculation.parameters.max_iter_per_time_step",
-        "solution.run_calculation.parameters.number_of_time_steps",
-        "solution.run_calculation.parameters.adaptive_time_stepping",
-        "solution.run_calculation.parameters.extrapolate_vars",
-        "solution.run_calculation.transient_controls",
-        "solution.run_calculation.pseudo_time_settings",
-    )
     for prefix in _RUN_PARAM_STEADY:
         if p == prefix or p.startswith(prefix + "."):
             return PathInfo(PathGroup.RUN, "iterate", None)
@@ -604,6 +606,7 @@ def reroute(path: str, mode: SolverMode) -> RerouteResult:
     that is not a recognized multi-path setting, so it never false-blocks
     an ordinary write.
     """
+    p = str(path)
     info = classify_path(path)
     if info is None:
         return _ACTIVE
@@ -658,12 +661,12 @@ def reroute(path: str, mode: SolverMode) -> RerouteResult:
         if p == f"solution.run_calculation.{info.family}" or p.startswith(
             f"solution.run_calculation.{info.family}."
         ):
+            regime = "steady" if info.family == "iterate" else "transient"
             return RerouteResult(
                 active=False,
                 correct_path=f"solution.run_calculation.{want_cmd}",
                 reason=(
-                    f"'{info.family}' is the {'steady' if info.family == 'iterate' else 'transient'} "
-                    f"run command but the live session is "
+                    f"'{info.family}' is the {regime} run command but the live session is "
                     f"{'transient' if mode.transient else 'steady'}"
                 ),
                 group=info.group.value,
@@ -678,12 +681,12 @@ def reroute(path: str, mode: SolverMode) -> RerouteResult:
         # the agent's executor treats it as ``inactive_skipped`` and
         # the deferred_intent / _ACTIVATION_GUIDANCE machinery can
         # suggest the correct flip (change solver.time first).
+        regime = "steady" if info.family == "iterate" else "transient"
         return RerouteResult(
             active=False,
             correct_path=None,
             reason=(
-                f"{p!r} is a {'steady' if info.family == 'iterate' else 'transient'} "
-                f"run-calculation leaf but the live session is "
+                f"{p!r} is a {regime} run-calculation leaf but the live session is "
                 f"{'transient' if mode.transient else 'steady'}; flip "
                 f"``setup.general.solver.time`` before writing this leaf"
             ),
