@@ -1118,8 +1118,9 @@ def test_get_command_arguments_skips_allowed_values_on_inactive_argument(monkeyp
     assert "allowed_values" not in args["normal_computation_method"]
     assert calls["allowed_values"] == []
     assert calls["get_attrs"] == [
-        ("active?", "allowed-values"),
-        ("active?", "allowed-values"),
+        ("active?",),
+        ("allowed-values",),
+        ("active?",),
     ]
 
 

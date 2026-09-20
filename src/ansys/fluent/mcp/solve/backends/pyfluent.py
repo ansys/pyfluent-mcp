@@ -2162,17 +2162,33 @@ class PyFluentBackend(Backend):
 
                 attrs_fn = getattr(child, "get_attrs", None)
                 if callable(attrs_fn):
+                    is_active_flag: bool | None = None
                     try:
-                        raw = attrs_fn(["active?", "allowed-values"]) or {}
+                        active_raw = attrs_fn(["active?"]) or {}
                     except Exception:
-                        raw = {}
-                    if isinstance(raw, dict):
-                        is_active_flag = raw.get("active?")
-                        if is_active_flag is not None:
-                            info["is_active"] = bool(is_active_flag)
-                        allowed = raw.get("allowed-values")
-                        if isinstance(allowed, list) and allowed and info.get("is_active", True):
-                            info["allowed_values"] = list(allowed)[:25]
+                        active_raw = {}
+                    if isinstance(active_raw, dict) and isinstance(
+                        active_raw.get("attrs"), dict
+                    ):
+                        active_raw = active_raw["attrs"]
+                    if isinstance(active_raw, dict):
+                        if active_raw.get("active?") is not None:
+                            is_active_flag = bool(active_raw["active?"])
+                    if is_active_flag is not None:
+                        info["is_active"] = is_active_flag
+                    if info.get("is_active", True):
+                        try:
+                            allowed_raw = attrs_fn(["allowed-values"]) or {}
+                        except Exception:
+                            allowed_raw = {}
+                        if isinstance(allowed_raw, dict) and isinstance(
+                            allowed_raw.get("attrs"), dict
+                        ):
+                            allowed_raw = allowed_raw["attrs"]
+                        if isinstance(allowed_raw, dict):
+                            allowed = allowed_raw.get("allowed-values")
+                            if isinstance(allowed, list) and allowed:
+                                info["allowed_values"] = list(allowed)[:25]
                 else:
                     is_active = getattr(child, "is_active", None)
                     active_ok = True
