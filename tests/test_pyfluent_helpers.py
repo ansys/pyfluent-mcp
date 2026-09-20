@@ -825,6 +825,58 @@ def test_pyfluent_guard_probe_failure_paths():
     assert backend._probe_iterating_for_guard() is False
 
 
+def test_pyfluent_dry_run_write_previews_live_write_failures():
+    """Verify that dry-run write catches live-path failures without mutating."""
+
+    read_only = FakeSettingsNode(attrs={"active?": True, "read-only?": True})
+    inactive = FakeSettingsNode(attrs={"active?": False})
+    model = FakeSettingsNode(attrs={"active?": True, "allowed-values": ["k-omega", "k-epsilon"]})
+    fallback_model = FakeSettingsNode(active=True, allowed=["steady", "transient"])
+    wall = FakeNamedCollection(
+        ["wall-1"],
+        items={"wall-1": FakeSettingsNode(attrs={"active?": True, "allowed-values": ["Coupled"]})},
+    )
+    values = [FakeSettingsNode(attrs={"active?": True, "allowed-values": [10, 20]})]
+    root = SimpleNamespace(
+        setup=SimpleNamespace(
+            boundary_conditions=SimpleNamespace(wall=wall),
+            general=SimpleNamespace(solver=SimpleNamespace(time=fallback_model)),
+            models=SimpleNamespace(viscous=SimpleNamespace(model=model)),
+            read_only=read_only,
+            inactive=inactive,
+            values=values,
+        )
+    )
+    backend = pyfluent.PyFluentBackend()
+    backend._solver = SimpleNamespace(settings=root)
+
+    missing = asyncio.run(backend.dry_run_write("setup.missing", "x"))
+    inactive_result = asyncio.run(backend.dry_run_write("setup.inactive", "x"))
+    read_only_result = asyncio.run(backend.dry_run_write("setup.read_only", "x"))
+    assert missing["error_code"] == "unknown_attribute"
+    assert inactive_result["error_code"] == "inactive_target"
+    assert read_only_result["error_code"] == "read_only_leaf"
+
+    rejected = asyncio.run(backend.dry_run_write("setup.models.viscous.model", "bad"))
+    assert rejected["error_code"] == "value_not_allowed"
+    assert rejected["allowed_values"] == ["k-omega", "k-epsilon"]
+
+    assert asyncio.run(backend.dry_run_write("setup.models.viscous.model", "K_Omega")) == {
+        "status": "ok"
+    }
+    assert asyncio.run(backend.dry_run_write("setup.general.solver.time", "Transient")) == {
+        "status": "ok"
+    }
+    assert asyncio.run(
+        backend.dry_run_write(
+            "setup.boundary_conditions.wall", "Coupled", kind="set_named", key="wall-1"
+        )
+    ) == {"status": "ok"}
+    assert asyncio.run(
+        backend.dry_run_write("setup.values", 20, kind="set_list_item", index=0)
+    ) == {"status": "ok"}
+
+
 def test_pyfluent_live_context_methods_with_fake_settings_tree(monkeypatch):
     """Verify that pyfluent live context methods with fake settings tree.
 

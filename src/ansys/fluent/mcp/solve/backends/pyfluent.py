@@ -2167,9 +2167,7 @@ class PyFluentBackend(Backend):
                         active_raw = attrs_fn(["active?"]) or {}
                     except Exception:
                         active_raw = {}
-                    if isinstance(active_raw, dict) and isinstance(
-                        active_raw.get("attrs"), dict
-                    ):
+                    if isinstance(active_raw, dict) and isinstance(active_raw.get("attrs"), dict):
                         active_raw = active_raw["attrs"]
                     if isinstance(active_raw, dict):
                         if active_raw.get("active?") is not None:
