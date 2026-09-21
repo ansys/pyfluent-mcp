@@ -610,6 +610,65 @@ class Backend(ABC):
 
         return validate_python_source(code)
 
+    async def dry_run_write(
+        self,
+        path: str,
+        value: Any,
+        *,
+        kind: str = "set",
+        key: str | None = None,
+        index: int | None = None,
+    ) -> dict[str, Any]:
+        """Semantically validate a single write against LIVE state.
+
+        This is the JIT (just-in-time) semantic check the agent's
+        :class:`PlanValidator` calls immediately before each step
+        executes. It answers, for a specific ``(path, value)`` pair:
+
+        * Does the path exist and is it active in the CURRENT
+          solver mode?
+        * Is ``value`` acceptable for that path's type / allowed
+          values under the CURRENT state?
+        * Would the write raise the same error the executor would
+          raise if applied right now?
+
+        Unlike :meth:`validate_code`, which is a STATIC AST pass
+        against a code string, ``dry_run_write`` reasons about live
+        state: the same value can be valid at plan-authoring time
+        and invalid five steps later after a barrier flip. Backends
+        with a live session should override this to query the solver
+        directly; the ABC's default returns ``{"status": "ok"}`` so
+        callers treat unsupported backends as "no additional
+        objection" rather than as an error.
+
+        Parameters
+        ----------
+        path:
+            Dotted settings-tree path (e.g. ``setup.models.viscous.model``).
+        value:
+            The value the caller intends to write. Scalar for ``kind="set"``,
+            a partial-state dict for ``kind="set_state" / "set_named"``.
+        kind:
+            One of ``"set"``, ``"set_named"``, ``"set_list_item"``,
+            ``"set_state"``, ``"multi_edit"``. Matches
+            :class:`fluids_mcp.agent.plan.models.StepKind`.
+        key:
+            NamedObject key when ``kind`` is ``"set_named"`` /
+            ``"multi_edit"``.
+        index:
+            ListObject index when ``kind`` is ``"set_list_item"``.
+
+        Returns
+        -------
+        dict[str, Any]
+            ``{"status": "ok"}`` when the write would succeed, or
+            ``{"status": "error", "error_code": "...", "message": "...",
+            "allowed_values": [...], "hint": "..."}`` when the backend
+            can predict a rejection. Backends MUST NOT actually mutate
+            state — this call is a preview only.
+        """
+        return {"status": "ok", "note": f"{self.label} has no dry-run implementation"}
+
     # ---- mesh introspection ------------------------------------------
 
     async def mesh_counts(self) -> dict[str, int | None]:

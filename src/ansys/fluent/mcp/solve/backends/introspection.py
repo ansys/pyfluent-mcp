@@ -193,8 +193,10 @@ def resolve_path(root: Any, path: str) -> Any:
         if "[" in part and part.endswith("]"):
             attr, _, key = part[:-1].partition("[")
             node = getattr(node, attr)
-            key = key.strip("\"'")
-            node = node[key]
+            if key.isdecimal():
+                node = node[int(key)]
+            else:
+                node = node[key.strip("\"'")]
             continue
         try:
             node = getattr(node, part)
