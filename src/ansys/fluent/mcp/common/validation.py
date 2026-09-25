@@ -152,6 +152,25 @@ _SAFE_DUNDER_READS: frozenset[str] = frozenset(
         "__class__",
     }
 )
+# Plain (non-dunder) attribute names that are never legitimate on a Fluent
+# settings path but are a known live-module escape hatch: several stdlib
+# modules on ``_ALLOWED_IMPORTS`` (e.g. ``dataclasses``, ``typing``) import
+# ``sys`` at module scope, so ``dataclasses.sys`` is a plain attribute that
+# resolves to the real, unrestricted ``sys`` module. From there,
+# ``sys.modules['os']`` / ``sys.modules['builtins']`` hands back the live,
+# unsandboxed module objects the restricted ``__builtins__`` was built to
+# withhold, regardless of how the resulting call is spelled (so this must be
+# blocked at the attribute-access level, not by name-matching individual
+# calls like ``os.system``).
+_FORBIDDEN_ATTRIBUTES: frozenset[str] = frozenset(
+    {
+        "sys",
+        "os",
+        "modules",
+        "builtins",
+        "subprocess",
+    }
+)
 _ALLOWED_BUILTINS: frozenset[str] = frozenset(
     {
         # value constructors
@@ -345,18 +364,40 @@ def _validate_python_source_uncached(
             if name and name in forbidden:
                 flagged.append(name)
             # Block ``getattr(obj, '__class__')``-style reflection used
-            # to climb back up to ``object.__subclasses__()`` etc.
+            # to climb back up to ``object.__subclasses__()`` etc., and
+            # ``getattr(dataclasses, 'sys')``-style reflection that reaches
+            # the same live-module names ``_FORBIDDEN_ATTRIBUTES`` blocks
+            # when spelled as plain attribute access.
             if (
                 isinstance(node.func, ast.Name)
                 and node.func.id in {"getattr", "setattr", "delattr", "hasattr"}
                 and len(node.args) >= 2
                 and isinstance(node.args[1], ast.Constant)
                 and isinstance(node.args[1].value, str)
-                and node.args[1].value.startswith("__")
-                and node.args[1].value.endswith("__")
-                and node.args[1].value not in _SAFE_DUNDER_READS
+                and (
+                    (
+                        node.args[1].value.startswith("__")
+                        and node.args[1].value.endswith("__")
+                        and node.args[1].value not in _SAFE_DUNDER_READS
+                    )
+                    or node.args[1].value in _FORBIDDEN_ATTRIBUTES
+                )
             ):
                 flagged.append(f"{node.func.id}(..., {node.args[1].value!r})")
+            # Block ``"{0.__class__.__bases__}".format(x)``-style reflection.
+            # ``str.format``/``format_map`` resolve their ``{0.attr}`` /
+            # ``{0[key]}`` field syntax via CPython's C-level attribute/item
+            # protocol, not the Python ``getattr`` builtin, so neither the
+            # dunder/``_FORBIDDEN_ATTRIBUTES`` literal checks above nor the
+            # runtime-guarded ``getattr`` (see ``pyfluent._build_safe_builtins``)
+            # can see or stop the traversal. There is no legitimate use of
+            # this mini-language in Fluent automation snippets, so it is
+            # rejected outright rather than pattern-matched.
+            if isinstance(node.func, ast.Attribute) and node.func.attr in {
+                "format",
+                "format_map",
+            }:
+                flagged.append(f".{node.func.attr}(...)")
         if (
             isinstance(node, ast.Attribute)
             and node.attr.startswith("__")
@@ -365,6 +406,18 @@ def _validate_python_source_uncached(
             # block dunder attribute access (``__class__``/``__globals__``/...)
             if node.attr not in _SAFE_DUNDER_READS:
                 flagged.append(node.attr)
+        # Block live-module escape hatches (``dataclasses.sys``,
+        # ``typing.sys.modules['os']``, ...). See ``_FORBIDDEN_ATTRIBUTES``.
+        if isinstance(node, ast.Attribute) and node.attr in _FORBIDDEN_ATTRIBUTES:
+            flagged.append(node.attr)
+        # Same check for the literal-string-subscript form (``mod.modules['os']``).
+        if (
+            isinstance(node, ast.Subscript)
+            and isinstance(node.slice, ast.Constant)
+            and isinstance(node.slice.value, str)
+            and node.slice.value in _FORBIDDEN_ATTRIBUTES
+        ):
+            flagged.append(node.slice.value)
         # Block PyFluent TUI escape hatch: ``solver.tui.<anything>`` is a
         # text-command bridge that bypasses every settings-API guardrail
         # the rest of this validator enforces (no schema, no allowed-type
@@ -545,6 +598,16 @@ def _dotted_name(node: ast.AST) -> str | None:
     if isinstance(node, ast.Attribute):
         prefix = _dotted_name(node.value)
         return f"{prefix}.{node.attr}" if prefix else node.attr
+    if (
+        isinstance(node, ast.Subscript)
+        and isinstance(node.slice, ast.Constant)
+        and isinstance(node.slice.value, str)
+    ):
+        # Treat ``mod.modules['os']`` like ``mod.modules.os`` so a forbidden
+        # or sensitive name reached through a literal string subscript is
+        # visible to the same dotted-name matching as attribute access.
+        prefix = _dotted_name(node.value)
+        return f"{prefix}.{node.slice.value}" if prefix else node.slice.value
     return None
 
 

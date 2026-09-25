@@ -55,6 +55,8 @@ from ansys.fluent.mcp.common.models import ConnectResult, RunCodeResult
 from ansys.fluent.mcp.common.validation import (
     _ALLOWED_BUILTINS,
     _ALLOWED_IMPORTS,
+    _FORBIDDEN_ATTRIBUTES,
+    _SAFE_DUNDER_READS,
     validate_python_source,
 )
 from ansys.fluent.mcp.solve.backends.introspection import (
@@ -427,16 +429,86 @@ def _scan_reflection_writes(code: str) -> list[str]:
     return flagged
 
 
+def _is_forbidden_attribute_name(name: Any) -> bool:
+    """Return ``True`` when ``name`` is a dunder or live-module escape name.
+
+    Mirrors the AST validator's dunder/``_FORBIDDEN_ATTRIBUTES`` blocklist,
+    but operates on a concrete string at call time. Unlike the AST check
+    (which only sees string *literals*), this catches names assembled at
+    runtime via concatenation, slicing, ``chr()`` joins, etc. -- e.g.
+    ``getattr(dataclasses, "s" + "ys")`` or ``getattr(type(1), "__" +
+    "mro" + "__")`` walking to ``object.__subclasses__()``.
+    """
+    if not isinstance(name, str):
+        return False
+    if name in _FORBIDDEN_ATTRIBUTES:
+        return True
+    return name.startswith("__") and name.endswith("__") and name not in _SAFE_DUNDER_READS
+
+
+def _make_guarded_reflection_builtins() -> dict[str, Any]:
+    """Return runtime-guarded ``getattr``/``setattr``/``hasattr``/``delattr``.
+
+    A dynamically-built attribute-name string defeats the AST validator's
+    literal-only checks entirely, so the authoritative name check has to
+    happen here, where the name is always a concrete string regardless of
+    how it was constructed.
+
+    Returns
+    -------
+    dict[str, Any]
+        Mapping of builtin name to guarded replacement.
+    """
+    import builtins as _b
+
+    real_getattr, real_setattr, real_hasattr, real_delattr = (
+        _b.getattr,
+        _b.setattr,
+        _b.hasattr,
+        _b.delattr,
+    )
+
+    def _safe_getattr(obj: Any, name: Any, *default: Any) -> Any:
+        if _is_forbidden_attribute_name(name):
+            raise AttributeError(f"access to {name!r} is not permitted in sandboxed run_code")
+        return real_getattr(obj, name, *default)
+
+    def _safe_setattr(obj: Any, name: Any, value: Any) -> None:
+        if _is_forbidden_attribute_name(name):
+            raise AttributeError(f"access to {name!r} is not permitted in sandboxed run_code")
+        real_setattr(obj, name, value)
+
+    def _safe_hasattr(obj: Any, name: Any) -> bool:
+        if _is_forbidden_attribute_name(name):
+            return False
+        return real_hasattr(obj, name)
+
+    def _safe_delattr(obj: Any, name: Any) -> None:
+        if _is_forbidden_attribute_name(name):
+            raise AttributeError(f"access to {name!r} is not permitted in sandboxed run_code")
+        real_delattr(obj, name)
+
+    return {
+        "getattr": _safe_getattr,
+        "setattr": _safe_setattr,
+        "hasattr": _safe_hasattr,
+        "delattr": _safe_delattr,
+    }
+
+
 def _build_safe_builtins() -> dict[str, Any]:
     """Construct a restricted ``__builtins__`` mapping for ``exec``.
 
     Only the names listed in :data:`ansys.fluent.mcp.common.validation._ALLOWED_BUILTINS`
     are exposed, plus a guarded ``__import__`` that enforces
-    :data:`ansys.fluent.mcp.common.validation._ALLOWED_IMPORTS`. Notably
-    absent: ``eval``, ``exec``, ``compile``, ``open``, ``input``,
-    ``exit``, ``quit``, ``globals``, ``locals``, ``vars``. This is a
-    defense-in-depth layer behind the AST validator — even a validator
-    bypass cannot reach these names via the runtime ``builtins`` module.
+    :data:`ansys.fluent.mcp.common.validation._ALLOWED_IMPORTS` and guarded
+    ``getattr``/``setattr``/``hasattr``/``delattr`` that enforce the same
+    attribute-name blocklist the AST validator uses, but at runtime (see
+    :func:`_make_guarded_reflection_builtins`). Notably absent: ``eval``,
+    ``exec``, ``compile``, ``open``, ``input``, ``exit``, ``quit``,
+    ``globals``, ``locals``, ``vars``. This is a defense-in-depth layer
+    behind the AST validator — even a validator bypass cannot reach these
+    names via the runtime ``builtins`` module.
 
     Returns
     -------
@@ -452,6 +524,7 @@ def _build_safe_builtins() -> dict[str, Any]:
     # Provide a guarded __import__ so snippets that the AST validator
     # accepted (e.g. ``import math``) actually run.
     safe["__import__"] = _make_safe_import()
+    safe.update(_make_guarded_reflection_builtins())
     return safe
 
 

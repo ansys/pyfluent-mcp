@@ -347,6 +347,24 @@ def test_safe_builtins_allow_whitelisted_imports_and_block_unsafe_ones():
     assert "__import__" in builtins
     assert "eval" not in builtins
 
+    class Probe:
+        visible = "ok"
+
+    probe = Probe()
+    assert builtins["getattr"](probe, "visible") == "ok"
+    assert builtins["hasattr"](probe, "visible") is True
+    assert builtins["hasattr"](probe, "sys") is False
+    with pytest.raises(AttributeError):
+        builtins["getattr"](probe, "sys")
+    with pytest.raises(AttributeError):
+        builtins["getattr"](probe, "__" + "globals" + "__")
+    with pytest.raises(AttributeError):
+        builtins["setattr"](probe, "sys", None)
+    with pytest.raises(AttributeError):
+        builtins["delattr"](probe, "sys")
+    # explicitly allow-listed dunder reads still work through the guard
+    assert builtins["getattr"](probe, "__class__") is Probe
+
 
 def test_filter_launch_kwargs_for_var_kwargs_and_uninspectable_callables():
     """Verify that filter launch kwargs for var kwargs and uninspectable callables.
@@ -1641,6 +1659,91 @@ def test_pyfluent_run_code_validate_help_mesh_reports_and_screenshot(monkeypatch
     backend._solver = None
     with pytest.raises(NotConnectedError):
         asyncio.run(backend.screenshot())
+
+
+def test_run_code_blocks_dataclasses_sys_modules_sandbox_escape():
+    """``dataclasses.sys.modules[...]`` must not reach real ``os``/``builtins``.
+
+    ``dataclasses`` is on the strict-mode allowed-import list and its module
+    object carries a plain (non-dunder) reference to the real ``sys`` module,
+    whose ``modules`` dict exposes every already-imported module -- including
+    ``os`` and the real ``builtins`` -- regardless of the restricted
+    ``__builtins__`` installed for ``exec``. The AST validator's forbidden-call
+    scanner only recognizes ``Name``/``Attribute`` call targets, so a call
+    reached through a ``Subscript`` (e.g. ``dataclasses.sys.modules['os']``)
+    was invisible to it. Ref: third-party report, run_code sandbox bypass.
+    """
+    backend = pyfluent.PyFluentBackend()
+    backend._solver = SimpleNamespace(settings=SimpleNamespace())
+
+    payload = (
+        "import dataclasses\n"
+        "__return__ = dataclasses.sys.modules['os'].popen("
+        "'echo SANDBOX_ESCAPE_CONFIRMED').read()\n"
+    )
+    result = asyncio.run(backend.run_code(payload))
+
+    assert result.status == "error"
+    assert result.error_code in {"forbidden_call", "forbidden_import", "forbidden_name"}
+
+    # Same primitive via ``typing`` (also allow-listed and also leaks ``sys``).
+    typing_payload = "import typing\n__return__ = typing.sys.modules['builtins'].eval('1+1')\n"
+    typing_result = asyncio.run(backend.run_code(typing_payload))
+    assert typing_result.status == "error"
+
+
+def test_run_code_blocks_dynamically_constructed_getattr_names():
+    """A runtime-built attribute-name string must not bypass the sandbox.
+
+    The AST validator only recognizes forbidden/dunder attribute names as
+    string *literals*. A name assembled at runtime (concatenation, slicing,
+    etc.) parses cleanly under ``strict=True`` because there is no literal
+    for the validator to match -- e.g. ``getattr(dataclasses, "s" + "ys")``
+    or ``getattr(type(1), "__" + "mro" + "__")`` walking to
+    ``object.__subclasses__()``. The runtime-guarded ``getattr`` installed
+    by ``_build_safe_builtins`` must catch these regardless.
+    """
+    backend = pyfluent.PyFluentBackend()
+    backend._solver = SimpleNamespace(settings=SimpleNamespace())
+
+    dataclasses_payload = (
+        "import dataclasses\n"
+        "name = 's' + 'ys'\n"
+        "__return__ = getattr(dataclasses, name).modules['builtins'].eval('1+1')\n"
+    )
+    assert asyncio.run(backend.run_code(dataclasses_payload)).status == "error"
+
+    mro_payload = (
+        "u = '_' + '_'\n"
+        "a2 = u + 'mro' + u\n"
+        "a3 = u + 'subclasses' + u\n"
+        "base = getattr(type(1), a2)[-1]\n"
+        "__return__ = len(getattr(base, a3)())\n"
+    )
+    assert asyncio.run(backend.run_code(mro_payload)).status == "error"
+
+
+def test_run_code_blocks_format_string_attribute_traversal():
+    """``"{0.__class__.__bases__}".format(x)`` must be rejected outright.
+
+    ``str.format``/``format_map`` resolve ``{0.attr}``/``{0[key]}`` field
+    syntax via CPython's C-level attribute/item protocol rather than the
+    Python ``getattr`` builtin, so this traversal is invisible to both the
+    dunder/``_FORBIDDEN_ATTRIBUTES`` literal checks and the runtime-guarded
+    ``getattr``. There is no legitimate use for this mini-language in
+    Fluent automation snippets, so ``.format``/``.format_map`` calls are
+    rejected unconditionally.
+    """
+    backend = pyfluent.PyFluentBackend()
+    backend._solver = SimpleNamespace(settings=SimpleNamespace())
+
+    payload = "tmpl = '{0.__class__.__bases__}'\n__return__ = tmpl.format(5)\n"
+    result = asyncio.run(backend.run_code(payload))
+    assert result.status == "error"
+    assert result.error_code == "forbidden_call"
+
+    map_payload = "tmpl = '{x.__class__}'\n__return__ = tmpl.format_map({'x': 5})\n"
+    assert asyncio.run(backend.run_code(map_payload)).error_code == "forbidden_call"
 
 
 def test_pyfluent_validate_code_semantic_warnings(monkeypatch):
