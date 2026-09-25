@@ -1,0 +1,153 @@
+
+
+
+
+
+
+:class:`CommandArgument`
+========================
+
+
+.. py:class:: ansys.fluent.mcp.common.path_descriptor.CommandArgument
+
+   
+   Single keyword argument of a Fluent settings command.
+
+   Populated from :meth:`Backend.get_command_arguments` — the live
+   solver reports ``argument_names`` (ordered list) and ``arguments``
+   (per-name descriptor). The offline schema in
+   ``settings_271.json.gz`` carries the same information under
+   ``args`` on command nodes.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: CommandArgument
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~to_dict`
+            - Return a JSON-safe dict shape.
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~name`
+            - 
+          * - :py:attr:`~kind`
+            - 
+          * - :py:attr:`~required`
+            - 
+          * - :py:attr:`~default`
+            - 
+          * - :py:attr:`~allowed_values`
+            - 
+          * - :py:attr:`~docstring`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.path_descriptor import CommandArgument
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: name
+   :type:  str
+
+.. py:attribute:: kind
+   :type:  str | None
+   :value: None
+
+
+.. py:attribute:: required
+   :type:  bool
+   :value: False
+
+
+.. py:attribute:: default
+   :type:  Any
+   :value: None
+
+
+.. py:attribute:: allowed_values
+   :type:  tuple[Any, Ellipsis] | None
+   :value: None
+
+
+.. py:attribute:: docstring
+   :type:  str | None
+   :value: None
+
+
+
+
+Method detail
+-------------
+
+.. py:method:: to_dict() -> dict[str, Any]
+
+   
+   Return a JSON-safe dict shape.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+

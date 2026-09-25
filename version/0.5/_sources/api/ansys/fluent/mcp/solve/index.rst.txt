@@ -1,0 +1,151 @@
+
+
+
+
+
+
+The ``solve`` package
+=========================
+
+.. py:module:: ansys.fluent.mcp.solve
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: solve
+.. tab-set::
+
+    .. tab-item:: Subpackages
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.backends`
+            - Solve connection/data-plane backends.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.catalog`
+            - Solve settings catalog (discovery, indexing, retrieval).
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.data`
+            - Bundled static data for PyFluent-MCP.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.lib`
+            - Cross-cutting solve helpers that aren't backend/catalog/agent.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.mcp`
+            - Solve MCP leaf provides Fluent solver live-context and execution tools.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.skills`
+            - Routing skill for the standalone ``ansys-fluent-mcp`` server.
+
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.SolveMCP`
+            - Solve MCP leaf: Fluent solver live-context and execution tools.
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-md-package"></span> backends</api/ansys/fluent/mcp/solve/backends/index>
+    <span class="nf nf-md-package"></span> catalog</api/ansys/fluent/mcp/solve/catalog/index>
+    <span class="nf nf-md-package"></span> data</api/ansys/fluent/mcp/solve/data/index>
+    <span class="nf nf-md-package"></span> lib</api/ansys/fluent/mcp/solve/lib/index>
+    <span class="nf nf-md-package"></span> mcp</api/ansys/fluent/mcp/solve/mcp/index>
+    <span class="nf nf-md-package"></span> skills</api/ansys/fluent/mcp/solve/skills/index>
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> SolveMCP</api/ansys/fluent/mcp/solve/SolveMCP>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+
+Solve leaf, which provides Fluent solver live-context and execution tools.
+
+The MCP class :class:`SolveMCP` lives in
+:mod:`ansys.fluent.mcp.solve.mcp`; it is re-exported here so both
+``ansys.fluent.mcp.solve`` and ``ansys.fluent.mcp.solve.mcp`` resolve
+to the same class. New code may prefer the direct import for
+explicitness.
+
+The product-domain layer is organised into subpackages:
+:mod:`~ansys.fluent.mcp.solve.backends` (PyFluent / composite
+backends), :mod:`~ansys.fluent.mcp.solve.catalog` (offline schema,
+index, help, retriever), :mod:`~ansys.fluent.mcp.solve.lib` (domain
+tools, units, patterns) and :mod:`~ansys.fluent.mcp.solve.data`
+(bundled settings schema).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+

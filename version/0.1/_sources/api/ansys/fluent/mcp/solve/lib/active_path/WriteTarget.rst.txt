@@ -1,0 +1,141 @@
+
+
+
+
+
+
+:class:`WriteTarget`
+====================
+
+
+.. py:class:: ansys.fluent.mcp.solve.lib.active_path.WriteTarget
+
+   
+   Canonical resolution of "where should a write to ``requested_path`` land".
+
+   The three consumers of active-path knowledge (the validator's
+   ``inactive_path`` diagnostic, the ``resolve_active_path`` tool
+   surfaced to the LLM, and the recipe URF stagers) historically
+   each maintained their OWN version of the classify → reroute →
+   fetch-alternate-path pipeline. That triplication is the reason
+   the same live case could produce three DIFFERENT answers for
+   "where does this URF write actually go" — the validator said
+   ``inactive_path``, the tool said "no reroute needed", and the
+   recipe went ahead and wrote the wrong family.
+
+   :func:`resolve_write_target` is the single deterministic
+   resolver they all consult. The result carries:
+
+   * ``requested_path`` — the input, verbatim.
+   * ``active_path`` — the correct path to write under ``mode``,
+     which equals ``requested_path`` when the input is already
+     active (``needs_reroute=False``).
+   * ``needs_reroute`` — True iff ``active_path != requested_path``.
+   * ``group`` / ``active_family`` — for messaging and telemetry.
+   * ``reason`` — short human-readable explanation suitable for a
+     validator diagnostic and the LLM-facing tool response.
+   * ``classified`` — True iff the requested path was recognized
+     as belonging to a known multi-path class. When False, the
+     resolver is conservative: it returns ``needs_reroute=False``
+     and ``active_path=requested_path`` so an ordinary write is
+     never false-blocked.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: WriteTarget
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~requested_path`
+            - 
+          * - :py:attr:`~active_path`
+            - 
+          * - :py:attr:`~needs_reroute`
+            - 
+          * - :py:attr:`~group`
+            - 
+          * - :py:attr:`~active_family`
+            - 
+          * - :py:attr:`~reason`
+            - 
+          * - :py:attr:`~classified`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.lib.active_path import WriteTarget
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: requested_path
+   :type:  str
+
+.. py:attribute:: active_path
+   :type:  str
+
+.. py:attribute:: needs_reroute
+   :type:  bool
+
+.. py:attribute:: group
+   :type:  str | None
+   :value: None
+
+
+.. py:attribute:: active_family
+   :type:  str | None
+   :value: None
+
+
+.. py:attribute:: reason
+   :type:  str
+   :value: ''
+
+
+.. py:attribute:: classified
+   :type:  bool
+   :value: False
+
+
+
+
+
+

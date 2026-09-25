@@ -1,0 +1,92 @@
+
+
+
+
+
+
+:class:`ClarificationOption`
+============================
+
+
+.. py:class:: ansys.fluent.mcp.common.models.ClarificationOption(/, **data: Any)
+
+   Bases: :py:obj:`pydantic.BaseModel`
+
+
+   
+   One selectable answer for a clarification question.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: ClarificationOption
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~label`
+            - 
+          * - :py:attr:`~value`
+            - 
+          * - :py:attr:`~description`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.models import ClarificationOption
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: label
+   :type:  str
+
+.. py:attribute:: value
+   :type:  str
+
+.. py:attribute:: description
+   :type:  Optional[str]
+   :value: None
+
+
+
+
+
+

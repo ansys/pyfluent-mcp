@@ -1,0 +1,187 @@
+
+
+
+
+
+
+:class:`HttpApiRetriever`
+=========================
+
+
+.. py:class:: ansys.fluent.mcp.solve.catalog.retriever.HttpApiRetriever(url: str, *, collection_name: str = 'fluent_api_collection', timeout: float = 30.0, headers: Optional[dict[str, str]] = None, client: Optional[httpx.AsyncClient] = None)
+
+   Bases: :py:obj:`ApiRetriever`
+
+
+   
+   Forward retrieval to an HTTP endpoint that wraps the legacy ``GetEncodedElements`` (Qdrant-backed) workflow.
+
+   The endpoint is expected to accept ``POST <url>`` with JSON body::
+
+       {
+           "query": "...",
+           "top_k": 10,
+           "collection_name": "fluent_api_collection",
+           "kinds": ["Parameter"],
+           "under": "setup.boundary_conditions",
+       }
+
+   and respond with::
+
+       {
+           "hits": [
+               {"path": "...", "kind": "...", "score": ..., "raw": "...", "payload": {...}},
+               ...,
+           ]
+       }
+
+   Any extra fields are passed through unchanged in ``payload``.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: HttpApiRetriever
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~retrieve`
+            - Retrieve API hits that match the query and filters.
+          * - :py:attr:`~aclose`
+            - Close resources for the HttpApiRetriever object.
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~name`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.catalog.retriever import HttpApiRetriever
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: name
+   :value: 'http'
+
+
+
+
+Method detail
+-------------
+
+.. py:method:: retrieve(query: str, *, top_k: int = 10, kinds: Optional[Sequence[str]] = None, under: Optional[str] = None) -> list[ApiHit]
+   :async:
+
+
+   
+   Retrieve API hits that match the query and filters.
+
+
+   :Parameters:
+
+       **query** : :class:`python:str`
+           Search text or user request to evaluate.
+
+       **top_k** : :class:`python:int`
+           Maximum number of results to return.
+
+       **kinds** : :obj:`Optional`\[:obj:`Sequence`\[:class:`python:str`]]
+           Optional result kinds used to narrow the operation.
+
+       **under** : :obj:`Optional`\[:class:`python:str`]
+           Optional path prefix used to scope the operation.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:obj:`ApiHit`]
+           List of results produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: aclose() -> None
+   :async:
+
+
+   
+   Close resources for the HttpApiRetriever object.
+
+
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+

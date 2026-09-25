@@ -1,0 +1,353 @@
+
+
+
+
+
+
+The ``schema_probe_tools.py`` module
+====================================
+
+.. py:module:: ansys.fluent.mcp.solve.lib.schema_probe_tools
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: schema_probe_tools
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~probe_path_impl`
+            - Batch pre-flight probe for a list of settings paths.
+
+
+          * - :py:obj:`~get_active_status_impl`
+            - Batch active-status probe.
+
+
+          * - :py:obj:`~get_allowed_values_impl`
+            - Batch allowed-values probe.
+
+
+          * - :py:obj:`~describe_named_object_template_impl`
+            - Describe the field shape of a NamedObject collection's child.
+
+
+          * - :py:obj:`~describe_path_impl`
+            - Batch unified path-descriptor probe.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Live-schema probe tools.
+
+The MCP leaf used to keep these primitives backend-private — agents
+that ran outside the in-process leaf could call ``get_state`` /
+``run_code`` and infer the same information one round-trip at a
+time, but they could not directly ask "is this path active?",
+"what allowed values does this enum take?", "does this NamedObject
+template require a name argument?" or "does this path even exist
+in the schema?". That gap meant external MCP clients (Cursor, VS
+Code Copilot, Claude Desktop) had to write defensive ``try/except``
+around every write and discovered violations only after Fluent
+raised an opaque ``api-set-var``.
+
+This module exposes those primitives as five domain tools:
+
+* ``probe_path`` — batch ``{exists, is_active, is_user_creatable, kind}``
+* ``get_active_status`` — batch ``{path: bool}``
+* ``get_allowed_values`` — batch ``{path: [...]}``
+* ``describe_named_object_template`` — single-path template fetch
+* ``describe_path`` — unified batch :class:`PathDescriptor` (composes the
+  four primitives above into one envelope per path)
+
+The four primitive implementations are thin wrappers around the
+corresponding :class:`Backend` methods so the leaf and the agent share
+the same contract. ``describe_path`` fuses them so external MCP clients
+don't have to stitch payloads together. All five are read-only /
+introspective — they never mutate the live session.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: probe_path_impl(backend: ansys.fluent.mcp.common.backend.Backend, *, paths: list[str]) -> dict[str, Any]
+   :async:
+
+
+   
+   Batch pre-flight probe for a list of settings paths.
+
+   Returns ``{path: {exists, is_active, is_user_creatable, kind}}``
+   in a single round-trip. Backends without a live session raise
+   :class:`BackendUnavailableError`; the wrapper surfaces that as
+   a structured error so the LLM can pivot to ``get_state`` or
+   ``find_api`` without burning a turn.
+
+   :Parameters:
+
+       **paths**
+           One or more Fluent settings paths to probe. Bracket-indexed
+           paths (``solution.controls.under_relaxation[pressure]``) are
+           accepted in addition to plain paths.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           ``{"connected": True, "results": {<path>: {...}}, "status": "ok"}``
+           on success, or ``{"connected": ..., "status": "error",
+           "error_code": "...", "message": "..."}`` on failure.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: get_active_status_impl(backend: ansys.fluent.mcp.common.backend.Backend, *, paths: list[str]) -> dict[str, Any]
+   :async:
+
+
+   
+   Batch active-status probe.
+
+   Returns ``{path: bool}`` per requested path. Inactive paths
+   cannot be written to — Fluent either silently ignores the
+   assignment or raises ``InactiveObjectError``. Use this before
+   proposing a write to a path that is gated by another model
+   (``setup.models.viscous.k_omega_model`` is inactive unless
+   ``viscous.model='k-omega'``, ``solution.controls.p_v_controls
+   .explicit_pressure_under_relaxation`` is inactive under
+   SIMPLE / SIMPLEC / PISO, etc.).
+
+   :Parameters:
+
+       **paths**
+           One or more Fluent settings paths to probe.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           ``{"connected": True, "status": "ok", "results": {path: bool}}``
+           on success.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: get_allowed_values_impl(backend: ansys.fluent.mcp.common.backend.Backend, *, paths: list[str]) -> dict[str, Any]
+   :async:
+
+
+   
+   Batch allowed-values probe.
+
+   Returns ``{path: [allowed, values, ...]}`` for paths that are
+   enum-style (``setup.models.viscous.model``,
+   ``setup.boundary_conditions.wall["foo"].thermal.thermal_condition``,
+   discretization schemes, ...). Returns an empty list for paths
+   that have no allowed-values constraint. Use BEFORE writing to
+   an enum field so the LLM can pick a value from the live set
+   instead of guessing.
+
+   :Parameters:
+
+       **paths**
+           One or more Fluent settings paths.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           ``{"connected": True, "status": "ok", "results": {path: list}}``.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: describe_named_object_template_impl(backend: ansys.fluent.mcp.common.backend.Backend, *, path: str) -> dict[str, Any]
+   :async:
+
+
+   
+   Describe the field shape of a NamedObject collection's child.
+
+   For a NamedObject family (boundary_conditions.velocity_inlet,
+   solution.report_definitions.surface, materials.fluid, ...) this
+   returns the per-field metadata needed to construct a valid
+   create / update payload:
+
+   * ``child_class`` — name of the child class (Group / scalar leaf)
+   * ``fields`` — a mapping of ``field_name`` to its metadata
+     (``type_hint``, ``is_active``, ``is_read_only``,
+     ``is_user_creatable``, ``allowed_values``, ``min``, ``max``,
+     ``default``, ``units``)
+   * ``is_active`` — whether the collection itself is active
+   * ``is_user_creatable`` — whether ``.create()`` may be called
+   * ``create_command`` — ``{"argument_names": [...]}`` if a
+     create command exists
+
+   Use BEFORE proposing a ``set_named`` step to learn which fields
+   are required, read-only, or have allowed_values constraints.
+
+   :Parameters:
+
+       **path**
+           Fluent collection path (no bracket key — that's appended
+           automatically when the template is consulted for a child).
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           ``{"connected": True, "status": "ok", "template": {...}}`` on
+           success. ``template`` is ``None`` if the backend cannot
+           introspect or the path is not a NamedObject collection.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: describe_path_impl(backend: ansys.fluent.mcp.common.backend.Backend, *, paths: list[str], include_template: bool = True, include_command_arguments: bool = True) -> dict[str, Any]
+   :async:
+
+
+   
+   Batch unified path-descriptor probe.
+
+   Composes ``probe_path`` + ``get_allowed_values`` (+ optionally
+   ``describe_named_object_template`` + ``get_command_arguments``) into
+   a single :class:`PathDescriptor` per input path so external MCP
+   clients don't have to stitch four disparate probe payloads
+   together to reason about a Fluent settings path.
+
+   Returns ``{path: PathDescriptor.to_dict()}``. Fields default to
+   ``None`` (meaning "unknown / unavailable") rather than to
+   sentinels a caller might misread — an empty ``allowed_values``
+   list carries "backend explicitly reports no allowed values",
+   whereas ``None`` carries "we did not probe / the probe failed".
+
+   The composition is fail-soft: if the allowed-values probe raises
+   for one path, the descriptor for that path just gets
+   ``allowed_values=None`` and the batch still succeeds. Only a
+   hard failure of ``probe_path`` (which drives ``exists`` /
+   ``is_active`` / ``kind``) surfaces a top-level error.
+
+   :Parameters:
+
+       **paths**
+           One or more Fluent settings paths to describe.
+
+       **include_template**
+           When True (default) and a path is a NamedObject collection,
+           fold in :meth:`Backend.describe_named_object_template`.
+
+       **include_command_arguments**
+           When True (default) and a path is a Command, fold in
+           :meth:`Backend.get_command_arguments`.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           ``{"connected": True, "status": "ok", "results": {path:
+           <PathDescriptor.to_dict()>}}`` on success.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

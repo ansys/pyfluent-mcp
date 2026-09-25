@@ -1,0 +1,180 @@
+
+
+
+
+
+
+The ``errors.py`` module
+========================
+
+.. py:module:: ansys.fluent.mcp.common.errors
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: errors
+.. tab-set::
+
+
+
+
+
+
+    .. tab-item:: Exceptions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.errors.FluidsMCPError`
+            - Base class for typed errors raised by leaves and backends.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.errors.BackendUnavailableError`
+            - Raised when a backend call fails because the backend is unavailable.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.errors.NotConnectedError`
+            - Raised when a backend call fails because the backend is not connected.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.errors.InvalidArgumentsError`
+            - Raised when a backend call fails due to invalid arguments.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.errors.UpstreamError`
+            - Raised when a backend call fails due to an upstream error (for example, a network issue).
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.errors.DiscoveryError`
+            - Raised when a backend discovery operation fails.
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~typed_guard`
+            - Wrap an async tool handler so unexpected exceptions become `TypedError`.
+
+
+
+    .. tab-item:: Attributes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~logger`
+            - 
+
+
+
+    .. tab-item:: Constants
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~T`
+            - 
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-md-lightning_bolt"></span> FluidsMCPError</api/ansys/fluent/mcp/common/errors/FluidsMCPError>
+    <span class="nf nf-md-lightning_bolt"></span> BackendUnavailableError</api/ansys/fluent/mcp/common/errors/BackendUnavailableError>
+    <span class="nf nf-md-lightning_bolt"></span> NotConnectedError</api/ansys/fluent/mcp/common/errors/NotConnectedError>
+    <span class="nf nf-md-lightning_bolt"></span> InvalidArgumentsError</api/ansys/fluent/mcp/common/errors/InvalidArgumentsError>
+    <span class="nf nf-md-lightning_bolt"></span> UpstreamError</api/ansys/fluent/mcp/common/errors/UpstreamError>
+    <span class="nf nf-md-lightning_bolt"></span> DiscoveryError</api/ansys/fluent/mcp/common/errors/DiscoveryError>
+
+
+
+
+
+
+
+Description
+-----------
+
+Helper module to handle errors.
+
+Typed error helpers and a guard decorator that converts unexpected
+exceptions into a `TypedError` instead of crashing the MCP transport.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: typed_guard(func: Callable[Ellipsis, Awaitable[T]]) -> Callable[Ellipsis, Awaitable[T | ansys.fluent.mcp.common.models.TypedError]]
+
+   
+   Wrap an async tool handler so unexpected exceptions become `TypedError`.
+
+   ``FluidsMCPError`` subclasses are converted to their typed form.
+   Anything else is logged and wrapped as `internal_error`.
+
+   :Parameters:
+
+       **func** : :obj:`Callable`\[..., :obj:`Awaitable`\[:obj:`T`]]
+           Function supplied to the decorator.
+
+
+
+   :Returns:
+
+       :obj:`Callable`\[..., :obj:`Awaitable`\[:obj:`T` | :obj:`TypedError`]]
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: T
+
+.. py:data:: logger
+
+
+

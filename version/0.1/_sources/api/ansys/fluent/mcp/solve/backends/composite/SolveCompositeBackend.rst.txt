@@ -1,0 +1,1012 @@
+
+
+
+
+
+
+:class:`SolveCompositeBackend`
+==============================
+
+
+.. py:class:: ansys.fluent.mcp.solve.backends.composite.SolveCompositeBackend(*, label: str = 'Solve (PyFluent)')
+
+   Bases: :py:obj:`ansys.fluent.mcp.common.backend.Backend`
+
+
+   
+   Composite backend: PyFluent for execution; LLM pipeline for codegen.
+
+   * **Execution & live context** are always handled by an in-process
+     :class:`PyFluentBackend`.
+   * **Codegen & clarify** raise :class:`BackendUnavailableError` so the
+     :class:`CodegenPipeline` (or the LLM orchestrator) falls back to
+     its own generation strategy.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: SolveCompositeBackend
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~connect`
+            - Connect to the configured backend or service.
+          * - :py:attr:`~disconnect`
+            - Close resources for the SolveCompositeBackend object.
+          * - :py:attr:`~is_connected`
+            - Return whether connected.
+          * - :py:attr:`~close_sync`
+            - Best-effort synchronous cleanup for shutdown.
+          * - :py:attr:`~status`
+            - Return backend status information.
+          * - :py:attr:`~codegen`
+            - Generate code from the provided prompt.
+          * - :py:attr:`~clarify`
+            - Apply a clarification answer to a pending code-generation session.
+          * - :py:attr:`~list_named_objects`
+            - List named objects entries.
+          * - :py:attr:`~get_named_object_names`
+            - Return the named object names.
+          * - :py:attr:`~find_named_object`
+            - Find named object entries.
+          * - :py:attr:`~get_state`
+            - Return the state.
+          * - :py:attr:`~get_active_status`
+            - Return the active status.
+          * - :py:attr:`~get_allowed_values`
+            - Return the allowed values.
+          * - :py:attr:`~get_targeted_context`
+            - Return the targeted context.
+          * - :py:attr:`~get_help`
+            - Return the help.
+          * - :py:attr:`~solver_status`
+            - Return solver status information from the backend.
+          * - :py:attr:`~mesh_counts`
+            - Return mesh entity counts.
+          * - :py:attr:`~mesh_quality`
+            - Return mesh quality information from the backend.
+          * - :py:attr:`~mesh_check`
+            - Run the backend mesh check operation.
+          * - :py:attr:`~run_code`
+            - Execute Python code through the backend runtime.
+          * - :py:attr:`~validate_code`
+            - Validate code.
+          * - :py:attr:`~screenshot`
+            - Capture a screenshot from the backend runtime.
+          * - :py:attr:`~invalidate_cache`
+            - Clear cached backend state.
+          * - :py:attr:`~invalidate_live_caches`
+            - Clear cached live backend state.
+          * - :py:attr:`~invalidate_mesh_cache`
+            - Clear mesh-probe caches on the composite and inner backend.
+
+
+   .. tab-item:: Properties
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~endpoint`
+            - Return the backend endpoint description.
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~kind`
+            - 
+          * - :py:attr:`~label`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.backends.composite import SolveCompositeBackend
+
+Property detail
+---------------
+
+.. py:property:: endpoint
+   :type: Optional[str]
+
+
+   
+   Return the backend endpoint description.
+
+
+
+
+
+   :Returns:
+
+       :obj:`Optional`\[:class:`python:str`]
+           Optional value produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: kind
+   :value: 'pyfluent'
+
+
+.. py:attribute:: label
+   :value: 'Solve (PyFluent)'
+
+
+
+
+Method detail
+-------------
+
+.. py:method:: connect(*, ip: Optional[str] = None, port: Optional[int] = None, password: Optional[str] = None, server_info_file: Optional[str] = None, precision: str = 'double', processor_count: int = 1, ui_mode: str = 'gui', product_version: Optional[str] = None, **_: Any) -> ansys.fluent.mcp.common.models.ConnectResult
+   :async:
+
+
+   
+   Connect to the configured backend or service.
+
+
+   :Parameters:
+
+       **ip** : :obj:`Optional`\[:class:`python:str`]
+           IP address of the Fluent server to connect to.
+
+       **port** : :obj:`Optional`\[:class:`python:int`]
+           Port number of the Fluent server to connect to.
+
+       **password** : :obj:`Optional`\[:class:`python:str`]
+           Password used when connecting to a Fluent server.
+
+       **server_info_file** : :obj:`Optional`\[:class:`python:str`]
+           Server-info file used to connect to an existing Fluent session.
+
+       **precision** : :class:`python:str`
+           Solver precision requested for the Fluent session.
+
+       **processor_count** : :class:`python:int`
+           Number of processors requested for the Fluent session.
+
+       **ui_mode** : :class:`python:str`
+           Fluent UI mode requested for launch.
+
+       **product_version** : :obj:`Optional`\[:class:`python:str`]
+           Fluent product version requested for launch.
+
+       **_** : :obj:`Any`
+           Ignored compatibility options accepted by the backend interface.
+
+
+
+   :Returns:
+
+       :obj:`ConnectResult`
+           ConnectResult produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: disconnect() -> None
+   :async:
+
+
+   
+   Close resources for the SolveCompositeBackend object.
+
+
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: is_connected() -> bool
+
+   
+   Return whether connected.
+
+
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>`
+           Boolean result of the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: close_sync() -> None
+
+   
+   Best-effort synchronous cleanup for shutdown.
+
+
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: status(leaf: str) -> ansys.fluent.mcp.common.models.SessionStatus
+
+   
+   Return backend status information.
+
+
+   :Parameters:
+
+       **leaf** : :class:`python:str`
+           Leaf MCP server instance under test.
+
+
+
+   :Returns:
+
+       :obj:`SessionStatus`
+           SessionStatus produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: codegen(prompt: str, *, session_id: Optional[str] = None, context: Optional[dict[str, Any]] = None)
+   :async:
+
+
+   
+   Generate code from the provided prompt.
+
+
+   :Parameters:
+
+       **prompt** : :class:`python:str`
+           Natural-language request to process.
+
+       **session_id** : :obj:`Optional`\[:class:`python:str`]
+           Identifier for the conversation or tool session.
+
+       **context** : :obj:`Optional`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Additional context passed to the backend or pipeline.
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: clarify(session_id: str, clarification_id: str, answer: str)
+   :async:
+
+
+   
+   Apply a clarification answer to a pending code-generation session.
+
+
+   :Parameters:
+
+       **session_id** : :class:`python:str`
+           Identifier for the conversation or tool session.
+
+       **clarification_id** : :class:`python:str`
+           Identifier for the clarification.
+
+       **answer** : :class:`python:str`
+           Answer text supplied for the pending clarification.
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: list_named_objects() -> dict[str, Any]
+   :async:
+
+
+   
+   List named objects entries.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: get_named_object_names(collection_path: str) -> list[str]
+   :async:
+
+
+   
+   Return the named object names.
+
+
+   :Parameters:
+
+       **collection_path** : :class:`python:str`
+           Path for the collection.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:class:`python:str`]
+           List of results produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: find_named_object(name: str) -> list[dict[str, Any]]
+   :async:
+
+
+   
+   Find named object entries.
+
+
+   :Parameters:
+
+       **name** : :class:`python:str`
+           Name of the object, module, or setting being processed.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           List of results produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: get_state(paths: list[str] | None = None) -> dict[str, Any]
+   :async:
+
+
+   
+   Return the state.
+
+
+   :Parameters:
+
+       **paths** : :class:`python:list`\[:class:`python:str`] | :data:`python:None`
+           Fluent object paths supplied to the operation.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: get_active_status(paths: list[str]) -> dict[str, bool]
+   :async:
+
+
+   
+   Return the active status.
+
+
+   :Parameters:
+
+       **paths** : :class:`python:list`\[:class:`python:str`]
+           Fluent object paths supplied to the operation.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :ref:`bool <python:bltin-boolean-values>`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: get_allowed_values(paths: list[str]) -> dict[str, list[Any]]
+   :async:
+
+
+   
+   Return the allowed values.
+
+
+   :Parameters:
+
+       **paths** : :class:`python:list`\[:class:`python:str`]
+           Fluent object paths supplied to the operation.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:list`\[:obj:`Any`]]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: get_targeted_context(*, paths_to_check: list[str], named_object_types: list[str] | None = None, instance_state_fetch: list[str] | None = None) -> dict[str, Any]
+   :async:
+
+
+   
+   Return the targeted context.
+
+
+   :Parameters:
+
+       **paths_to_check** : :class:`python:list`\[:class:`python:str`]
+           Fluent object paths to validate or inspect.
+
+       **named_object_types** : :class:`python:list`\[:class:`python:str`] | :data:`python:None`
+           Named-object families that should be considered during lookup.
+
+       **instance_state_fetch** : :class:`python:list`\[:class:`python:str`] | :data:`python:None`
+           Whether named-object instance state should be fetched.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: get_help(path: str) -> dict[str, Any]
+   :async:
+
+
+   
+   Return the help.
+
+
+   :Parameters:
+
+       **path** : :class:`python:str`
+           Filesystem path or API path to process.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: solver_status() -> dict[str, Any]
+   :async:
+
+
+   
+   Return solver status information from the backend.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: mesh_counts() -> dict[str, int | None]
+   :async:
+
+
+   
+   Return mesh entity counts.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:int` | :data:`python:None`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: mesh_quality() -> dict[str, float | None]
+   :async:
+
+
+   
+   Return mesh quality information from the backend.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:float` | :data:`python:None`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: mesh_check() -> dict[str, Any]
+   :async:
+
+
+   
+   Run the backend mesh check operation.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: run_code(code: str, *, namespace: dict[str, Any] | None = None, filename: str = '<mcp>') -> ansys.fluent.mcp.common.models.RunCodeResult
+   :async:
+
+
+   
+   Execute Python code through the backend runtime.
+
+
+   :Parameters:
+
+       **code** : :class:`python:str`
+           Python code or command text to execute or validate.
+
+       **namespace** : :class:`python:dict`\[:class:`python:str`, :obj:`Any`] | :data:`python:None`
+           Namespace used to resolve the backend object or route.
+
+       **filename** : :class:`python:str`
+           File name or path used by the backend operation.
+
+
+
+   :Returns:
+
+       :obj:`RunCodeResult`
+           RunCodeResult produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: validate_code(code: str) -> ansys.fluent.mcp.common.models.RunCodeResult
+   :async:
+
+
+   
+   Validate code.
+
+
+   :Parameters:
+
+       **code** : :class:`python:str`
+           Python code or command text to execute or validate.
+
+
+
+   :Returns:
+
+       :obj:`RunCodeResult`
+           RunCodeResult produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: screenshot(*, view: Optional[str] = None) -> dict[str, Any]
+   :async:
+
+
+   
+   Capture a screenshot from the backend runtime.
+
+
+   :Parameters:
+
+       **view** : :obj:`Optional`\[:class:`python:str`]
+           Graphics view or camera preset requested by the caller.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: invalidate_cache() -> None
+
+   
+   Clear cached backend state.
+
+
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: invalidate_live_caches() -> None
+
+   
+   Clear cached live backend state.
+
+
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: invalidate_mesh_cache() -> None
+
+   
+   Clear mesh-probe caches on the composite and inner backend.
+
+
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+

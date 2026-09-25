@@ -1,0 +1,166 @@
+
+
+
+
+
+
+The ``validation.py`` module
+============================
+
+.. py:module:: ansys.fluent.mcp.common.validation
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: validation
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~validate_python_source`
+            - Parse code and return a typed result (memoized).
+
+
+          * - :py:obj:`~sanitize_python_code`
+            - Replace JavaScript-style Booleans/null with Python equivalents.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Static code validation shared across backends.
+
+AST parse plus a few cheap heuristics. Backends with a live solver
+session can layer real semantic checks on top by extending `validate_code`
+in their own implementation.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: validate_python_source(code: str, *, forbidden_calls: Iterable[str] = _FORBIDDEN_CALLS, strict: bool = False, extra_allowed_names: Iterable[str] = ()) -> ansys.fluent.mcp.common.models.RunCodeResult
+
+   
+   Parse code and return a typed result (memoized).
+
+   This is a pure function, which means the same inputs always produce the same RunCodeResult.
+   A bounded LRU keyed by ``(sha256(code), strict,
+   frozenset(forbidden_calls), frozenset(extra_allowed_names))``
+   avoids re-walking the AST when the agent re-validates the same
+   snippet, which is common during multi-edit retries).
+
+   :Parameters:
+
+       **code** : :class:`python:str`
+           Python code snippet to validate or execute.
+
+       **forbidden_calls** : :obj:`Iterable`\[:class:`python:str`]
+           Forbidden calls to supply to the function.
+
+       **strict** : :ref:`bool <python:bltin-boolean-values>`
+           Strict to supply to the function.
+
+       **extra_allowed_names** : :obj:`Iterable`\[:class:`python:str`]
+           Extra allowed names to supply to the function.
+
+
+
+   :Returns:
+
+       :obj:`RunCodeResult`
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: sanitize_python_code(code: str) -> tuple[str, list[str]]
+
+   
+   Replace JavaScript-style Booleans/null with Python equivalents.
+
+   Uses the ``tokenize`` module so that replacements only affect
+   ``NAME`` tokens. Occurrences inside string literals or comments
+   are left untouched.
+
+   Returns ``(sanitized_code, fixes)`` where ``fixes`` is a list of
+   human-readable descriptions of each replacement made.  If no
+   replacements are needed, the original code is returned unchanged.
+
+   :Parameters:
+
+       **code** : :class:`python:str`
+           Python code snippet to validate or execute.
+
+
+
+   :Returns:
+
+       :class:`python:tuple`\[:class:`python:str`, :class:`python:list`\[:class:`python:str`]]
+           Collection containing the operation results.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

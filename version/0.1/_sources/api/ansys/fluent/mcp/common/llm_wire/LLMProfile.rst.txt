@@ -1,0 +1,143 @@
+
+
+
+
+
+
+:class:`LLMProfile`
+===================
+
+
+.. py:class:: ansys.fluent.mcp.common.llm_wire.LLMProfile
+
+   
+   A fully resolved, provider-agnostic capability descriptor.
+
+   One descriptor drives every LLM interaction: which provider/route to
+   call, whether native tool-calling is available, the per-provider
+   token-caching mechanism, and the retry policy. Resolved once via
+   :func:`resolve_profile` and read by the transport seam and callers.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: LLMProfile
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~provider`
+            - 
+          * - :py:attr:`~model`
+            - 
+          * - :py:attr:`~route`
+            - 
+          * - :py:attr:`~endpoint`
+            - 
+          * - :py:attr:`~transport`
+            - 
+          * - :py:attr:`~tool_mode`
+            - 
+          * - :py:attr:`~supports_streaming`
+            - 
+          * - :py:attr:`~supports_json_mode`
+            - 
+          * - :py:attr:`~max_tokens_param`
+            - 
+          * - :py:attr:`~send_temperature`
+            - 
+          * - :py:attr:`~cache`
+            - 
+          * - :py:attr:`~retry`
+            - 
+          * - :py:attr:`~auth_style`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.llm_wire import LLMProfile
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: provider
+   :type:  str
+
+.. py:attribute:: model
+   :type:  str
+
+.. py:attribute:: route
+   :type:  str
+
+.. py:attribute:: endpoint
+   :type:  str | None
+
+.. py:attribute:: transport
+   :type:  str
+
+.. py:attribute:: tool_mode
+   :type:  str
+
+.. py:attribute:: supports_streaming
+   :type:  bool
+
+.. py:attribute:: supports_json_mode
+   :type:  bool
+
+.. py:attribute:: max_tokens_param
+   :type:  str
+
+.. py:attribute:: send_temperature
+   :type:  bool
+
+.. py:attribute:: cache
+   :type:  CacheSpec
+
+.. py:attribute:: retry
+   :type:  RetrySpec
+
+.. py:attribute:: auth_style
+   :type:  str
+   :value: 'bearer'
+
+
+
+
+
+

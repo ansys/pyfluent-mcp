@@ -1,0 +1,102 @@
+
+
+
+
+
+
+:class:`ConnectionTarget`
+=========================
+
+
+.. py:class:: ansys.fluent.mcp.common.models.ConnectionTarget(/, **data: Any)
+
+   Bases: :py:obj:`pydantic.BaseModel`
+
+
+   
+   Minimal connection descriptor surfaced to clients/UI for selection.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: ConnectionTarget
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~id`
+            - 
+          * - :py:attr:`~label`
+            - 
+          * - :py:attr:`~backend_kind`
+            - 
+          * - :py:attr:`~endpoint`
+            - 
+          * - :py:attr:`~extra`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.models import ConnectionTarget
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: id
+   :type:  str
+
+.. py:attribute:: label
+   :type:  str
+
+.. py:attribute:: backend_kind
+   :type:  str
+
+.. py:attribute:: endpoint
+   :type:  str
+
+.. py:attribute:: extra
+   :type:  dict[str, Any]
+   :value: None
+
+
+
+
+
+

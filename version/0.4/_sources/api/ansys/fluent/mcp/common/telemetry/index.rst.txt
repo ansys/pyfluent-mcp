@@ -1,0 +1,182 @@
+
+
+
+
+
+
+The ``telemetry.py`` module
+===========================
+
+.. py:module:: ansys.fluent.mcp.common.telemetry
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: telemetry
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.telemetry.Telemetry`
+            - Pluggable telemetry sink.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.telemetry.LoggingTelemetry`
+            - Default sink that writes one JSON line per event at the INFO level.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.telemetry.NullTelemetry`
+            - Discard everything (used in tests where logging is noise).
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~get_default_telemetry`
+            - Return the default telemetry.
+
+
+          * - :py:obj:`~set_default_telemetry`
+            - Override the default sink. Pass ``None`` to reset to logging.
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> Telemetry</api/ansys/fluent/mcp/common/telemetry/Telemetry>
+    <span class="nf nf-cod-symbol_class"></span> LoggingTelemetry</api/ansys/fluent/mcp/common/telemetry/LoggingTelemetry>
+    <span class="nf nf-cod-symbol_class"></span> NullTelemetry</api/ansys/fluent/mcp/common/telemetry/NullTelemetry>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Telemetry hook.
+
+Centralized place to emit per-step events from MCP host interactions:
+
+* ``tool_call``: Every tool invocation
+* ``host_turn``: Every host round-trip, when the caller reports one
+* ``validation_end``: Final outcome of a validation request
+
+Default implementation logs at INFO via :mod:`logging` in a structured
+JSON line so consumers (such as Application Insights and OpenTelemetry collectors)
+can scrape without installing extra dependencies. Replace via
+:func:`set_default_telemetry` to forward elsewhere.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: get_default_telemetry() -> Telemetry
+
+   
+   Return the default telemetry.
+
+
+
+
+
+   :Returns:
+
+       :obj:`Telemetry`
+           Telemetry produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: set_default_telemetry(sink: Optional[Telemetry]) -> None
+
+   
+   Override the default sink. Pass ``None`` to reset to logging.
+
+
+   :Parameters:
+
+       **sink** : :obj:`Optional`\[:obj:`Telemetry`]
+           Sink to supply to the function.
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

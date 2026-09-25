@@ -1,0 +1,296 @@
+
+
+
+
+
+
+The ``ansys.fluent.mcp`` library
+================================
+
+.. py:module:: ansys.fluent.mcp
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: mcp
+.. tab-set::
+
+    .. tab-item:: Subpackages
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common`
+            - Shared infrastructure for all Fluid's MCP leaves.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve`
+            - Solve leaf, which is Fluent solver's code generation and live-context tools.
+
+
+
+    .. tab-item:: Submodules
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.__main__`
+            - Entry point for running the MCP server as a module.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.server`
+            - Lifespan and CLI entry for the MCP server with startup options.
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.FluidsMCPConfig`
+            - Resolved configuration values.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.Clarification`
+            - A follow-up question emitted by code generation when user input is ambiguous.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.ClarificationOption`
+            - One selectable answer for a clarification question.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.CodegenResult`
+            - Result of a code generation call. It mirrors ``FluentCodegenResult`` from the legacy API.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.ConnectResult`
+            - Result of a ``connect`` call.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.RunCodeResult`
+            - Result of a code execution call.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.SolveMCP`
+            - Solve MCP leaf: Fluent solver codegen and live-context tools.
+
+
+
+
+    .. tab-item:: Exceptions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.ConfigError`
+            - Raised when an environment variable is set to an invalid value.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.BackendUnavailableError`
+            - Raised when a backend call fails because the backend is unavailable.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.DiscoveryError`
+            - Raised when a backend discovery operation fails.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.FluidsMCPError`
+            - Base class for typed errors raised by leaves and backends.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.InvalidArgumentsError`
+            - Raised when a backend call fails due to invalid arguments.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.NotConnectedError`
+            - Raised when a backend call fails because the backend is not connected.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.UpstreamError`
+            - Raised when a backend call fails due to an upstream error (for example, a network issue).
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~load_config`
+            - Read and validate every recognized environment variable.
+
+
+          * - :py:obj:`~validate_config`
+            - Validate configuration.
+
+
+
+    .. tab-item:: Attributes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~__version__`
+            - PyFluent MCP version.
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-md-package"></span> common</api/ansys/fluent/mcp/common/index>
+    <span class="nf nf-md-package"></span> solve</api/ansys/fluent/mcp/solve/index>
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-fa-file"></span> __main__</api/ansys/fluent/mcp/__main__/index>
+    <span class="nf nf-fa-file"></span> server</api/ansys/fluent/mcp/server/index>
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> FluidsMCPConfig</api/ansys/fluent/mcp/FluidsMCPConfig>
+    <span class="nf nf-cod-symbol_class"></span> Clarification</api/ansys/fluent/mcp/Clarification>
+    <span class="nf nf-cod-symbol_class"></span> ClarificationOption</api/ansys/fluent/mcp/ClarificationOption>
+    <span class="nf nf-cod-symbol_class"></span> CodegenResult</api/ansys/fluent/mcp/CodegenResult>
+    <span class="nf nf-cod-symbol_class"></span> ConnectResult</api/ansys/fluent/mcp/ConnectResult>
+    <span class="nf nf-cod-symbol_class"></span> RunCodeResult</api/ansys/fluent/mcp/RunCodeResult>
+    <span class="nf nf-cod-symbol_class"></span> SolveMCP</api/ansys/fluent/mcp/SolveMCP>
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-md-lightning_bolt"></span> ConfigError</api/ansys/fluent/mcp/ConfigError>
+    <span class="nf nf-md-lightning_bolt"></span> BackendUnavailableError</api/ansys/fluent/mcp/BackendUnavailableError>
+    <span class="nf nf-md-lightning_bolt"></span> DiscoveryError</api/ansys/fluent/mcp/DiscoveryError>
+    <span class="nf nf-md-lightning_bolt"></span> FluidsMCPError</api/ansys/fluent/mcp/FluidsMCPError>
+    <span class="nf nf-md-lightning_bolt"></span> InvalidArgumentsError</api/ansys/fluent/mcp/InvalidArgumentsError>
+    <span class="nf nf-md-lightning_bolt"></span> NotConnectedError</api/ansys/fluent/mcp/NotConnectedError>
+    <span class="nf nf-md-lightning_bolt"></span> UpstreamError</api/ansys/fluent/mcp/UpstreamError>
+
+
+
+
+
+
+
+Description
+-----------
+
+
+ANSYS Fluent MCP server.
+
+A Model Context Protocol (MCP) server that lets AI assistants drive an
+ANSYS Fluent solver session through `PyFluent
+<https://fluent.docs.pyansys.com/>`_. It load cases and meshes, inspects the
+live settings tree, generates and executes settings and API code, runs
+iterations, and queries results.
+
+This package is the open-source distribution of the Fluent Solve MCP
+leaf. The following public re-exports cover the server class plus the shared
+result models, errors, and configuration used by integrators.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+
+
+.. py:data:: __version__
+
+   
+   PyFluent MCP version.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

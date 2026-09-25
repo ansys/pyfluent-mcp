@@ -1,0 +1,522 @@
+
+
+
+
+
+
+:class:`PathDescriptor`
+=======================
+
+
+.. py:class:: ansys.fluent.mcp.common.path_descriptor.PathDescriptor
+
+   
+   One-envelope description of a Fluent settings path.
+
+   Every field defaults to ``None`` / empty so a partially known path
+   (e.g. schema-only, no live backend) still serializes cleanly. The
+   invariant callers rely on: **if a field is non-None it reflects a
+   real live probe result** — the composition path never fabricates
+   defaults for missing information.
+
+   Callers must not compare with ``!=`` for equality on inequal live
+   snapshots — the frozen contract only guarantees value equality of
+   the exact fields present. Use :meth:`to_dict` for round-trip
+   persistence.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+
+.. py:currentmodule:: PathDescriptor
+
+Overview
+--------
+
+.. tab-set::
+
+
+   .. tab-item:: Constructors
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~from_probe`
+            - Compose a descriptor from the four legacy probe payloads.
+          * - :py:attr:`~unknown`
+            - Return a descriptor that carries only the path (everything else None).
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~value_is_allowed`
+            - Return True/False if ``value`` is in the allowed set; None if unknown.
+          * - :py:attr:`~value_is_in_range`
+            - Return True/False if numeric ``value`` is within [min, max]; None if unknown.
+          * - :py:attr:`~to_dict`
+            - Return a JSON-safe dict of the descriptor.
+
+
+   .. tab-item:: Properties
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~is_parameter`
+            - True iff the path is a leaf value (writable via ``set``).
+          * - :py:attr:`~is_group`
+            - True iff the path is a container of fields.
+          * - :py:attr:`~is_named_object`
+            - True iff the path is an indexed NamedObject collection.
+          * - :py:attr:`~is_command`
+            - True iff the path is a callable command.
+          * - :py:attr:`~is_bounded_enum`
+            - True iff this leaf accepts a bounded set of allowed values.
+          * - :py:attr:`~has_utl_alternate`
+            - True iff a UTL-mode sibling path exists for this setting.
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~path`
+            - 
+          * - :py:attr:`~kind`
+            - 
+          * - :py:attr:`~exists`
+            - 
+          * - :py:attr:`~is_active`
+            - 
+          * - :py:attr:`~is_user_creatable`
+            - 
+          * - :py:attr:`~is_read_only`
+            - 
+          * - :py:attr:`~child_class`
+            - 
+          * - :py:attr:`~child_fields`
+            - 
+          * - :py:attr:`~allowed_values`
+            - 
+          * - :py:attr:`~min_value`
+            - 
+          * - :py:attr:`~max_value`
+            - 
+          * - :py:attr:`~command_arguments`
+            - 
+          * - :py:attr:`~utl_alternate_path`
+            - 
+          * - :py:attr:`~multiphase_alternate_path`
+            - 
+          * - :py:attr:`~notes`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.path_descriptor import PathDescriptor
+
+Property detail
+---------------
+
+.. py:property:: is_parameter
+   :type: bool
+
+
+   
+   True iff the path is a leaf value (writable via ``set``).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:property:: is_group
+   :type: bool
+
+
+   
+   True iff the path is a container of fields.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:property:: is_named_object
+   :type: bool
+
+
+   
+   True iff the path is an indexed NamedObject collection.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:property:: is_command
+   :type: bool
+
+
+   
+   True iff the path is a callable command.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:property:: is_bounded_enum
+   :type: bool
+
+
+   
+   True iff this leaf accepts a bounded set of allowed values.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:property:: has_utl_alternate
+   :type: bool
+
+
+   
+   True iff a UTL-mode sibling path exists for this setting.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: path
+   :type:  str
+
+.. py:attribute:: kind
+   :type:  str | None
+   :value: None
+
+
+.. py:attribute:: exists
+   :type:  bool | None
+   :value: None
+
+
+.. py:attribute:: is_active
+   :type:  bool | None
+   :value: None
+
+
+.. py:attribute:: is_user_creatable
+   :type:  bool | None
+   :value: None
+
+
+.. py:attribute:: is_read_only
+   :type:  bool | None
+   :value: None
+
+
+.. py:attribute:: child_class
+   :type:  str | None
+   :value: None
+
+
+.. py:attribute:: child_fields
+   :type:  tuple[str, Ellipsis] | None
+   :value: None
+
+
+.. py:attribute:: allowed_values
+   :type:  tuple[Any, Ellipsis] | None
+   :value: None
+
+
+.. py:attribute:: min_value
+   :type:  float | None
+   :value: None
+
+
+.. py:attribute:: max_value
+   :type:  float | None
+   :value: None
+
+
+.. py:attribute:: command_arguments
+   :type:  tuple[CommandArgument, Ellipsis] | None
+   :value: None
+
+
+.. py:attribute:: utl_alternate_path
+   :type:  str | None
+   :value: None
+
+
+.. py:attribute:: multiphase_alternate_path
+   :type:  str | None
+   :value: None
+
+
+.. py:attribute:: notes
+   :type:  tuple[str, Ellipsis]
+   :value: ()
+
+
+
+
+Method detail
+-------------
+
+.. py:method:: value_is_allowed(value: Any) -> bool | None
+
+   
+   Return True/False if ``value`` is in the allowed set; None if unknown.
+
+   Comparison is exact for numerics/booleans and
+   case-insensitive-strip for strings, matching Fluent's
+   settings-API tolerance on enum spellings.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: value_is_in_range(value: Any) -> bool | None
+
+   
+   Return True/False if numeric ``value`` is within [min, max]; None if unknown.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: to_dict() -> dict[str, Any]
+
+   
+   Return a JSON-safe dict of the descriptor.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: from_probe(path: str, probe: Mapping[str, Any] | None = None, *, allowed_values: Iterable[Any] | None = None, template: Mapping[str, Any] | None = None, command_arguments: Mapping[str, Any] | None = None, utl_alternate_path: str | None = None, multiphase_alternate_path: str | None = None, notes: Iterable[str] | None = None) -> PathDescriptor
+   :classmethod:
+
+
+   
+   Compose a descriptor from the four legacy probe payloads.
+
+   ``probe`` is the ``probe_path`` response (
+   ``{exists, is_active, is_user_creatable, kind}``).
+   ``allowed_values`` is the ``get_allowed_values`` response
+   (``None`` or a list). ``template`` is the
+   ``describe_named_object_template`` response
+   (``{child_class, fields, is_active, is_user_creatable,
+   create_command}``). ``command_arguments`` is the
+   ``get_command_arguments`` response
+   (``{argument_names, arguments}``).
+
+   Every source is optional; missing sources leave the
+   corresponding descriptor fields as ``None``.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: unknown(path: str) -> PathDescriptor
+   :classmethod:
+
+
+   
+   Return a descriptor that carries only the path (everything else None).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+
