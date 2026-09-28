@@ -1,0 +1,49 @@
+
+
+
+
+
+
+:class:`ConfigError`
+====================
+
+
+.. py:exception:: ansys.fluent.mcp.common.config.ConfigError
+
+   Bases: :py:obj:`ValueError`
+
+
+   
+   Raised when an environment variable is set to an invalid value.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.config import ConfigError
+
+
+
+
+

@@ -1,0 +1,93 @@
+
+
+
+
+
+
+:class:`UrfFamily`
+==================
+
+
+.. py:class:: ansys.fluent.mcp.solve.lib.active_path.UrfFamily
+
+   Bases: :py:obj:`str`, :py:obj:`enum.Enum`
+
+
+   
+   The active under-relaxation family for a given solver mode.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: UrfFamily
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~SEGREGATED`
+            - 
+          * - :py:attr:`~COUPLED_EXPLICIT`
+            - 
+          * - :py:attr:`~PSEUDO_TIME`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.lib.active_path import UrfFamily
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: SEGREGATED
+   :value: 'segregated'
+
+
+.. py:attribute:: COUPLED_EXPLICIT
+   :value: 'coupled_explicit'
+
+
+.. py:attribute:: PSEUDO_TIME
+   :value: 'pseudo_time'
+
+
+
+
+
+

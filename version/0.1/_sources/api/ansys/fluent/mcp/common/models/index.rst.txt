@@ -1,0 +1,146 @@
+
+
+
+
+
+
+The ``models.py`` module
+========================
+
+.. py:module:: ansys.fluent.mcp.common.models
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: models
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.models.CapabilityInfo`
+            - Static description of one tool/feature exposed by a leaf.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.models.SessionStatus`
+            - Result of ``session.status``. It is safe to call before ``connect``.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.models.ConnectionTarget`
+            - Minimal connection descriptor surfaced to the LLM/UI for selection.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.models.ConnectResult`
+            - Result of a ``connect`` call.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.models.ClarificationOption`
+            - One selectable answer for a clarification question.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.models.Clarification`
+            - A follow-up question emitted by code generation when user input is ambiguous.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.models.CodegenResult`
+            - Result of a code generation call. It mirrors ``FluentCodegenResult`` from the legacy API.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.models.RunCodeResult`
+            - Result of a code execution call.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.models.RemediationResult`
+            - Markdown response from a remediation/help endpoint (such as Prime meshing).
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.models.TypedError`
+            - Generic error envelope used when a tool can't return its native shape.
+
+
+
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> CapabilityInfo</api/ansys/fluent/mcp/common/models/CapabilityInfo>
+    <span class="nf nf-cod-symbol_class"></span> SessionStatus</api/ansys/fluent/mcp/common/models/SessionStatus>
+    <span class="nf nf-cod-symbol_class"></span> ConnectionTarget</api/ansys/fluent/mcp/common/models/ConnectionTarget>
+    <span class="nf nf-cod-symbol_class"></span> ConnectResult</api/ansys/fluent/mcp/common/models/ConnectResult>
+    <span class="nf nf-cod-symbol_class"></span> ClarificationOption</api/ansys/fluent/mcp/common/models/ClarificationOption>
+    <span class="nf nf-cod-symbol_class"></span> Clarification</api/ansys/fluent/mcp/common/models/Clarification>
+    <span class="nf nf-cod-symbol_class"></span> CodegenResult</api/ansys/fluent/mcp/common/models/CodegenResult>
+    <span class="nf nf-cod-symbol_class"></span> RunCodeResult</api/ansys/fluent/mcp/common/models/RunCodeResult>
+    <span class="nf nf-cod-symbol_class"></span> RemediationResult</api/ansys/fluent/mcp/common/models/RemediationResult>
+    <span class="nf nf-cod-symbol_class"></span> TypedError</api/ansys/fluent/mcp/common/models/TypedError>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Typed contracts shared by every Fluids MCP leaf.
+
+These are the response shapes that LLM clients see. Keeping them small,
+JSON-friendly, and stable is what makes orchestration reliable.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+

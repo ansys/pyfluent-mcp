@@ -1,0 +1,330 @@
+
+
+
+
+
+
+:class:`SolverMode`
+===================
+
+
+.. py:class:: ansys.fluent.mcp.solve.lib.active_path.SolverMode
+
+   
+   A snapshot of the live solver mode facets that gate path selection.
+
+   Every field defaults to the "simplest" value (standard namespace,
+   steady, pressure-based, segregated, single-phase, energy off) so a
+   partially-known mode still resolves deterministically.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+
+.. py:currentmodule:: SolverMode
+
+Overview
+--------
+
+.. tab-set::
+
+
+   .. tab-item:: Constructors
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~from_state`
+            - Build a :class:`SolverMode` from a live state snapshot dict.
+          * - :py:attr:`~from_backend_state`
+            - Build a :class:`SolverMode` from the raw ``backend.get_state()`` output.
+
+
+
+   .. tab-item:: Properties
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~coupled`
+            - True when the pressure-velocity scheme is a coupled-family one.
+          * - :py:attr:`~pressure_based`
+            - True when the solver type is pressure-based (opposite of density-based).
+          * - :py:attr:`~multiphase`
+            - True when any multiphase model is active.
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~utl`
+            - 
+          * - :py:attr:`~transient`
+            - 
+          * - :py:attr:`~density_based`
+            - 
+          * - :py:attr:`~flow_scheme`
+            - 
+          * - :py:attr:`~pseudo_transient`
+            - 
+          * - :py:attr:`~multiphase_model`
+            - 
+          * - :py:attr:`~phases`
+            - 
+          * - :py:attr:`~turbulence_model`
+            - 
+          * - :py:attr:`~energy`
+            - 
+          * - :py:attr:`~nita`
+            - 
+          * - :py:attr:`~radiation_model`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.lib.active_path import SolverMode
+
+Property detail
+---------------
+
+.. py:property:: coupled
+   :type: bool
+
+
+   
+   True when the pressure-velocity scheme is a coupled-family one.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:property:: pressure_based
+   :type: bool
+
+
+   
+   True when the solver type is pressure-based (opposite of density-based).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:property:: multiphase
+   :type: bool
+
+
+   
+   True when any multiphase model is active.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: utl
+   :type:  bool
+   :value: False
+
+
+.. py:attribute:: transient
+   :type:  bool
+   :value: False
+
+
+.. py:attribute:: density_based
+   :type:  bool
+   :value: False
+
+
+.. py:attribute:: flow_scheme
+   :type:  str | None
+   :value: None
+
+
+.. py:attribute:: pseudo_transient
+   :type:  bool
+   :value: False
+
+
+.. py:attribute:: multiphase_model
+   :type:  str | None
+   :value: None
+
+
+.. py:attribute:: phases
+   :type:  tuple[str, Ellipsis]
+   :value: ()
+
+
+.. py:attribute:: turbulence_model
+   :type:  str | None
+   :value: None
+
+
+.. py:attribute:: energy
+   :type:  bool
+   :value: False
+
+
+.. py:attribute:: nita
+   :type:  bool
+   :value: False
+
+
+.. py:attribute:: radiation_model
+   :type:  str | None
+   :value: None
+
+
+
+
+Method detail
+-------------
+
+.. py:method:: from_state(state: Mapping[str, Any] | None, *, utl: bool | None = None, phases: tuple[str, Ellipsis] = ()) -> SolverMode
+   :classmethod:
+
+
+   
+   Build a :class:`SolverMode` from a live state snapshot dict.
+
+   ``state`` is a flat ``{path: value}`` mapping as returned by
+   ``backend.get_state([...])``. ``utl`` is passed separately because
+   UTL detection is a dedicated probe (``detect_utl_mode``), not a
+   plain settings read. ``phases`` (ordered phase keys) is likewise
+   supplied by the caller when known (it comes from
+   ``list_named_objects`` on ``setup.models.multiphase.phases``).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: from_backend_state(state: Mapping[str, Any] | None, *, utl: bool | None = None, phases: tuple[str, Ellipsis] = ()) -> SolverMode
+   :classmethod:
+
+
+   
+   Build a :class:`SolverMode` from the raw ``backend.get_state()`` output.
+
+   The Fluent PyFluent backend returns a **nested dict of dicts**
+   keyed by slash-separated node paths (e.g. ``"setup/general/
+   solver"`` -> ``{"time": "steady", "type": "pressure-based",
+   ...}``), NOT the flat dotted mapping :meth:`from_state`
+   expects. This adapter flattens the shape the backend uses onto
+   the flat dotted mapping :meth:`from_state` consumes so callers
+   don't have to reimplement the translation.
+
+   Silently tolerant of missing keys — a partial or empty state
+   still produces a valid :class:`SolverMode` populated with the
+   "simplest" defaults. Only the specific facets :meth:`from_state`
+   cares about are extracted; other backend-state keys are
+   ignored.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+

@@ -1,0 +1,115 @@
+
+
+
+
+
+
+The ``composite.py`` module
+===========================
+
+.. py:module:: ansys.fluent.mcp.solve.backends.composite
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: composite
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.backends.composite.SolveCompositeBackend`
+            - Composite backend: PyFluent for execution; LLM pipeline for codegen.
+
+
+
+
+
+
+    .. tab-item:: Attributes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~logger`
+            - 
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> SolveCompositeBackend</api/ansys/fluent/mcp/solve/backends/composite/SolveCompositeBackend>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Composite Solve backend that always connects to PyFluent.
+
+The solve leaf requires a live PyFluent solver session for code execution
+and live-model introspection.  This composite backend ensures that PyFluent
+is **always** the execution engine, regardless of how the user initiates
+the connection.
+
+``codegen``/``clarify`` raise :class:`BackendUnavailableError` so the
+:class:`CodegenPipeline` (or the LLM orchestrator) generates the code
+itself.  Hosted deployments that want a managed-service code generantion/execution
+path install the internal ``fluids_one_solve`` backend, which the leaf
+discovers via the ``ansys.fluent.mcp.solve_backends`` entry point. It is
+intentionally **not** part of this open-source package.
+
+Typical usage from an LLM client::
+
+    connect()  # launches / attaches PyFluent
+    codegen("set inlet to 323 K")  # → LLM / CodegenPipeline
+    run_code(code)  # → PyFluent (always)
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:data:: logger
+
+
+

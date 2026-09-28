@@ -1,0 +1,122 @@
+
+
+
+
+
+
+:class:`SettingsNode`
+=====================
+
+
+.. py:class:: ansys.fluent.mcp.solve.catalog.schema.SettingsNode
+
+   
+   One node in the settings tree.
+
+   Path uses snake_case dotted notation (e.g.
+   ``setup.boundary_conditions.wall``). NamedObject members are
+   addressed as ``setup.boundary_conditions.wall["<name>"]`` by the
+   caller; the lookup helpers below transparently descend through
+   the schema's ``object-type`` envelope.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: SettingsNode
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~path`
+            - 
+          * - :py:attr:`~kind`
+            - 
+          * - :py:attr:`~help`
+            - 
+          * - :py:attr:`~child_names`
+            - 
+          * - :py:attr:`~commands`
+            - 
+          * - :py:attr:`~queries`
+            - 
+          * - :py:attr:`~has_allowed_values`
+            - 
+          * - :py:attr:`~user_creatable`
+            - 
+          * - :py:attr:`~aliases`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.catalog.schema import SettingsNode
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: path
+   :type:  str
+
+.. py:attribute:: kind
+   :type:  str
+
+.. py:attribute:: help
+   :type:  str
+
+.. py:attribute:: child_names
+   :type:  tuple[str, Ellipsis]
+
+.. py:attribute:: commands
+   :type:  dict[str, CommandSpec]
+
+.. py:attribute:: queries
+   :type:  dict[str, CommandSpec]
+
+.. py:attribute:: has_allowed_values
+   :type:  bool
+
+.. py:attribute:: user_creatable
+   :type:  bool
+
+.. py:attribute:: aliases
+   :type:  dict[str, str]
+
+
+
+
+

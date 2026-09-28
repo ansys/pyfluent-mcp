@@ -1,0 +1,89 @@
+
+
+
+
+
+
+:class:`PathInfo`
+=================
+
+
+.. py:class:: ansys.fluent.mcp.solve.lib.active_path.PathInfo
+
+   
+   Classification of a concrete path within a multi-path group.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: PathInfo
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~group`
+            - 
+          * - :py:attr:`~family`
+            - 
+          * - :py:attr:`~key`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.lib.active_path import PathInfo
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: group
+   :type:  PathGroup
+
+.. py:attribute:: family
+   :type:  str
+
+.. py:attribute:: key
+   :type:  str | None
+   :value: None
+
+
+
+
+
+

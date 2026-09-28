@@ -1,0 +1,179 @@
+
+
+
+
+
+
+The ``schema.py`` module
+========================
+
+.. py:module:: ansys.fluent.mcp.solve.catalog.schema
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: schema
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.catalog.schema.CommandArg`
+            - One argument of a command or query.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.catalog.schema.CommandSpec`
+            - Static signature for a command or query.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.catalog.schema.SettingsNode`
+            - One node in the settings tree.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.catalog.schema.SettingsSchema`
+            - Indexed view over the static settings schema.
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~load_settings_schema`
+            - Load the schema for a version. Currently only ``"271"`` is bundled.
+
+
+
+    .. tab-item:: Attributes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~logger`
+            - 
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> CommandArg</api/ansys/fluent/mcp/solve/catalog/schema/CommandArg>
+    <span class="nf nf-cod-symbol_class"></span> CommandSpec</api/ansys/fluent/mcp/solve/catalog/schema/CommandSpec>
+    <span class="nf nf-cod-symbol_class"></span> SettingsNode</api/ansys/fluent/mcp/solve/catalog/schema/SettingsNode>
+    <span class="nf nf-cod-symbol_class"></span> SettingsSchema</api/ansys/fluent/mcp/solve/catalog/schema/SettingsSchema>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Static index over PyFluent's canonical ``settings.json`` schema.
+
+The full schema (``setup``/``solution``/``results``/... consists of 77k+ nodes,
+including command-argument signatures, query lists, enum-flagged
+parameters, and child-aliases). It ships gzipped under
+``ansys/fluent/mcp/solve/data/settings_271.json.gz``. PyFluent itself only
+ships the slimmer ``api_objects.json`` (path plus kind only) The full
+schema is what allows validation of command kwargs, enum strings, and
+path/alias resolution **without a live solver**.
+
+The on-disk file is ~0.8 MB gzipped (~11.7 MB uncompressed). Because parsing
+the JSON is the expensive step (~150 ms on a recent laptop), the
+loader is lazy and lru-cached.
+
+Override the bundled file by setting ``FLUIDS_MCP_SETTINGS_JSON`` to
+an absolute path (``.json`` or ``.json.gz``). This is useful for testing a
+newer Fluent build before rolling a new vendored snapshot.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: load_settings_schema(version: str = _DEFAULT_VERSION) -> SettingsSchema | None
+
+   
+   Load the schema for a version. Currently only ``"271"`` is bundled.
+
+   Honors ``FLUIDS_MCP_SETTINGS_JSON`` for ad-hoc overrides. Returns
+   ``None`` (and logs at INFO) if no schema can be located. Callers
+   must treat schema-based checks as best-effort.
+
+   :Parameters:
+
+       **version** : :class:`python:str`
+           Version to supply to the function.
+
+
+
+   :Returns:
+
+       :obj:`SettingsSchema` | :data:`python:None`
+           Collection containing the operation results.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: logger
+
+
+

@@ -1,0 +1,196 @@
+
+
+
+
+
+
+The ``base.py`` module
+======================
+
+.. py:module:: ansys.fluent.mcp.common.base
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: base
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.base.FluidsLeafMCP`
+            - Base server class for a single Fluids MCP leaf.
+
+
+
+
+    .. tab-item:: Exceptions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.base.BackendUnavailableError`
+            - Raised when a backend call fails because the backend is unavailable.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.base.NotConnectedError`
+            - Raised when a backend call fails because the backend is not connected.
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~select_named_objects_from_mapping`
+            - Glob-expand ``pattern`` over ``named[collection]``.
+
+
+
+
+    .. tab-item:: Constants
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ALL_TOOLS`
+            - 
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> FluidsLeafMCP</api/ansys/fluent/mcp/common/base/FluidsLeafMCP>
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-md-lightning_bolt"></span> BackendUnavailableError</api/ansys/fluent/mcp/common/base/BackendUnavailableError>
+    <span class="nf nf-md-lightning_bolt"></span> NotConnectedError</api/ansys/fluent/mcp/common/base/NotConnectedError>
+
+
+
+
+
+
+
+Description
+-----------
+
+Base MCP server for a Fluids leaf (geometry/mesh/solve/post).
+
+A leaf:
+
+- Picks one or more `Backend` instances at construction time.
+- Inherits from `PyAnsysBaseMCP` so it can be registered alongside other
+  PyAnsys MCP servers at the organisation level.
+- Auto-registers the standard deterministic tool surface:
+    ``session_status``, ``connect``, ``disconnect``,
+    ``list_named_objects``, ``get_state``, ``get_targeted_context``,
+    ``run_code``, ``validate_code``, ``screenshot``, and others
+    (see ALL_TOOLS).
+
+Concrete leaves only have to declare which tools to *expose* (subset of the
+above) so we keep the MCP surface lean per leaf.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: select_named_objects_from_mapping(named: dict[str, list[str]], *, collection: str, pattern: str = '*', include_shadows: bool = True, exclude: Optional[list[str]] = None) -> dict[str, Any]
+
+   
+   Glob-expand ``pattern`` over ``named[collection]``.
+
+   Pure-data helper — no backend, no I/O. Used by both the
+   ``select_named_objects`` MCP tool and tests. Accepts either dotted
+   (``setup.boundary_conditions.wall``) or slashed-and-hyphenated
+   (``setup/boundary-conditions/wall``) collection spellings so callers
+   don't have to know which naming convention the active backend
+   happens to use.
+
+   :Parameters:
+
+       **named** : :class:`python:dict`\[:class:`python:str`, :class:`python:list`\[:class:`python:str`]]
+           Mapping of available named objects.
+
+       **collection** : :class:`python:str`
+           Collection of named objects to search.
+
+       **pattern** : :class:`python:str`
+           Selection pattern used to match object names.
+
+       **include_shadows** : :ref:`bool <python:bltin-boolean-values>`
+           Whether shadow objects should be included in results.
+
+       **exclude** : :obj:`Optional`\[:class:`python:list`\[:class:`python:str`]]
+           Names or patterns excluded from the selection.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: ALL_TOOLS
+   :value: ('session_status', 'connect', 'disconnect', 'list_named_objects', 'find_named_object',...
+
+
+
+
