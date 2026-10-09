@@ -1,0 +1,1130 @@
+
+
+
+
+
+
+:class:`PyFluentBackend`
+========================
+
+
+.. py:class:: ansys.fluent.mcp.solve.backends.pyfluent.PyFluentBackend(*, label: str = 'PyFluent (solve)')
+
+   Bases: :py:obj:`ansys.fluent.mcp.common.backend.Backend`
+
+
+   
+   Persistent PyFluent Solver session.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: PyFluentBackend
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~connect`
+            - Connect to the configured backend or service.
+          * - :py:attr:`~disconnect`
+            - Close resources for the PyFluentBackend object.
+          * - :py:attr:`~is_connected`
+            - Return whether connected.
+          * - :py:attr:`~close_sync`
+            - Close backend resources from synchronous code.
+          * - :py:attr:`~list_named_objects`
+            - Discover every named-object collection.
+          * - :py:attr:`~get_named_object_names`
+            - Return instance names for a single named-object collection using ``get_object_names()``.
+          * - :py:attr:`~get_state`
+            - Return the state.
+          * - :py:attr:`~get_active_status`
+            - Return the active status.
+          * - :py:attr:`~get_allowed_values`
+            - Return the allowed values.
+          * - :py:attr:`~get_node_attrs`
+            - Batched per-node settings-attribute fetch.
+          * - :py:attr:`~get_node_attrs_bulk`
+            - Recursively fetch attributes for all children of ``parent_path``.
+          * - :py:attr:`~probe_path`
+            - Cheap pre-flight: ``{path: {exists, is_active, is_user_creatable, kind}}``.
+          * - :py:attr:`~mesh_adjacency_probe`
+            - Return ``{cellzone -> [adjacent_face_zone_names]}``.
+          * - :py:attr:`~get_command_arguments`
+            - Introspect a Command's keyword-argument signature via PyFluent.
+          * - :py:attr:`~describe_named_object_template`
+            - Describe the field shape of a fresh child of a NamedObject collection.
+          * - :py:attr:`~list_fields`
+            - Enumerate solver field/variable names available for reports & post.
+          * - :py:attr:`~get_targeted_context`
+            - Return the targeted context.
+          * - :py:attr:`~run_code`
+            - Execute Python code through the backend runtime.
+          * - :py:attr:`~get_help`
+            - Return ``{path, doc, kind, child_names, allowed_values}``.
+          * - :py:attr:`~mesh_counts`
+            - Probe live mesh element totals via Fluent Scheme.
+          * - :py:attr:`~mesh_quality`
+            - Return mesh quality information from the backend.
+          * - :py:attr:`~mesh_check`
+            - Run the backend mesh check operation.
+          * - :py:attr:`~solver_status`
+            - Best-effort summary of where the solver currently is.
+          * - :py:attr:`~validate_code`
+            - Validate code.
+          * - :py:attr:`~screenshot`
+            - Capture a screenshot from the backend runtime.
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~kind`
+            - 
+          * - :py:attr:`~label`
+            - 
+          * - :py:attr:`~endpoint`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.backends.pyfluent import PyFluentBackend
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: kind
+   :value: 'pyfluent'
+
+
+.. py:attribute:: label
+   :value: 'PyFluent (solve)'
+
+
+.. py:attribute:: endpoint
+   :type:  Optional[str]
+   :value: None
+
+
+
+
+Method detail
+-------------
+
+.. py:method:: connect(*, ip: Optional[str] = None, port: Optional[int] = None, password: Optional[str] = None, server_info_file: Optional[str] = None, precision: str = 'double', processor_count: int = 1, ui_mode: str = 'gui', product_version: Optional[str] = None, dimension: Optional[int | str] = None, mode: Optional[str] = None, gpu: Optional[bool | list[int]] = None, journal_file_names: Optional[str | list[str]] = None, case_file_name: Optional[str] = None, case_data_file_name: Optional[str] = None, cwd: Optional[str] = None, fluent_path: Optional[str] = None, env: Optional[dict[str, Any]] = None, graphics_driver: Optional[str] = None, scheduler_options: Optional[dict[str, Any]] = None, start_timeout: Optional[int] = None, cleanup_on_exit: Optional[bool] = None, additional_arguments: Optional[str] = None, **_: Any) -> ansys.fluent.mcp.common.models.ConnectResult
+   :async:
+
+
+   
+   Connect to the configured backend or service.
+
+
+   :Parameters:
+
+       **ip** : :obj:`Optional`\[:class:`python:str`]
+           IP address of the Fluent server to connect to.
+
+       **port** : :obj:`Optional`\[:class:`python:int`]
+           Port number of the Fluent server to connect to.
+
+       **password** : :obj:`Optional`\[:class:`python:str`]
+           Password used when connecting to a Fluent server.
+
+       **server_info_file** : :obj:`Optional`\[:class:`python:str`]
+           Server-info file used to connect to an existing Fluent session.
+
+       **precision** : :class:`python:str`
+           Solver precision requested for the Fluent session.
+
+       **processor_count** : :class:`python:int`
+           Number of processors requested for the Fluent session.
+
+       **ui_mode** : :class:`python:str`
+           Fluent UI mode requested for launch.
+
+       **product_version** : :obj:`Optional`\[:class:`python:str`]
+           Fluent product version requested for launch.
+
+       **dimension** : :obj:`Optional`\[:class:`python:int` | :class:`python:str`]
+           Solver dimension requested for the Fluent session.
+
+       **mode** : :obj:`Optional`\[:class:`python:str`]
+           Execution or launch mode requested by the caller.
+
+       **gpu** : :obj:`Optional`\[:ref:`bool <python:bltin-boolean-values>` | :class:`python:list`\[:class:`python:int`]]
+           GPU option forwarded to the Fluent launch API.
+
+       **journal_file_names** : :obj:`Optional`\[:class:`python:str` | :class:`python:list`\[:class:`python:str`]]
+           Journal files passed to Fluent during startup.
+
+       **case_file_name** : :obj:`Optional`\[:class:`python:str`]
+           Case file path passed to Fluent at startup.
+
+       **case_data_file_name** : :obj:`Optional`\[:class:`python:str`]
+           Case-data file path passed to Fluent at startup.
+
+       **cwd** : :obj:`Optional`\[:class:`python:str`]
+           Working directory used when launching Fluent.
+
+       **fluent_path** : :obj:`Optional`\[:class:`python:str`]
+           Path for the fluent.
+
+       **env** : :obj:`Optional`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Environment mapping to read instead of the process environment.
+
+       **graphics_driver** : :obj:`Optional`\[:class:`python:str`]
+           Graphics driver requested for the Fluent session.
+
+       **scheduler_options** : :obj:`Optional`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Scheduler options forwarded to the Fluent launch API.
+
+       **start_timeout** : :obj:`Optional`\[:class:`python:int`]
+           Timeout in seconds used while starting Fluent.
+
+       **cleanup_on_exit** : :obj:`Optional`\[:ref:`bool <python:bltin-boolean-values>`]
+           Whether Fluent resources should be cleaned up when the process exits.
+
+       **additional_arguments** : :obj:`Optional`\[:class:`python:str`]
+           Additional launch arguments forwarded to Fluent.
+
+       **_** : :obj:`Any`
+           Ignored compatibility options accepted by the backend interface.
+
+
+
+   :Returns:
+
+       :obj:`ConnectResult`
+           ConnectResult produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: disconnect() -> None
+   :async:
+
+
+   
+   Close resources for the PyFluentBackend object.
+
+
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: is_connected() -> bool
+
+   
+   Return whether connected.
+
+
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>`
+           Boolean result of the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: close_sync() -> None
+
+   
+   Close backend resources from synchronous code.
+
+
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: list_named_objects() -> dict[str, Any]
+   :async:
+
+
+   
+   Discover every named-object collection.
+
+   Strategy:
+
+   1. Try the Scheme ``api-get-named-object-names`` (one call,
+      covers every collection Fluent knows about).
+   2. Fall back to a generic depth-limited tree walk.
+
+   No hardcoded path list.
+
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: get_named_object_names(collection_path: str) -> list[str]
+   :async:
+
+
+   
+   Return instance names for a single named-object collection using ``get_object_names()``.
+
+   A single cheap Scheme call that does not need to read the full collection state.
+
+   Falls back to the full ``list_named_objects()`` snapshot if the
+   collection node does not expose ``get_object_names``.
+
+   :Parameters:
+
+       **collection_path** : :class:`python:str`
+           Path to the named-object collection.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:class:`python:str`]
+           Collection containing the operation results.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: get_state(paths: list[str] | None = None) -> dict[str, Any]
+   :async:
+
+
+   
+   Return the state.
+
+
+   :Parameters:
+
+       **paths** : :class:`python:list`\[:class:`python:str`] | :data:`python:None`
+           Fluent object paths supplied to the operation.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: get_active_status(paths: list[str]) -> dict[str, bool]
+   :async:
+
+
+   
+   Return the active status.
+
+
+   :Parameters:
+
+       **paths** : :class:`python:list`\[:class:`python:str`]
+           Fluent object paths supplied to the operation.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :ref:`bool <python:bltin-boolean-values>`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: get_allowed_values(paths: list[str]) -> dict[str, list[Any]]
+   :async:
+
+
+   
+   Return the allowed values.
+
+
+   :Parameters:
+
+       **paths** : :class:`python:list`\[:class:`python:str`]
+           Fluent object paths supplied to the operation.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:list`\[:obj:`Any`]]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: get_node_attrs(paths: list[str], attrs: list[str]) -> dict[str, dict[str, Any]]
+   :async:
+
+
+   
+   Batched per-node settings-attribute fetch.
+
+   For each ``path`` resolves the settings node and asks Fluent
+   for ALL requested ``attrs`` in one Scheme RPC via PyFluent's
+   ``node.get_attrs([...])``. Returns ``{path: {attr: value}}``.
+
+   ``attrs`` use the Scheme spelling (``"active?"``,
+   ``"read-only?"``, ``"user-creatable?"``, ``"allowed-values"``,
+   ``"min"``, ``"max"``, ``"default"``, ``"units-quantity"``,
+   ``"file-purpose"``). Attrs the node does not expose are simply
+   omitted from its inner dict — Fluent never raises for missing
+   attrs in a batch request.
+
+   Unresolvable paths and nodes that do not implement
+   ``get_attrs`` map to ``{}``. Empty ``paths`` raises
+   :class:`InvalidArgumentsError`; empty ``attrs`` raises the same.
+
+   This is the foundation for enrichment passes such as
+   ``describe_named_object_template`` that would otherwise issue
+   one RPC per attribute.
+
+   :Parameters:
+
+       **paths** : :class:`python:list`\[:class:`python:str`]
+           Fluent object paths supplied to the operation.
+
+       **attrs** : :class:`python:list`\[:class:`python:str`]
+           Attribute names requested from the backend object.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: get_node_attrs_bulk(parent_path: str, attrs: list[str]) -> dict[str, dict[str, Any]]
+   :async:
+
+
+   
+   Recursively fetch attributes for all children of ``parent_path``.
+
+   Calls ``node.get_attrs(attrs, True)``, a single Scheme RPC —
+   returning ``{relative_child_path: {attr: value}}`` for every
+   descendant that exposes those attributes.  This replaces N per-field
+   ``get_node_attrs`` round-trips when the caller needs metadata for
+   a whole subtree (such as validating every leaf in a ``set_named``
+   value dict before apply).
+
+   Falls back to ``{}`` gracefully when the node is unreachable or
+   does not support the recursive form.
+
+   :Parameters:
+
+       **parent_path** : :class:`python:str`
+           Parent Fluent object path used for bulk lookup.
+
+       **attrs** : :class:`python:list`\[:class:`python:str`]
+           Attribute names requested from the backend object.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: probe_path(paths: list[str]) -> dict[str, dict[str, Any]]
+   :async:
+
+
+   
+   Cheap pre-flight: ``{path: {exists, is_active, is_user_creatable, kind}}``.
+
+   Designed to be called once before a batch of mutating writes so
+   the executor can skip steps that would fail anyway (path
+   missing, settings node currently inactive, NamedObject family
+   that does not accept ``create``). Each path costs ONE Scheme
+   RPC via the leaf's batched ``get_attrs([active?,
+   user-creatable?])`` plus a local class-name lookup.
+
+   ``kind`` is one of ``"missing"``, ``"command"``, ``"query"``,
+   ``"named_object"``, ``"group"``, ``"leaf"``. Unknown / unusual
+   nodes default to ``"leaf"``.
+
+   :Parameters:
+
+       **paths** : :class:`python:list`\[:class:`python:str`]
+           Fluent object paths supplied to the operation.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: mesh_adjacency_probe(cellzones: list[str], *, bc_filter: tuple[str, Ellipsis] | None = None) -> dict[str, list[str]]
+   :async:
+
+
+   
+   Return ``{cellzone -> [adjacent_face_zone_names]}``.
+
+   Read-only. Implementation walks every BC family that exposes
+   ``adjacent_cell_zone`` (wall, velocity_inlet, pressure_outlet,
+   mass_flow_inlet, …) and inverts the mapping. Coupled-wall
+   ``shadow_face_zone`` entries are added to BOTH sides so the
+   cellzone-↔-cellzone neighbour query (set-intersection on shared
+   face names) finds CHT solid-fluid pairs.
+
+   IMPORTANT — PyFluent Query objects: both ``adjacent_cell_zone``
+   and ``shadow_face_zone`` are PyFluent *Query* objects (not
+   Parameters). They are never included in ``get_state()`` output
+   and must be read by calling them: ``instance.adjacent_cell_zone()``.
+   The implementation enumerates instance names via a batched
+   ``get_state()`` (cheap), then calls the Query per-instance.
+
+   ``bc_filter`` (optional) restricts the walk to the listed BC
+   families (e.g. ``("wall",)`` to answer "walls adjacent to X";
+   ``("velocity_inlet","pressure_inlet")`` for inlets). Unknown
+   families are silently dropped. The coupled-wall shadow pass
+   runs only when ``"wall"`` is in scope (or the filter is None).
+
+   Limitation: interior face zones are NOT enumerated — they are
+   gated INACTIVE on ``boundary_conditions.interior[*]`` and the
+   ``mesh.adjacency`` Command's argument-binding side-channel is
+   broken on Fluent ≥ 27.1 (``cellzones.set_state`` raises
+   ``attr value not defined``). Callers that need interior-face
+   coverage must supplement with ``run_code``.
+
+   :Parameters:
+
+       **cellzones** : :class:`python:list`\[:class:`python:str`]
+           Cell zone names used for the mesh adjacency query.
+
+       **bc_filter** : :class:`python:tuple`\[:class:`python:str`, ...] | :data:`python:None`
+           Boundary-condition filter used to limit the probe.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:list`\[:class:`python:str`]]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: get_command_arguments(path: str) -> dict[str, Any] | None
+   :async:
+
+
+   
+   Introspect a Command's keyword-argument signature via PyFluent.
+
+
+   :Parameters:
+
+       **path** : :class:`python:str`
+           Fluent object path or file-system path to inspect.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`] | :data:`python:None`
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: describe_named_object_template(path: str) -> dict[str, Any] | None
+   :async:
+
+
+   
+   Describe the field shape of a fresh child of a NamedObject collection.
+
+   Uses PyFluent's static settings classes (``child_object_type``)
+   so we never have to create-and-delete a transient object on the
+   live session. Returns a flat ``{field_name: {type_hint, allowed_values?, child_kind}}``
+   map plus the create-command signature when present.
+
+   :Parameters:
+
+       **path** : :class:`python:str`
+           Fluent object path or file-system path to inspect.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`] | :data:`python:None`
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: list_fields(*, scope: str = 'any') -> dict[str, Any] | None
+   :async:
+
+
+   
+   Enumerate solver field/variable names available for reports & post.
+
+   ``scope`` is a hint passed to Fluent's field-info API:
+   ``"any"`` (default), ``"surface"``, ``"cell"``, ``"node"``.
+   Returns ``{"fields": [...], "scope": scope}`` or ``None`` when
+   unavailable.
+
+   :Parameters:
+
+       **scope** : :class:`python:str`
+           Scope used to limit the field or API lookup.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`] | :data:`python:None`
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: get_targeted_context(*, paths_to_check: list[str], named_object_types: list[str] | None = None, instance_state_fetch: list[str] | None = None) -> dict[str, Any]
+   :async:
+
+
+   
+   Return the targeted context.
+
+
+   :Parameters:
+
+       **paths_to_check** : :class:`python:list`\[:class:`python:str`]
+           Fluent object paths to validate or inspect.
+
+       **named_object_types** : :class:`python:list`\[:class:`python:str`] | :data:`python:None`
+           Named-object families that should be considered during lookup.
+
+       **instance_state_fetch** : :class:`python:list`\[:class:`python:str`] | :data:`python:None`
+           Whether named-object instance state should be fetched.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: run_code(code: str, *, namespace: dict[str, Any] | None = None, filename: str = '<ansys-fluent-mcp>') -> ansys.fluent.mcp.common.models.RunCodeResult
+   :async:
+
+
+   
+   Execute Python code through the backend runtime.
+
+
+   :Parameters:
+
+       **code** : :class:`python:str`
+           Python code or command text to execute or validate.
+
+       **namespace** : :class:`python:dict`\[:class:`python:str`, :obj:`Any`] | :data:`python:None`
+           Namespace used to resolve the backend object or route.
+
+       **filename** : :class:`python:str`
+           File name or path used by the backend operation.
+
+
+
+   :Returns:
+
+       :obj:`RunCodeResult`
+           RunCodeResult produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: get_help(path: str) -> dict[str, Any]
+   :async:
+
+
+   
+   Return ``{path, doc, kind, child_names, allowed_values}``.
+
+
+   :Parameters:
+
+       **path** : :class:`python:str`
+           Fluent object path or file-system path to inspect.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: mesh_counts() -> dict[str, int | None]
+   :async:
+
+
+   
+   Probe live mesh element totals via Fluent Scheme.
+
+   Returns ``{"cell_count", "face_count", "node_count"}``; each
+   value is ``int`` when the Scheme call resolved or ``None``
+   when unavailable (no mesh loaded, partition pending, Scheme
+   call failed). Never raises — surfaces failures as an all-
+   ``None`` payload so callers can branch on ``is None`` without
+   try/except.
+
+   Why Scheme: Fluent does not surface mesh-element totals on
+   the settings tree. The canonical accessor is
+   ``(inquire-grids)`` — it returns a list whose LAST element is
+   the global grid summary in the shape
+   ``(<id-or-name> cells faces nodes ...)``. ``cadr``/``caddr``/
+   ``cadddr`` extract the three counts. This matches the pattern
+   Fluent itself uses internally (e.g. in
+   ``wb-is-data-file-compatible?`` for cross-file count checks)
+   and is stable across versions back to 19.0. ``rpgetvar
+   'tinfo/n-cells`` does NOT exist as an rpvar.
+
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:int` | :data:`python:None`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: mesh_quality() -> dict[str, float | None]
+   :async:
+
+
+   
+   Return mesh quality information from the backend.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:float` | :data:`python:None`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: mesh_check() -> dict[str, Any]
+   :async:
+
+
+   
+   Run the backend mesh check operation.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: solver_status() -> dict[str, Any]
+   :async:
+
+
+   
+   Best-effort summary of where the solver currently is.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: validate_code(code: str) -> ansys.fluent.mcp.common.models.RunCodeResult
+   :async:
+
+
+   
+   Validate code.
+
+
+   :Parameters:
+
+       **code** : :class:`python:str`
+           Python code or command text to execute or validate.
+
+
+
+   :Returns:
+
+       :obj:`RunCodeResult`
+           RunCodeResult produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: screenshot(*, view: Optional[str] = None) -> dict[str, Any]
+   :async:
+
+
+   
+   Capture a screenshot from the backend runtime.
+
+
+   :Parameters:
+
+       **view** : :obj:`Optional`\[:class:`python:str`]
+           Graphics view or camera preset requested by the caller.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+

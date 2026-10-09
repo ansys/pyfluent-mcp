@@ -1,0 +1,132 @@
+
+
+
+
+
+
+The ``backend_trace.py`` module
+===============================
+
+.. py:module:: ansys.fluent.mcp.common.backend_trace
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: backend_trace
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~trace_call`
+            - Log a single ``backend_call`` entry when tracing is enabled.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Diagnostic tracer for backend state-query calls.
+
+Enable with the ``FLUIDS_BACKEND_TRACE`` env var:
+
+* ``1`` / ``true`` / ``on`` — emit one INFO line per call, no stack.
+* ``stack`` — INFO line **plus** a 6-frame caller stack (skipping
+  this module + backend wrappers).
+
+Disabled by default — zero cost when the env var is unset.
+
+The point of this tracer is to answer the operational question
+"who is hitting the live Fluent session when there is no user
+query in flight?" without having to attach a debugger. Every
+``get_state`` / ``get_active_status`` / ``get_named_object_names``
+/ ``solver_status`` / ``run_code`` entry logs a single
+``backend_call`` event tagged with method name, arg shape, and
+(optionally) the calling frame. Filter the agent log on
+``backend_call`` and you can immediately see whether the chatter
+is coming from our own code (validator, preface, MCP tool, …) or
+from PyFluent's internal heartbeat (which will not appear here
+because PyFluent's RPCs do not flow through our wrappers).
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: trace_call(method: str, *, summary: str = '') -> None
+
+   
+   Log a single ``backend_call`` entry when tracing is enabled.
+
+   ``method`` is the canonical backend method (``get_state``,
+   ``get_active_status``, …). ``summary`` is an optional short
+   string describing arg shape (e.g. ``"paths=4"``). Never raises.
+
+   :Parameters:
+
+       **method** : :class:`python:str`
+           Backend method name being traced.
+
+       **summary** : :class:`python:str`
+           Short description attached to the trace entry.
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

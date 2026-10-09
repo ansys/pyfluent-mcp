@@ -1,0 +1,124 @@
+
+
+
+
+
+
+The ``meshing_workflow_entries.py`` module
+==========================================
+
+.. py:module:: ansys.fluent.mcp.solve.catalog.meshing_workflow_entries
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: meshing_workflow_entries
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~get_meshing_workflow_entries`
+            - Return all synthetic ApiEntry records for classic meshing workflows.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Synthetic ApiEntry catalogue for classic PyFluent meshing workflows.
+
+These entries are injected into the meshing-session :class:`ApiIndex` so
+that BM25 retrieval surfaces the correct ``workflow.TaskObject[...]``
+idiom — including default argument keys and constant string values — for
+every standard meshing task, rather than only the low-level generated
+schema paths that live in ``ansys/fluent/core/generated/api_tree/api_objects.json``.
+
+Source of truth
+---------------
+* ``D:/Repos/pyfluent/tests/test_meshing_workflow.py``  (watertight + 2D +
+  fault-tolerant workflow patterns)
+
+Adding a new task
+-----------------
+Add an :func:`_entry` call to :func:`get_meshing_workflow_entries`.  No
+other changes are needed; ``get_meshing_api_index`` already injects
+everything this function returns.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: get_meshing_workflow_entries() -> list[ApiEntry]
+
+   
+   Return all synthetic ApiEntry records for classic meshing workflows.
+
+   :meth:`get_meshing_api_index` passes this list to :class:`ApiIndex`
+   via ``extra_entries``.  The entries are injected before BM25 statistics
+   are built, so they participate fully in ranking alongside the real
+   ``api_objects.json`` entries.
+
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:obj:`ApiEntry`]
+           Synthetic entries for Watertight Geometry, Fault-tolerant Meshing,
+           and 2D Meshing workflow tasks.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

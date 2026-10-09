@@ -1,0 +1,802 @@
+
+
+
+
+
+
+:class:`PathFamily`
+===================
+
+
+.. py:class:: ansys.fluent.mcp.solve.lib.utl.PathFamily
+
+   
+   Translate semantic operations into mode-appropriate Fluent paths.
+
+   Recipes that want to be mode-agnostic build paths through this
+   helper rather than hard-coding ``setup.boundary_conditions.…``.
+   The :meth:`from_active` classmethod picks the correct family
+   given a live UTL flag::
+
+       family = PathFamily.from_active(ctx.utl_enabled)
+       for path, value in family.wall_thermal_temperature("hw", 423):
+           cx.set(path, value)
+
+   All helpers return a *list of (path, value)* tuples — even single-
+   write operations — because the UTL form for some BC attributes
+   requires two writes (condition + value) where the standard form
+   needs only one.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+.. py:currentmodule:: PathFamily
+
+Overview
+--------
+
+.. tab-set::
+
+
+   .. tab-item:: Constructors
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~from_active`
+            - Create the wrapper from the active solver session.
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~boundaries_root`
+            - Root path for boundary-condition families (wall, inlet, ...).
+          * - :py:attr:`~volumes_root`
+            - Root path for cell-zone families (fluid, solid).
+          * - :py:attr:`~interfaces_root`
+            - Root path for mesh interfaces.
+          * - :py:attr:`~bc_path`
+            - Return the indexed BC node path.
+          * - :py:attr:`~cz_path`
+            - Resolve the child zone path for the requested zone.
+          * - :py:attr:`~wall_thermal_temperature`
+            - Set a wall to fixed-temperature BC and assign the value.
+          * - :py:attr:`~wall_thermal_mixed`
+            - Set a wall to Mixed convection+radiation.
+          * - :py:attr:`~wall_thermal_convection`
+            - Configure wall thermal convection settings.
+          * - :py:attr:`~velocity_inlet_speed`
+            - Configure velocity-inlet speed settings.
+          * - :py:attr:`~velocity_inlet_temperature`
+            - Configure velocity-inlet temperature settings.
+          * - :py:attr:`~report_volume_selector`
+            - Bind a volume report-definition to its zones / physics groups.
+          * - :py:attr:`~surface_integral_args`
+            - Build the kwargs dict for ``surface_integrals.<method>(…)``.
+          * - :py:attr:`~utl_volume_set_location`
+            - Group multiple cell zones into a single UTL physics volume.
+          * - :py:attr:`~utl_volume_split`
+            - Split a UTL physics volume by extracting some zones into a new physics volume.
+          * - :py:attr:`~utl_interface_create_call`
+            - Create a mesh interface via the UTL command form. UTL only.
+          * - :py:attr:`~utl_interface_auto_create`
+            - Auto-create interfaces from coincident boundary pairs. UTL only.
+
+
+   .. tab-item:: Properties
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~is_utl`
+            - Return whether utl.
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~kind`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.lib.utl import PathFamily
+
+Property detail
+---------------
+
+.. py:property:: is_utl
+   :type: bool
+
+
+   
+   Return whether utl.
+
+
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>`
+           Boolean result of the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: kind
+   :type:  FamilyKind
+
+
+
+Method detail
+-------------
+
+.. py:method:: from_active(utl_enabled: bool | None) -> PathFamily
+   :classmethod:
+
+
+   
+   Create the wrapper from the active solver session.
+
+
+   :Parameters:
+
+       **utl_enabled** : :ref:`bool <python:bltin-boolean-values>` | :data:`python:None`
+           Utl enabled to supply to the function.
+
+
+
+   :Returns:
+
+       'PathFamily'
+           'PathFamily' produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: boundaries_root() -> str
+
+   
+   Root path for boundary-condition families (wall, inlet, ...).
+
+
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           String result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: volumes_root() -> str
+
+   
+   Root path for cell-zone families (fluid, solid).
+
+
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           String result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: interfaces_root() -> str
+
+   
+   Root path for mesh interfaces.
+
+   Note: the two forms are not structurally equivalent — the
+   standard form is a NamedObject collection
+   (``setup.mesh_interfaces.interface[name]``) while UTL exposes
+   a command collection (``setup.physics.interfaces.create``,
+   ``.auto_create``). Callers that need to *create* an interface
+   should use :meth:`interface_create_call` instead.
+
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           String result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: bc_path(family: str, name: str) -> str
+
+   
+   Return the indexed BC node path.
+
+
+   :Parameters:
+
+       **family** : :class:`python:str`
+           Family to supply to the function.
+
+       **name** : :class:`python:str`
+           Name of the object, module, or setting being processed.
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           String result produced by the function.
+
+
+
+
+
+
+
+
+
+
+   .. rubric:: Examples
+
+   **UTL mode**
+
+   >>> family = PathFamily.from_active(utl_enabled=True)
+   >>> output = family.bc_path("wall", "hw")
+   >>> print(output)
+
+   setup.physics.boundaries.wall['hw']
+
+   **Standard mode**
+
+   >>> family = PathFamily.from_active(utl_enabled=False)
+   >>> output = family.bc_path("wall", "hw")
+   >>> print(output)
+
+   setup.boundary_conditions.wall['hw']
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: cz_path(family: str, name: str) -> str
+
+   
+   Resolve the child zone path for the requested zone.
+
+
+   :Parameters:
+
+       **family** : :class:`python:str`
+           Family to supply to the function.
+
+       **name** : :class:`python:str`
+           Name of the object, module, or setting being processed.
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           String value produced by the helper.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: wall_thermal_temperature(name: str, value: float) -> list[tuple[str, Any]]
+
+   
+   Set a wall to fixed-temperature BC and assign the value.
+
+   Returns paired (path, value) writes. Both modes use the same
+   v27.1 canonical sub-paths (``.thermal.thermal_condition`` and
+   ``.thermal.temperature.value``); only the root prefix and the
+   enum casing differ between standard and UTL.
+
+   :Parameters:
+
+       **name** : :class:`python:str`
+           Name of the object, module, or setting being processed.
+
+       **value** : :class:`python:float`
+           Value to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:class:`python:tuple`\[:class:`python:str`, :obj:`Any`]]
+           Collection containing the operation results.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: wall_thermal_mixed(name: str, *, htc: float, ext_temp: float) -> list[tuple[str, Any]]
+
+   
+   Set a wall to Mixed convection+radiation.
+
+
+   :Parameters:
+
+       **name** : :class:`python:str`
+           Name of the object, module, or setting being processed.
+
+       **htc** : :class:`python:float`
+           Htc to supply to the function.
+
+       **ext_temp** : :class:`python:float`
+           Ext temp to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:class:`python:tuple`\[:class:`python:str`, :obj:`Any`]]
+           Collection containing the operation results.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: wall_thermal_convection(name: str, *, htc: float) -> list[tuple[str, Any]]
+
+   
+   Configure wall thermal convection settings.
+
+
+   :Parameters:
+
+       **name** : :class:`python:str`
+           Name of the object, module, or setting being processed.
+
+       **htc** : :class:`python:float`
+           Htc to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:class:`python:tuple`\[:class:`python:str`, :obj:`Any`]]
+           List of results produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: velocity_inlet_speed(name: str, value: float) -> list[tuple[str, Any]]
+
+   
+   Configure velocity-inlet speed settings.
+
+
+   :Parameters:
+
+       **name** : :class:`python:str`
+           Name of the object, module, or setting being processed.
+
+       **value** : :class:`python:float`
+           Value to inspect, convert, or store.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:class:`python:tuple`\[:class:`python:str`, :obj:`Any`]]
+           List of results produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: velocity_inlet_temperature(name: str, value: float) -> list[tuple[str, Any]]
+
+   
+   Configure velocity-inlet temperature settings.
+
+
+   :Parameters:
+
+       **name** : :class:`python:str`
+           Name of the object, module, or setting being processed.
+
+       **value** : :class:`python:float`
+           Value to inspect, convert, or store.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:class:`python:tuple`\[:class:`python:str`, :obj:`Any`]]
+           List of results produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: report_volume_selector(report_name: str, zones_or_groups: list[str]) -> list[tuple[str, Any]]
+
+   
+   Bind a volume report-definition to its zones / physics groups.
+
+   Standard: writes to ``…[r].cell_zones``.
+   UTL: writes to ``…[r].locations.physics``.
+
+   :Parameters:
+
+       **report_name** : :class:`python:str`
+           Report name to supply to the function.
+
+       **zones_or_groups** : :class:`python:list`\[:class:`python:str`]
+           Zones or groups to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:class:`python:tuple`\[:class:`python:str`, :obj:`Any`]]
+           Collection containing the operation results.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: surface_integral_args(zones_or_groups: list[str], *, report_of: str | None = None, write_to_file: bool = False, file_name: str | None = None, append_data: bool = False) -> dict[str, Any]
+
+   
+   Build the kwargs dict for ``surface_integrals.<method>(…)``.
+
+   Standard: ``surface_names=[…]``.
+   UTL: ``locations={'surfaces': [], 'physics': [...]}``.
+
+   :Parameters:
+
+       **zones_or_groups** : :class:`python:list`\[:class:`python:str`]
+           Zones or groups to supply to the function.
+
+       **report_of** : :class:`python:str` | :data:`python:None`
+           Report of to supply to the function.
+
+       **write_to_file** : :ref:`bool <python:bltin-boolean-values>`
+           Write to file to supply to the function.
+
+       **file_name** : :class:`python:str` | :data:`python:None`
+           File name to supply to the function.
+
+       **append_data** : :ref:`bool <python:bltin-boolean-values>`
+           Append data to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: utl_volume_set_location(family: str, name: str, locations: list[str]) -> tuple[str, dict[str, Any]]
+
+   
+   Group multiple cell zones into a single UTL physics volume.
+
+   Returns ``(method_path, args)`` for a ``call`` step. UTL only.
+   Raises ``ValueError`` in standard mode — callers should check
+   :attr:`is_utl` or mark their recipe ``requires_utl=True``.
+
+   :Parameters:
+
+       **family** : :class:`python:str`
+           Family to supply to the function.
+
+       **name** : :class:`python:str`
+           Name of the object, module, or setting being processed.
+
+       **locations** : :class:`python:list`\[:class:`python:str`]
+           Locations to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:tuple`\[:class:`python:str`, :class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: utl_volume_split(family: str, src_name: str, *, into: list[str], new_name: str) -> tuple[str, dict[str, Any]]
+
+   
+   Split a UTL physics volume by extracting some zones into a new physics volume.
+
+   Only available in UTL mode.
+
+   :Parameters:
+
+       **family** : :class:`python:str`
+           Family to supply to the function.
+
+       **src_name** : :class:`python:str`
+           Src name to supply to the function.
+
+       **into** : :class:`python:list`\[:class:`python:str`]
+           Into to supply to the function.
+
+       **new_name** : :class:`python:str`
+           New name to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:tuple`\[:class:`python:str`, :class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: utl_interface_create_call(*, name: str, boundary_1: str, boundary_2: str, intf_type: str = 'wall', mesh_connectivity: str = 'non-conformal', periodicity: str = 'none') -> tuple[str, dict[str, Any]]
+
+   
+   Create a mesh interface via the UTL command form. UTL only.
+
+
+   :Parameters:
+
+       **name** : :class:`python:str`
+           Name of the object, module, or setting being processed.
+
+       **boundary_1** : :class:`python:str`
+           Boundary 1 to supply to the function.
+
+       **boundary_2** : :class:`python:str`
+           Boundary 2 to supply to the function.
+
+       **intf_type** : :class:`python:str`
+           Intf type to supply to the function.
+
+       **mesh_connectivity** : :class:`python:str`
+           Mesh connectivity to supply to the function.
+
+       **periodicity** : :class:`python:str`
+           Periodicity to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:tuple`\[:class:`python:str`, :class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: utl_interface_auto_create() -> tuple[str, dict[str, Any]]
+
+   
+   Auto-create interfaces from coincident boundary pairs. UTL only.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:tuple`\[:class:`python:str`, :class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+

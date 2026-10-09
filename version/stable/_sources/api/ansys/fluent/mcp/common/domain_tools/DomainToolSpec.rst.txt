@@ -1,0 +1,102 @@
+
+
+
+
+
+
+:class:`DomainToolSpec`
+=======================
+
+
+.. py:class:: ansys.fluent.mcp.common.domain_tools.DomainToolSpec
+
+   
+   Metadata describing a domain tool to a MCP leaf.
+
+   The ``parameters`` field is **optional**. When omitted, the
+   framework derives the JSON schema from the handler's typed
+   signature. (See :func:`schema_from_signature`). Setting an explicit
+   JSON schema is only useful when the handler accepts a union/variant
+   payload that can't be expressed cleanly with Python type
+   hints.
+
+   Note (architecture boundary): This package never builds an
+   agent-side spec object. That would require importing the optional
+   higher-level agent layer, which is forbidden. (Dependency direction
+   is agent → this package, never the reverse). The agent layer, when
+   installed, constructs its own spec from this descriptor plus
+   :func:`schema_from_signature`.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: DomainToolSpec
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~name`
+            - 
+          * - :py:attr:`~description`
+            - 
+          * - :py:attr:`~parameters`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.domain_tools import DomainToolSpec
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: name
+   :type:  str
+
+.. py:attribute:: description
+   :type:  str
+
+.. py:attribute:: parameters
+   :type:  dict[str, Any] | None
+   :value: None
+
+
+
+
+
+

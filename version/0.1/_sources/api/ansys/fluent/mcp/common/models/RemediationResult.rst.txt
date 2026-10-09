@@ -1,0 +1,101 @@
+
+
+
+
+
+
+:class:`RemediationResult`
+==========================
+
+
+.. py:class:: ansys.fluent.mcp.common.models.RemediationResult(/, **data: Any)
+
+   Bases: :py:obj:`pydantic.BaseModel`
+
+
+   
+   Markdown response from a remediation/help endpoint (such as Prime meshing).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: RemediationResult
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~status`
+            - 
+          * - :py:attr:`~markdown`
+            - 
+          * - :py:attr:`~message`
+            - 
+          * - :py:attr:`~error_code`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.models import RemediationResult
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: status
+   :type:  Literal['ok', 'error']
+
+.. py:attribute:: markdown
+   :type:  str
+   :value: ''
+
+
+.. py:attribute:: message
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: error_code
+   :type:  Optional[str]
+   :value: None
+
+
+
+
+
+

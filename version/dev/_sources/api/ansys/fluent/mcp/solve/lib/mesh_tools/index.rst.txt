@@ -1,0 +1,140 @@
+
+
+
+
+
+
+The ``mesh_tools.py`` module
+============================
+
+.. py:module:: ansys.fluent.mcp.solve.lib.mesh_tools
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: mesh_tools
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~mesh_quality_impl`
+            - Return live mesh sizing and quality metrics from the connected solver.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Solve-leaf mesh-introspection domain tools (shared implementation).
+
+``mesh_quality`` is a pure-domain tool: it reads only from
+``Backend.mesh_quality()``, ``Backend.mesh_check()`` and
+``Backend.mesh_counts()``, so it is safe to expose from the standalone
+MCP leaf. Richer mesh discovery that depends on named-object or schema
+caches is out of scope for the leaf and lives on host-side callers.
+
+**Why cell/face/node counts are always included here:** Fluent does not
+expose mesh-element totals on the settings tree, and PyFluent's
+``solver.mesh.*`` namespace has no ``cell_count`` attribute. Without
+these counts, an agent has no reliable accessor for the canonical "how
+many cells does my mesh have?" question and would resort to guessing
+non-existent attributes (such as ``solver.field_info.get_cell_count``,
+``solver.mesh.cell_count``, and ``solver.mesh_info.cell_count``). The
+counts come from ``(inquire-grids)`` via ``Backend.mesh_counts()``.
+Surfacing them here makes ``mesh_quality`` the one-stop tool for every
+mesh size/quality/topology question.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: mesh_quality_impl(backend: ansys.fluent.mcp.common.backend.Backend, *, include_check: bool = False) -> dict[str, Any]
+   :async:
+
+
+   
+   Return live mesh sizing and quality metrics from the connected solver.
+
+   Output shape:
+
+   * ``cell_count``/``face_count``/ ``node_count``: Globals from
+     ``(inquire-grids)``. ``None`` is returned when the probe failed (no mesh
+     loaded or partition pending). Always present at the top level so
+     "how many cells does my mesh have?" is answered in a single
+     tool call.
+   * ``quality``: ``{min_orthogonal_quality, max_ortho_skew,
+     max_aspect_ratio}`` from ``mesh.quality``.
+   * ``check`` (only when ``include_check=True``): Structured
+     ``mesh.check`` payload with domain extents, volume/face-area
+     statistics, warnings, errors and a trimmed ``raw`` transcript.
+
+   :Parameters:
+
+       **backend** : :obj:`Backend`
+           Backend to supply to the function.
+
+       **include_check** : :ref:`bool <python:bltin-boolean-values>`
+           Include check to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

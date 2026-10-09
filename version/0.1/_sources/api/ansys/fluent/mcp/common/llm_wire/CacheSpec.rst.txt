@@ -1,0 +1,135 @@
+
+
+
+
+
+
+:class:`CacheSpec`
+==================
+
+
+.. py:class:: ansys.fluent.mcp.common.llm_wire.CacheSpec
+
+   
+   Provider-agnostic token-caching descriptor.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: CacheSpec
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+   .. tab-item:: Properties
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~enabled`
+            - Return whether the provider is enabled.
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~mechanism`
+            - 
+          * - :py:attr:`~ttl_seconds`
+            - 
+          * - :py:attr:`~send_key`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.llm_wire import CacheSpec
+
+Property detail
+---------------
+
+.. py:property:: enabled
+   :type: bool
+
+
+   
+   Return whether the provider is enabled.
+
+
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>`
+           Boolean result of the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: mechanism
+   :type:  str
+   :value: 'none'
+
+
+.. py:attribute:: ttl_seconds
+   :type:  int
+   :value: 0
+
+
+.. py:attribute:: send_key
+   :type:  bool
+   :value: True
+
+
+
+
+
+
