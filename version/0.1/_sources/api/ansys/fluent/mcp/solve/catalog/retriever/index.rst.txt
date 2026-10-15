@@ -1,0 +1,224 @@
+
+
+
+
+
+
+The ``retriever.py`` module
+===========================
+
+.. py:module:: ansys.fluent.mcp.solve.catalog.retriever
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: retriever
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.catalog.retriever.ApiHit`
+            - One ranked candidate returned by a retriever.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.catalog.retriever.ApiRetriever`
+            - ABC for an API retriever. Async by convention.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.catalog.retriever.HttpApiRetriever`
+            - Forward retrieval to an HTTP endpoint that wraps the legacy ``GetEncodedElements`` (Qdrant-backed) workflow.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.catalog.retriever.QdrantApiRetriever`
+            - Direct vector search against the Fluent API Qdrant collection.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.catalog.retriever.LexicalApiRetriever`
+            - Thin async adapter over :class:`ApiIndex.search`.
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~get_default_api_retriever`
+            - Return the default API retriever.
+
+
+          * - :py:obj:`~set_default_api_retriever`
+            - Test/integration hook to override the default.
+
+
+
+    .. tab-item:: Attributes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~EmbedFn`
+            - 
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> ApiHit</api/ansys/fluent/mcp/solve/catalog/retriever/ApiHit>
+    <span class="nf nf-cod-symbol_class"></span> ApiRetriever</api/ansys/fluent/mcp/solve/catalog/retriever/ApiRetriever>
+    <span class="nf nf-cod-symbol_class"></span> HttpApiRetriever</api/ansys/fluent/mcp/solve/catalog/retriever/HttpApiRetriever>
+    <span class="nf nf-cod-symbol_class"></span> QdrantApiRetriever</api/ansys/fluent/mcp/solve/catalog/retriever/QdrantApiRetriever>
+    <span class="nf nf-cod-symbol_class"></span> LexicalApiRetriever</api/ansys/fluent/mcp/solve/catalog/retriever/LexicalApiRetriever>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+API retrieval (RAG over the Fluent API catalog).
+
+The following three retriever implementations are provided. They are selected
+via environment variables. (See :func:`get_default_api_retriever`.)
+
+* :class:`HttpApiRetriever`: Forwards to a remote HTTP retriever
+  endpoint that wraps the ``GetEncodedElements`` workflow.
+  Opt-in via ``FLUIDS_MCP_API_RETRIEVER_URL``. Dormant by default.
+
+* :class:`QdrantApiRetriever`: Talks to Qdrant directly using
+  ``qdrant-client``. Embeddings are produced by an injected callable
+  so no model is pinned here. Opt-in via ``FLUIDS_MCP_QDRANT_URL``.
+  Dormant by default.
+
+* :class:`LexicalApiRetriever`: The **default and only** retriever
+  in a stock install. A thin async adapter over
+  :class:`~ansys.fluent.mcp.common.api_index.ApiIndex`, which scores the
+  bundled ``api_objects.json`` plus PyFluent class docstrings using
+  BM25 ( at no extra cost versus the previous token-overlap heuristic).
+  All ranking lives in :mod:`ansys.fluent.mcp.common.api_index`. This
+  class only marshals between the ``ApiRetriever`` async protocol
+  and the synchronous ``ApiIndex.search`` call.
+
+The HTTP/Qdrant classes are kept around as option-value (~150 LOC,
+tested) for the day a partner wants to plug in a hosted index, but
+they are not on the hot path and should not receive new investment.
+Improve the lexical path instead.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: get_default_api_retriever() -> ApiRetriever
+
+   
+   Return the default API retriever.
+
+
+
+
+
+   :Returns:
+
+       :obj:`ApiRetriever`
+           API retriever produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: set_default_api_retriever(retriever: Optional[ApiRetriever]) -> None
+
+   
+   Test/integration hook to override the default.
+
+
+   :Parameters:
+
+       **retriever** : :obj:`Optional`\[:obj:`ApiRetriever`]
+           Retriever to supply to the function.
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: EmbedFn
+
+
+

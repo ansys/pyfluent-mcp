@@ -1,0 +1,120 @@
+
+
+
+
+
+
+The ``discovery_tools.py`` module
+=================================
+
+.. py:module:: ansys.fluent.mcp.solve.lib.discovery_tools
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: discovery_tools
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~list_fields_impl`
+            - Enumerate scalar/vector fields available in the loaded case.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Solve-leaf live-introspection domain tools (shared implementation).
+
+These tools talk directly to the connected Fluent backend and do not
+depend on any host-side cache, so they are safe to expose from the
+standalone MCP leaf.
+
+Currently, ``list_fields_impl`` enumerates the data fields the loaded
+solver case can plot and report on (e.g. for ``contour`` setup).
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: list_fields_impl(backend: ansys.fluent.mcp.common.backend.Backend, *, scope: str = 'any') -> dict[str, Any]
+   :async:
+
+
+   
+   Enumerate scalar/vector fields available in the loaded case.
+
+   ``scope`` is forwarded verbatim to ``Backend.list_fields`` and is
+   typically one of ``"any" | "cell" | "node" | "face"``.
+
+   :Parameters:
+
+       **backend** : :obj:`Backend`
+           Backend to supply to the function.
+
+       **scope** : :class:`python:str`
+           Scope for limiting the field or API lookup.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

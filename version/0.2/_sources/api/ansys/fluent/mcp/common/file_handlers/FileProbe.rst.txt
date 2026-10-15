@@ -1,0 +1,118 @@
+
+
+
+
+
+
+:class:`FileProbe`
+==================
+
+
+.. py:class:: ansys.fluent.mcp.common.file_handlers.FileProbe
+
+   
+   Result of probing a file for product-relevant metadata.
+
+   Fields are deliberately ``Optional``. If a probe cannot determine
+   a value (for example, because of an unreadable header or a missing optional dependency),
+   the agent falls back to asking the user or to the backend default.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: FileProbe
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~file_type`
+            - 
+          * - :py:attr:`~suffix`
+            - 
+          * - :py:attr:`~dimension`
+            - 
+          * - :py:attr:`~precision`
+            - 
+          * - :py:attr:`~is_lightweight`
+            - 
+          * - :py:attr:`~extra`
+            - 
+          * - :py:attr:`~notes`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.file_handlers import FileProbe
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: file_type
+   :type:  str
+
+.. py:attribute:: suffix
+   :type:  str
+
+.. py:attribute:: dimension
+   :type:  int | None
+   :value: None
+
+
+.. py:attribute:: precision
+   :type:  str | None
+   :value: None
+
+
+.. py:attribute:: is_lightweight
+   :type:  bool | None
+   :value: None
+
+
+.. py:attribute:: extra
+   :type:  dict[str, Any]
+
+.. py:attribute:: notes
+   :type:  list[str]
+   :value: []
+
+
+
+
+
+

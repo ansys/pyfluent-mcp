@@ -1,0 +1,105 @@
+
+
+
+
+
+
+:class:`PathGroup`
+==================
+
+
+.. py:class:: ansys.fluent.mcp.solve.lib.active_path.PathGroup
+
+   Bases: :py:obj:`str`, :py:obj:`enum.Enum`
+
+
+   
+   The multi-path class a concrete path belongs to.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: PathGroup
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~URF`
+            - 
+          * - :py:attr:`~BC`
+            - 
+          * - :py:attr:`~CZ`
+            - 
+          * - :py:attr:`~INTERFACE`
+            - 
+          * - :py:attr:`~RUN`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.lib.active_path import PathGroup
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: URF
+   :value: 'urf'
+
+
+.. py:attribute:: BC
+   :value: 'bc'
+
+
+.. py:attribute:: CZ
+   :value: 'cz'
+
+
+.. py:attribute:: INTERFACE
+   :value: 'interface'
+
+
+.. py:attribute:: RUN
+   :value: 'run'
+
+
+
+
+
+

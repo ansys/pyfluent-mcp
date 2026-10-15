@@ -1,0 +1,99 @@
+
+
+
+
+
+
+:class:`TypedError`
+===================
+
+
+.. py:class:: ansys.fluent.mcp.common.models.TypedError(/, **data: Any)
+
+   Bases: :py:obj:`pydantic.BaseModel`
+
+
+   
+   Generic error envelope used when a tool can't return its native shape.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: TypedError
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~status`
+            - 
+          * - :py:attr:`~error_code`
+            - 
+          * - :py:attr:`~message`
+            - 
+          * - :py:attr:`~details`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.models import TypedError
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: status
+   :type:  Literal['error']
+   :value: 'error'
+
+
+.. py:attribute:: error_code
+   :type:  str
+
+.. py:attribute:: message
+   :type:  str
+
+.. py:attribute:: details
+   :type:  dict[str, Any]
+   :value: None
+
+
+
+
+
+

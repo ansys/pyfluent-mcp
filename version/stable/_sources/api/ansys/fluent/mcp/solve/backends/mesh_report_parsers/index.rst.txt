@@ -1,0 +1,199 @@
+
+
+
+
+
+
+The ``mesh_report_parsers.py`` module
+=====================================
+
+.. py:module:: ansys.fluent.mcp.solve.backends.mesh_report_parsers
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: mesh_report_parsers
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~parse_mesh_quality`
+            - Extract the three headline quality numbers from a ``mesh.quality`` report.
+
+
+          * - :py:obj:`~parse_mesh_check`
+            - Extract structured fields from a ``mesh.check`` report.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Pure-functional parsers for Fluent's ``mesh.check`` and ``mesh.quality`` reports.
+
+These commands print a human-readable block to the Fluent transcript/console.
+PyFluent forwards that print stream to Python's stdout, which
+:meth:`ansys.fluent.mcp.solve.backends.pyfluent.PyFluentBackend.run_code`
+captures into ``RunCodeResult.stdout`` via
+``contextlib.redirect_stdout``. The following parsers take that captured
+text and extract structured numbers/lists.
+
+Why parse instead of using a programmatic API:
+
+* ``mesh.check`` and ``mesh.quality`` are settings-API commands. They
+  return ``None`` and emit their result to the console. There is no
+  structured return value across the supported Fluent versions.
+  (Newer PyFluent versions have experimental structured reports under
+  ``solver.report.*``, but the names have churned across the 24.x / 25.x)
+  releases.
+* The transcript wording for the headline lines cared about
+  (``Minimum Orthogonal Quality``/``Maximum Ortho Skew``/``Maximum Aspect
+  Ratio``/``Volume statistics``/``Face area statistics``/``Domain Extents``)
+  has been stable since Fluent 19.0. Extra histograms/hints below
+  the headline lines are version-dependent and ignored.
+
+Fluent 2024 and later formats notes (verified against a real session):
+
+* ``mesh.quality`` typically prints only ``Minimum Orthogonal Quality``
+  and ``Maximum Aspect Ratio``. ``Maximum Ortho Skew`` is **often
+  absent** because Fluent treats orthogonal quality as the canonical
+  cell-quality metric (orthogonal quality ≈ 1 − ortho-skew, so the
+  two are redundant). The parser returns ``None`` for the missing
+  field. Callers MUST treat ``None`` as ``unknown`` and rely on
+  ``min_orthogonal_quality`` as the primary signal.
+* The headline lines now include trailing annotations like
+  ``cell <id> on zone <z> (ID: <gid> on partition: <p>) at location
+  (x, y, z)``. These are ignored by design. Only the number to the
+  right of the ``=`` is captured.
+* ``mesh.check`` may indent the ``Volume statistics:`` and ``Face area
+  statistics:`` headers with one leading space and use single-space
+  separators between ``total volume`` and ``(m3)``. The regex
+  whitespace classes (``\\s+``, ``\\s*``) tolerate both styles.
+
+Both parsers are intentionally **lenient**. Anything that cannot be matchd
+collapses to ``None`` rather than raising. Callers are expected to
+treat ``None`` as ``unknown``, never as a passing score.
+
+Tested against transcripts from both pressure-based and density-based
+solvers in :mod:`tests.test_mesh_report_parsers`.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: parse_mesh_quality(stdout: str | None) -> dict[str, float | None]
+
+   
+   Extract the three headline quality numbers from a ``mesh.quality`` report.
+
+   The returned mapping contains ``"min_orthogonal_quality"``,
+   ``"max_ortho_skew"``, and ``"max_aspect_ratio"``. A value is
+   ``None`` when the line is not found in ``stdout`` (no mesh loaded,
+   command failed, transcript capture truncated). Never raises.
+
+   :Parameters:
+
+       **stdout** : :class:`python:str` | :data:`python:None`
+           Stdout to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:float` | :data:`python:None`]
+           Parsed quality metrics keyed by Fluent's headline mesh-quality fields.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: parse_mesh_check(stdout: str | None) -> dict[str, Any]
+
+   
+   Extract structured fields from a ``mesh.check`` report.
+
+   Output shape is documented on
+   :meth:`ansys.fluent.mcp.common.backend.Backend.mesh_check`. Missing
+   fields are emitted as ``None`` (or empty list for ``warnings``/``errors``).
+   Never raises.
+
+   The ``raw`` field always carries the verbatim stdout chunk so
+   callers that need a feature this parser doesn't extract yet can
+   still get at it without re-running the command.
+
+   :Parameters:
+
+       **stdout** : :class:`python:str` | :data:`python:None`
+           Stdout to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

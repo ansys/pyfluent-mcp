@@ -1,0 +1,82 @@
+
+
+
+
+
+
+:class:`ApiSearchHit`
+=====================
+
+
+.. py:class:: ansys.fluent.mcp.solve.catalog.index.ApiSearchHit
+
+   
+   One search hit from the index.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: ApiSearchHit
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~entry`
+            - 
+          * - :py:attr:`~score`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.catalog.index import ApiSearchHit
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: entry
+   :type:  ApiEntry
+
+.. py:attribute:: score
+   :type:  float
+
+
+
+
+

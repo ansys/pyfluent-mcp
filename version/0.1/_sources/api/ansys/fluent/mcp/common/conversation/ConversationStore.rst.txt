@@ -1,0 +1,347 @@
+
+
+
+
+
+
+:class:`ConversationStore`
+==========================
+
+
+.. py:class:: ansys.fluent.mcp.common.conversation.ConversationStore(*, ttl_seconds: float = 60 * 60, max_entries: int = 256)
+
+   
+   Thread-safe TTL-bounded conversation store.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: ConversationStore
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~create`
+            - Create the value needed by the operation.
+          * - :py:attr:`~get`
+            - Return a fake mapping or attribute value.
+          * - :py:attr:`~get_or_create`
+            - Return the or create.
+          * - :py:attr:`~touch`
+            - Update the conversation access timestamp.
+          * - :py:attr:`~append_history`
+            - Append history.
+          * - :py:attr:`~set_pending_clarification`
+            - Set the pending clarification.
+          * - :py:attr:`~has_pending_clarification_id`
+            - Return True if ``session_id`` already has a pending clarification with this ID.
+          * - :py:attr:`~clarification_was_just_asked`
+            - Detect a clarification loop: same question text already pending.
+
+
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.conversation import ConversationStore
+
+
+
+Method detail
+-------------
+
+.. py:method:: create() -> ConversationEntry
+
+   
+   Create the value needed by the operation.
+
+
+
+
+
+   :Returns:
+
+       :obj:`ConversationEntry`
+           ConversationEntry produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: get(session_id: str) -> Optional[ConversationEntry]
+
+   
+   Return a fake mapping or attribute value.
+
+
+   :Parameters:
+
+       **session_id** : :class:`python:str`
+           Identifier for the conversation or tool session.
+
+
+
+   :Returns:
+
+       :obj:`Optional`\[:obj:`ConversationEntry`]
+           Optional value produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: get_or_create(session_id: Optional[str]) -> ConversationEntry
+
+   
+   Return the or create.
+
+
+   :Parameters:
+
+       **session_id** : :obj:`Optional`\[:class:`python:str`]
+           Identifier for the conversation or tool session.
+
+
+
+   :Returns:
+
+       :obj:`ConversationEntry`
+           ConversationEntry produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: touch(session_id: str) -> None
+
+   
+   Update the conversation access timestamp.
+
+
+   :Parameters:
+
+       **session_id** : :class:`python:str`
+           Identifier for the conversation or tool session.
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: append_history(session_id: str, role: str, content: Any) -> None
+
+   
+   Append history.
+
+
+   :Parameters:
+
+       **session_id** : :class:`python:str`
+           Identifier for the conversation or tool session.
+
+       **role** : :class:`python:str`
+           Role to supply to the function.
+
+       **content** : :obj:`Any`
+           Content returned by the mocked response.
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: set_pending_clarification(session_id: str, clarification: dict[str, Any] | None) -> None
+
+   
+   Set the pending clarification.
+
+
+   :Parameters:
+
+       **session_id** : :class:`python:str`
+           Identifier for the conversation or tool session.
+
+       **clarification** : :class:`python:dict`\[:class:`python:str`, :obj:`Any`] | :data:`python:None`
+           Clarification to supply to the function.
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: has_pending_clarification_id(session_id: str, clarification_id: str) -> bool
+
+   
+   Return True if ``session_id`` already has a pending clarification with this ID.
+
+
+   :Parameters:
+
+       **session_id** : :class:`python:str`
+           Session identifier to supply to the function.
+
+       **clarification_id** : :class:`python:str`
+           Clarification identifier to supply to the function.
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>`
+           Boolean result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: clarification_was_just_asked(session_id: str, question_text: str) -> bool
+
+   
+   Detect a clarification loop: same question text already pending.
+
+
+   :Parameters:
+
+       **session_id** : :class:`python:str`
+           Session identifier to supply to the function.
+
+       **question_text** : :class:`python:str`
+           Question text to supply to the function.
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>`
+           Boolean result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+
