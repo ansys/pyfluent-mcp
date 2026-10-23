@@ -42,7 +42,7 @@ def _patch_pyfluent_local_launch():
         Result produced by the function.
     """
     try:
-        from ansys.fluent.core.launcher import launcher as _launcher
+        from ansys.fluent.core.execution.launcher import launcher as _launcher
     except ImportError:
         # PyFluent not installed; integration tests will skip on their own.
         yield
