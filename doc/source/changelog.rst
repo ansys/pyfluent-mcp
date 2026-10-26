@@ -9,6 +9,75 @@ This section contains the release notes for PyFluent-MCP.
 
 .. towncrier release notes start
 
+`0.5.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.5.0>`_ - September 25, 2026
+=========================================================================================
+
+.. tab-set::
+
+
+  .. tab-item:: Added
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Add live dry-run write capability
+          - `#71 <https://github.com/ansys/pyfluent-mcp/pull/71>`_
+
+        * - Improved restrictive access
+          - `#75 <https://github.com/ansys/pyfluent-mcp/pull/75>`_
+
+
+  .. tab-item:: Dependencies
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Update flit-core requirement from <4,>=3.2 to >=3.2,<5 in the pip-deps group
+          - `#58 <https://github.com/ansys/pyfluent-mcp/pull/58>`_
+
+        * - Bump the actions group with 15 updates
+          - `#60 <https://github.com/ansys/pyfluent-mcp/pull/60>`_, `#64 <https://github.com/ansys/pyfluent-mcp/pull/64>`_, `#68 <https://github.com/ansys/pyfluent-mcp/pull/68>`_
+
+        * - Bump the pre-commit group across 1 directory with 2 updates
+          - `#61 <https://github.com/ansys/pyfluent-mcp/pull/61>`_
+
+        * - Bump the pip-deps group with 2 updates
+          - `#62 <https://github.com/ansys/pyfluent-mcp/pull/62>`_
+
+        * - Bump https://github.com/astral-sh/ruff-pre-commit from v0.16.3 to 0.16.4 in the pre-commit group
+          - `#63 <https://github.com/ansys/pyfluent-mcp/pull/63>`_
+
+        * - Bump pydantic from 2.13.4 to 2.13.5 in the pip-deps group
+          - `#66 <https://github.com/ansys/pyfluent-mcp/pull/66>`_
+
+        * - Bump the pre-commit group with 2 updates
+          - `#67 <https://github.com/ansys/pyfluent-mcp/pull/67>`_, `#69 <https://github.com/ansys/pyfluent-mcp/pull/69>`_, `#73 <https://github.com/ansys/pyfluent-mcp/pull/73>`_
+
+        * - Bump the pip-deps group with 4 updates
+          - `#70 <https://github.com/ansys/pyfluent-mcp/pull/70>`_
+
+        * - Bump sphinx-autodoc-typehints from 3.13.5 to 3.13.6 in the pip-deps group
+          - `#72 <https://github.com/ansys/pyfluent-mcp/pull/72>`_
+
+        * - Bump codecov/codecov-action from 7.0.0 to 7.1.0 in the actions group
+          - `#74 <https://github.com/ansys/pyfluent-mcp/pull/74>`_
+
+
+  .. tab-item:: Maintenance
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Update CHANGELOG for v0.4.0
+          - `#55 <https://github.com/ansys/pyfluent-mcp/pull/55>`_
+
+        * - Bump version to 0.5.dev0
+          - `#56 <https://github.com/ansys/pyfluent-mcp/pull/56>`_
+
+
 `0.4.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.4.0>`_ - August 14, 2026
 ======================================================================================
 
