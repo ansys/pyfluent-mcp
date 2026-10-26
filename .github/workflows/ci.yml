@@ -7,7 +7,6 @@ on:
       - "v*"
     branches:
       - main
-      - test_live_integration
   schedule:
     - cron: "30 4 * * *" # Daily at 04:30 UTC
 
