@@ -1,0 +1,99 @@
+
+
+
+
+
+
+:class:`Clarification`
+======================
+
+
+.. py:class:: ansys.fluent.mcp.common.models.Clarification(/, **data: Any)
+
+   Bases: :py:obj:`pydantic.BaseModel`
+
+
+   
+   A follow-up question emitted by code generation when user input is ambiguous.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: Clarification
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~id`
+            - 
+          * - :py:attr:`~question`
+            - 
+          * - :py:attr:`~options`
+            - 
+          * - :py:attr:`~free_text_allowed`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.models import Clarification
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: id
+   :type:  str
+
+.. py:attribute:: question
+   :type:  str
+
+.. py:attribute:: options
+   :type:  list[ClarificationOption]
+   :value: None
+
+
+.. py:attribute:: free_text_allowed
+   :type:  bool
+   :value: True
+
+
+
+
+
+

@@ -1,0 +1,1455 @@
+
+
+
+
+
+
+The ``llm_wire.py`` module
+==========================
+
+.. py:module:: ansys.fluent.mcp.common.llm_wire
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: llm_wire
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.llm_wire.AaliChatModel`
+            - A single resolved chat-model entry from the AALI model's configuration.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.llm_wire.ModelConfig`
+            - A fully resolved endpoint/key/model/authorization triplet (plus style).
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.llm_wire.CacheSpec`
+            - Provider-agnostic token-caching descriptor.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.llm_wire.RetrySpec`
+            - Retry/backoff policy applied by the transport seam.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.llm_wire.LLMProfile`
+            - A fully resolved, provider-agnostic capability descriptor.
+
+
+
+
+    .. tab-item:: Exceptions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.llm_wire.LLMTransportError`
+            - Raised when an LLM transport call fails (network/provider error).
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~env_flag`
+            - Parse a boolean env var with a permissive truthy/falsy grammar.
+
+
+          * - :py:obj:`~resolve_tls_verify`
+            - Resolve the value to pass to ``httpx``'s ``verify=`` for LLM calls.
+
+
+          * - :py:obj:`~first_model_token`
+            - Return the first whitespace-separated token of ``LLM_MODEL``.
+
+
+          * - :py:obj:`~normalise_endpoint`
+            - Return a fully-qualified ``/chat/completions`` URL.
+
+
+          * - :py:obj:`~load_aali_chat_model`
+            - Return the first usable chat model from the AALI configuration or ``None``.
+
+
+          * - :py:obj:`~resolve_model_config`
+            - Resolve the endpoint/key/model/authorization triplet from a uniform order.
+
+
+          * - :py:obj:`~resolve_model_quirks`
+            - Return the wire-format quirk dictionary for ``model`` (empty if none).
+
+
+          * - :py:obj:`~max_tokens_param_for`
+            - Resolve the request field used to cap output tokens for ``model``.
+
+
+          * - :py:obj:`~send_temperature_for`
+            - Whether ``temperature`` may be sent in the body for ``model``.
+
+
+          * - :py:obj:`~prompt_cache_key`
+            - Derive a STABLE cache-routing key from model and a leading system prompt.
+
+
+          * - :py:obj:`~build_chat_body`
+            - Build an OpenAI ``/chat/completions`` request body, model-agnostic.
+
+
+          * - :py:obj:`~auth_headers`
+            - Build request headers honoring the configured authorization style.
+
+
+          * - :py:obj:`~parse_json_object`
+            - Best-effort parse of the first ``{...}`` JSON object in ``text``.
+
+
+          * - :py:obj:`~detect_provider`
+            - Infer the provider identifier from explicit environment, model route, or hints.
+
+
+          * - :py:obj:`~resolve_litellm_route`
+            - Return the LiteLLM ``provider/model`` route string for ``model``.
+
+
+          * - :py:obj:`~native_provider_configured`
+            - Whether a native (LiteLLM) provider is *explicitly* configured.
+
+
+          * - :py:obj:`~default_cache_mechanism`
+            - Return the default token-caching mechanism for ``provider``.
+
+
+          * - :py:obj:`~resolve_profile`
+            - Resolve an :class:`LLMProfile` from environment plus model/endpoint hints.
+
+
+          * - :py:obj:`~apply_anthropic_cache_control`
+            - Apply Anthropic ephemeral cache control to the system prompt.
+
+
+          * - :py:obj:`~build_litellm_kwargs`
+            - Assemble keyword arguments for ``litellm.(a)completion``.
+
+
+          * - :py:obj:`~normalize_usage`
+            - Map any provider's usage object/dictionary to a canonical token dictionary.
+
+
+          * - :py:obj:`~acall`
+            - Async transport seam, which is the single place an LLM call is issued.
+
+
+          * - :py:obj:`~call`
+            - Return synchronous counterpart to :func:`acall`.
+
+
+          * - :py:obj:`~astream`
+            - Async streaming seam — yields OpenAI-shaped chunk dicts.
+
+
+          * - :py:obj:`~warm_cache`
+            - Prime the provider's prompt cache with the stable system prefix.
+
+
+
+
+    .. tab-item:: Constants
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~DEFAULT_MODEL`
+            - 
+
+
+          * - :py:obj:`~PROVIDER_OPENAI`
+            - 
+
+
+          * - :py:obj:`~PROVIDER_AZURE`
+            - 
+
+
+          * - :py:obj:`~PROVIDER_ANTHROPIC`
+            - 
+
+
+          * - :py:obj:`~PROVIDER_GEMINI`
+            - 
+
+
+          * - :py:obj:`~PROVIDER_COMPAT`
+            - 
+
+
+          * - :py:obj:`~CACHE_OPENAI_AUTO`
+            - 
+
+
+          * - :py:obj:`~CACHE_ANTHROPIC`
+            - 
+
+
+          * - :py:obj:`~CACHE_GEMINI`
+            - 
+
+
+          * - :py:obj:`~CACHE_NONE`
+            - 
+
+
+          * - :py:obj:`~TRANSPORT_LITELLM`
+            - 
+
+
+          * - :py:obj:`~TRANSPORT_COMPAT`
+            - 
+
+
+          * - :py:obj:`~PROVIDER_HOSTS`
+            - 
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> AaliChatModel</api/ansys/fluent/mcp/common/llm_wire/AaliChatModel>
+    <span class="nf nf-cod-symbol_class"></span> ModelConfig</api/ansys/fluent/mcp/common/llm_wire/ModelConfig>
+    <span class="nf nf-cod-symbol_class"></span> CacheSpec</api/ansys/fluent/mcp/common/llm_wire/CacheSpec>
+    <span class="nf nf-cod-symbol_class"></span> RetrySpec</api/ansys/fluent/mcp/common/llm_wire/RetrySpec>
+    <span class="nf nf-cod-symbol_class"></span> LLMProfile</api/ansys/fluent/mcp/common/llm_wire/LLMProfile>
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-md-lightning_bolt"></span> LLMTransportError</api/ansys/fluent/mcp/common/llm_wire/LLMTransportError>
+
+
+
+
+
+
+
+Description
+-----------
+
+Model-agnostic wire-format core for OpenAI-compatible LLM endpoints.
+
+This is the single place that knows how to talk to an OpenAI-style
+``POST /chat/completions`` endpoint *regardless of which model sits
+behind it*. Every LLM call path in the suite—the agent provider, the
+solve codegen pipeline, and the tier-2 assist helper—builds its
+request body, resolves its model/endpoint/key triplet, and parses
+replies through the helpers here, so "model agnostic" is a property of
+one tested module instead of three drifting copies.
+
+Design rules:
+
+* **Transport is OpenAI-compatible only.** Other vendors (Anthropic,
+  Gemini, local models) are reached through an OpenAI-compatible gateway
+  (LiteLLM/OpenRouter/vLLM/Ollama). The only vendor-specific
+  surface is the small :data:`_MODEL_QUIRKS` table.
+* **No model name is hard-coded outside this module.** Callers fall back
+  to :data:`DEFAULT_MODEL`.
+* **httpx is the only third-party dependency**, and it is imported by the
+  caller. This module never makes the HTTP call itself. It only shapes
+  the request and reads the response.
+
+The module is intentionally dependency-free with respect to the rest of
+the package so that both this package and any optional higher-level layer
+that consumes it can import it. The dependency direction is one-way.
+Consumers import this module. This module never imports a consumer.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: env_flag(name: str, *, default: bool) -> bool
+
+   
+   Parse a boolean env var with a permissive truthy/falsy grammar.
+
+
+   :Parameters:
+
+       **name** : :class:`python:str`
+           Name of the object, module, or setting being processed.
+
+       **default** : :ref:`bool <python:bltin-boolean-values>`
+           Fallback value used when no explicit value is supplied.
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>`
+           Boolean result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: resolve_tls_verify(env=os.environ) -> bool | str
+
+   
+   Resolve the value to pass to ``httpx``'s ``verify=`` for LLM calls.
+
+   Secure by default. ``httpx`` does NOT honor ``SSL_CERT_FILE``/
+   ``REQUESTS_CA_BUNDLE`` automatically (unlike ``requests``), so a
+   corporate/self-signed CA must be passed explicitly. This helper is
+   the single place that resolves it. Here is the resolution order:
+
+   1. ``LLM_TLS_INSECURE`` truthy -> ``False`` (disables verification and
+      logs a loud one-time warning). Intended only for throwaway/development
+      setups. It exposes API keys and prompts to MITM (man-in-the-middle) attacks.
+   2. A CA bundle path from ``LLM_CA_BUNDLE``/``SSL_CERT_FILE``/
+      ``REQUESTS_CA_BUNDLE`` (first non-empty wins) -> that path. This is
+      the supported way to trust a corporate/self-signed CA.
+   3. Otherwise ``True`` (verify against the system/certification trust store).
+
+   :Parameters:
+
+       **env** : :obj:`Any`
+           Environment mapping to read instead of the process environment.
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>` | :class:`python:str`
+           Boolean result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: first_model_token(raw: str | None) -> str | None
+
+   
+   Return the first whitespace-separated token of ``LLM_MODEL``.
+
+   ``LLM_MODEL`` may hold a space-separated list (for the UI model
+   switcher). Only the first token is the active model.
+
+   :Parameters:
+
+       **raw** : :class:`python:str` | :data:`python:None`
+           Raw text value to parse.
+
+
+
+   :Returns:
+
+       :class:`python:str` | :data:`python:None`
+           String result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: normalise_endpoint(url: str) -> str
+
+   
+   Return a fully-qualified ``/chat/completions`` URL.
+
+   Accepts ``https://host/v1``, ``https://host/v1/``,
+   ``https://host/openai/v1/``, or a URL that already ends in
+   ``/chat/completions`` (left untouched).
+
+   :Parameters:
+
+       **url** : :class:`python:str`
+           URL to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           String result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: load_aali_chat_model() -> AaliChatModel | None
+
+   
+   Return the first usable chat model from the AALI configuration or ``None``.
+
+   Never raises: any I/O or parse error is logged and yields ``None`` so
+   the caller can fall back to its own defaults.
+
+
+
+
+   :Returns:
+
+       :obj:`AaliChatModel` | :data:`python:None`
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: resolve_model_config(*, endpoint: str | None = None, api_key: str | None = None, model: str | None = None, auth_style: str | None = None, aali_fallback: Optional[Callable[[], AaliChatModel | None]] = None, env=os.environ) -> ModelConfig
+
+   
+   Resolve the endpoint/key/model/authorization triplet from a uniform order.
+
+   Resolution order (first non-empty wins):
+
+   1. Explicit arguments.
+   2. Environment variables ``LLM_ENDPOINT``/``LLM_API_KEY``/
+      ``LLM_MODEL``/``LLM_AUTH_STYLE``.
+   3. ``aali_fallback()`` isonly consulted when no endpoint is set via
+      (1) or (2), and only when a callable is supplied. Pass
+      :func:`load_aali_chat_model` to opt in. Pass ``None`` (default)
+      to keep resolution strictly environment-driven (and deterministic in
+      tests).
+
+   ``model`` always resolves to a concrete string (:data:`DEFAULT_MODEL`
+   when nothing else is set). ``endpoint`` may be ``None`` so the caller
+   can decide whether a missing endpoint is fatal.
+
+   :Parameters:
+
+       **endpoint** : :class:`python:str` | :data:`python:None`
+           Endpoint to supply to the function.
+
+       **api_key** : :class:`python:str` | :data:`python:None`
+           API key to supply to the function.
+
+       **model** : :class:`python:str` | :data:`python:None`
+           Model to supply to the function.
+
+       **auth_style** : :class:`python:str` | :data:`python:None`
+           Authorization style to supply to the function.
+
+       **aali_fallback** : :obj:`Optional`\[:obj:`Callable`\[[], :obj:`AaliChatModel` | :data:`python:None`]]
+           AALI fallback to supply to the function.
+
+       **env** : :obj:`Any`
+           Environment mapping to read instead of the process environment.
+
+
+
+   :Returns:
+
+       :obj:`ModelConfig`
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: resolve_model_quirks(model: str) -> dict[str, Any]
+
+   
+   Return the wire-format quirk dictionary for ``model`` (empty if none).
+
+
+   :Parameters:
+
+       **model** : :class:`python:str`
+           Model to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: max_tokens_param_for(model: str) -> str
+
+   
+   Resolve the request field used to cap output tokens for ``model``.
+
+   Explicit ``LLM_MAX_TOKENS_PARAM`` environment wins. Otherwise, per-model
+   quirks. Otherwise, the OpenAI default ``max_tokens``.
+
+   :Parameters:
+
+       **model** : :class:`python:str`
+           Model to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           String result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: send_temperature_for(model: str) -> bool
+
+   
+   Whether ``temperature`` may be sent in the body for ``model``.
+
+   Explicit ``LLM_SEND_TEMPERATURE`` environment wins. Otherwise, per-model
+   quirks (reasoning models reject a non-default temperature).
+
+   :Parameters:
+
+       **model** : :class:`python:str`
+           Model to supply to the function.
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>`
+           Boolean result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: prompt_cache_key(model: str, messages: Sequence[dict[str, Any]]) -> str
+
+   
+   Derive a STABLE cache-routing key from model and a leading system prompt.
+
+   The cacheable prefix every request shares is the static system prompt
+   (and tool specifications derived from it). Keying on its hash groups all turns
+   of all conversations using the same prompt onto the same cache node,
+   maximizing prefix reuse while staying independent of per-turn volatile
+   content. Returns ``""`` when no system message is present.
+
+   :Parameters:
+
+       **model** : :class:`python:str`
+           Model to supply to the function.
+
+       **messages** : :obj:`Sequence`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Messages to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           String result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: build_chat_body(*, model: str, messages: Sequence[dict[str, Any]], max_tokens: int | None = None, temperature: float | None = None, max_tokens_param: str | None = None, send_temperature: bool | None = None, send_cache_key: bool = True, response_format: dict[str, Any] | None = None) -> dict[str, Any]
+
+   
+   Build an OpenAI ``/chat/completions`` request body, model-agnostic.
+
+   Honors per-model wire-format quirks so the same call works against
+   gpt-4o-class, gpt-5/o-series reasoning models, and stripped-down
+   local servers:
+
+   * ``max_tokens`` is written under ``max_tokens`` or
+     ``max_completion_tokens`` per :func:`max_tokens_param_for`. When
+     ``max_tokens`` is ``None``, no token cap is sent at all (preserves
+     "uncapped" callers like the codegen pipeline).
+   * ``temperature`` is dropped entirely for models that reject it
+     (:func:`send_temperature_for`) or when ``temperature is None``.
+   * A stable ``prompt_cache_key`` is added when ``send_cache_key`` and
+     ``LLM_SEND_CACHE_KEY`` are both on. Disable via
+     ``LLM_SEND_CACHE_KEY=0`` for endpoints that reject unknown fields.
+
+   Callers that have already resolved quirks once (for example, the long-lived
+   agent provider) may pass ``max_tokens_param``/``send_temperature``
+   explicitly to skip per-call resolution.
+
+   :Parameters:
+
+       **model** : :class:`python:str`
+           Model to supply to the function.
+
+       **messages** : :obj:`Sequence`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Messages to supply to the function.
+
+       **max_tokens** : :class:`python:int` | :data:`python:None`
+           Maximum number of tokens to supply to the function.
+
+       **temperature** : :class:`python:float` | :data:`python:None`
+           Temperature to supply to the function.
+
+       **max_tokens_param** : :class:`python:str` | :data:`python:None`
+           Maximum tokens parameter to supply to the function.
+
+       **send_temperature** : :ref:`bool <python:bltin-boolean-values>` | :data:`python:None`
+           Send temperature to supply to the function.
+
+       **send_cache_key** : :ref:`bool <python:bltin-boolean-values>`
+           Send cache key to supply to the function.
+
+       **response_format** : :class:`python:dict`\[:class:`python:str`, :obj:`Any`] | :data:`python:None`
+           Response format to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: auth_headers(api_key: str | None, *, auth_style: str = 'bearer', base: dict[str, str] | None = None) -> dict[str, str]
+
+   
+   Build request headers honoring the configured authorization style.
+
+   * ``bearer`` (default) → ``Authorization: Bearer <key>``
+   * ``azure-api-key`` → ``api-key: <key>`` (Azure OpenAI)
+
+   Returns a fresh dictionary. ``base`` (if given) is copied, not mutated.
+
+   :Parameters:
+
+       **api_key** : :class:`python:str` | :data:`python:None`
+           API key to supply to the function.
+
+       **auth_style** : :class:`python:str`
+           Authorization style to supply to the function.
+
+       **base** : :class:`python:dict`\[:class:`python:str`, :class:`python:str`] | :data:`python:None`
+           Base to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:str`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: parse_json_object(text: str | None) -> dict[str, Any] | None
+
+   
+   Best-effort parse of the first ``{...}`` JSON object in ``text``.
+
+   Tolerates Markdown fences (for example, \`\`\`json ... \`\`\`) and
+   surrounding prose because some chat completions disregard a "JSON only"
+   instruction. Returns ``None`` when no object can be parsed.
+
+   :Parameters:
+
+       **text** : :class:`python:str` | :data:`python:None`
+           Text value to parse, normalize, or write.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`] | :data:`python:None`
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: detect_provider(model: str | None, endpoint: str | None, *, env=os.environ) -> str
+
+   
+   Infer the provider identifier from explicit environment, model route, or hints.
+
+   Order: ``LLM_PROVIDER`` environment → ``provider/model`` route prefix →
+   endpoint host → model-name family → :data:`PROVIDER_OPENAI`.
+
+   :Parameters:
+
+       **model** : :class:`python:str` | :data:`python:None`
+           Model to supply to the function.
+
+       **endpoint** : :class:`python:str` | :data:`python:None`
+           Endpoint to supply to the function.
+
+       **env** : :obj:`Any`
+           Environment mapping to read instead of the process environment.
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           String result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: resolve_litellm_route(provider: str, model: str) -> str
+
+   
+   Return the LiteLLM ``provider/model`` route string for ``model``.
+
+
+   :Parameters:
+
+       **provider** : :class:`python:str`
+           Provider to supply to the function.
+
+       **model** : :class:`python:str`
+           Model to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           String result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: native_provider_configured(model: str | None, *, env=os.environ) -> bool
+
+   
+   Whether a native (LiteLLM) provider is *explicitly* configured.
+
+   A bare default (provider ``openai``, no endpoint, no key) must NOT be
+   treated as usable, or callers like ``llm_assist`` would report
+   availability and then fail at call time. Returns ``True`` only when
+   there is an explicit signal: ``LLM_PROVIDER`` is set, the model is a
+   native/route-prefixed name, or a provider API key is present.
+
+   :Parameters:
+
+       **model** : :class:`python:str` | :data:`python:None`
+           Model to supply to the function.
+
+       **env** : :obj:`Any`
+           Environment mapping to read instead of the process environment.
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>`
+           Boolean result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: default_cache_mechanism(provider: str) -> str
+
+   
+   Return the default token-caching mechanism for ``provider``.
+
+
+   :Parameters:
+
+       **provider** : :class:`python:str`
+           Provider to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           String result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: resolve_profile(*, model: str | None = None, endpoint: str | None = None, auth_style: str | None = None, env=os.environ, aali_fallback: Optional[Callable[[], AaliChatModel | None]] = None) -> LLMProfile
+
+   
+   Resolve an :class:`LLMProfile` from environment plus model/endpoint hints.
+
+   Precedence mirrors :func:`resolve_model_config`: explicit arguments →
+   ``LLM_*`` environment plus optional AALI configuration → safe defaults.
+
+   :Parameters:
+
+       **model** : :class:`python:str` | :data:`python:None`
+           Model to supply to the function.
+
+       **endpoint** : :class:`python:str` | :data:`python:None`
+           Endpoint to supply to the function.
+
+       **auth_style** : :class:`python:str` | :data:`python:None`
+           Authorization style to supply to the function.
+
+       **env** : :obj:`Any`
+           Environment mapping to read instead of the process environment.
+
+       **aali_fallback** : :obj:`Optional`\[:obj:`Callable`\[[], :obj:`AaliChatModel` | :data:`python:None`]]
+           AALI fallback to supply to the function.
+
+
+
+   :Returns:
+
+       :obj:`LLMProfile`
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: apply_anthropic_cache_control(messages: Sequence[dict[str, Any]]) -> list[dict[str, Any]]
+
+   
+   Apply Anthropic ephemeral cache control to the system prompt.
+
+   Return a copy of ``messages`` with an Anthropic ephemeral cache
+   breakpoint on the (first) system prompt.
+
+   Anthropic prompt caching is opt-in: the stable prefix must carry a
+   ``cache_control`` marker. The end of the system message is marked so the
+   entire system prompt (the large, stable prefix) is cached. A no-op
+   when there is no string-content system message.
+
+   :Parameters:
+
+       **messages** : :obj:`Sequence`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Messages to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: build_litellm_kwargs(profile: LLMProfile, messages: Sequence[dict[str, Any]], *, tools: Sequence[dict[str, Any]] | None = None, max_tokens: int | None = None, temperature: float | None = None, response_format: dict[str, Any] | None = None, api_key: str | None = None, api_base: str | None = None, api_version: str | None = None, stream: bool = False) -> dict[str, Any]
+
+   
+   Assemble keyword arguments for ``litellm.(a)completion``.
+
+   Applies the per-provider caching mechanism, native tool schema, and
+   credentials. The retry is owned by the seam (``num_retries=0``).
+
+   :Parameters:
+
+       **profile** : :obj:`LLMProfile`
+           Profile to supply to the function.
+
+       **messages** : :obj:`Sequence`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Messages to supply to the function.
+
+       **tools** : :obj:`Sequence`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]] | :data:`python:None`
+           Tools to supply to the function.
+
+       **max_tokens** : :class:`python:int` | :data:`python:None`
+           Maximum number of tokens to supply to the function.
+
+       **temperature** : :class:`python:float` | :data:`python:None`
+           Temperature to supply to the function.
+
+       **response_format** : :class:`python:dict`\[:class:`python:str`, :obj:`Any`] | :data:`python:None`
+           Response format to supply to the function.
+
+       **api_key** : :class:`python:str` | :data:`python:None`
+           API key to supply to the function.
+
+       **api_base** : :class:`python:str` | :data:`python:None`
+           API base to supply to the function.
+
+       **api_version** : :class:`python:str` | :data:`python:None`
+           API version to supply to the function.
+
+       **stream** : :ref:`bool <python:bltin-boolean-values>`
+           Stream to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: normalize_usage(usage: Any) -> dict[str, int]
+
+   
+   Map any provider's usage object/dictionary to a canonical token dictionary.
+
+   Canonical keys: ``prompt_tokens``, ``completion_tokens``,
+   ``total_tokens``, ``cached_prompt_tokens`` (cache reads),
+   ``cache_creation_tokens`` (cache writes — Anthropic, billed higher).
+   Handles OpenAI/Azure ``prompt_tokens_details.cached_tokens``,
+   Anthropic ``cache_read_input_tokens`` / ``cache_creation_input_tokens``,
+   and Gemini ``cachedContentTokenCount``.
+
+   :Parameters:
+
+       **usage** : :obj:`Any`
+           Usage to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:int`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: acall(profile: LLMProfile, messages: Sequence[dict[str, Any]], *, tools: Sequence[dict[str, Any]] | None = None, max_tokens: int | None = None, temperature: float | None = None, response_format: dict[str, Any] | None = None, api_key: str | None = None, api_base: str | None = None, api_version: str | None = None, allowed_hosts: frozenset[str] | set[str] | None = None, offline: bool = False) -> dict[str, Any]
+   :async:
+
+
+   
+   Async transport seam, which is the single place an LLM call is issued.
+
+   Returns an OpenAI-shaped response dictionary (``choices`` plus ``usage``) so
+   existing parsers work unchanged. Dispatches to LiteLLM for native
+   providers or the httpx OpenAI-compatible path for custom endpoints.
+
+   :Parameters:
+
+       **profile** : :obj:`LLMProfile`
+           Profile to supply to the function.
+
+       **messages** : :obj:`Sequence`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Messages to supply to the function.
+
+       **tools** : :obj:`Sequence`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]] | :data:`python:None`
+           Tools to supply to the function.
+
+       **max_tokens** : :class:`python:int` | :data:`python:None`
+           Maximum number of tokens to supply to the function.
+
+       **temperature** : :class:`python:float` | :data:`python:None`
+           Temperature to supply to the function.
+
+       **response_format** : :class:`python:dict`\[:class:`python:str`, :obj:`Any`] | :data:`python:None`
+           Response format to supply to the function.
+
+       **api_key** : :class:`python:str` | :data:`python:None`
+           API key to supply to the function.
+
+       **api_base** : :class:`python:str` | :data:`python:None`
+           API base to supply to the function.
+
+       **api_version** : :class:`python:str` | :data:`python:None`
+           API version to supply to the function.
+
+       **allowed_hosts** : :obj:`frozenset`\[:class:`python:str`] | :obj:`set`\[:class:`python:str`] | :data:`python:None`
+           Allowed hosts to supply to the function.
+
+       **offline** : :ref:`bool <python:bltin-boolean-values>`
+           Offline to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: call(profile: LLMProfile, messages: Sequence[dict[str, Any]], *, tools: Sequence[dict[str, Any]] | None = None, max_tokens: int | None = None, temperature: float | None = None, response_format: dict[str, Any] | None = None, api_key: str | None = None, api_base: str | None = None, api_version: str | None = None, allowed_hosts: frozenset[str] | set[str] | None = None, offline: bool = False) -> dict[str, Any]
+
+   
+   Return synchronous counterpart to :func:`acall`.
+
+
+   :Parameters:
+
+       **profile** : :obj:`LLMProfile`
+           Profile to supply to the function.
+
+       **messages** : :obj:`Sequence`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Messages to supply to the function.
+
+       **tools** : :obj:`Sequence`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]] | :data:`python:None`
+           Tools to supply to the function.
+
+       **max_tokens** : :class:`python:int` | :data:`python:None`
+           Maximum number of tokens to supply to the function.
+
+       **temperature** : :class:`python:float` | :data:`python:None`
+           Temperature to supply to the function.
+
+       **response_format** : :class:`python:dict`\[:class:`python:str`, :obj:`Any`] | :data:`python:None`
+           Response format to supply to the function.
+
+       **api_key** : :class:`python:str` | :data:`python:None`
+           API key to supply to the function.
+
+       **api_base** : :class:`python:str` | :data:`python:None`
+           API base to supply to the function.
+
+       **api_version** : :class:`python:str` | :data:`python:None`
+           API version to supply to the function.
+
+       **allowed_hosts** : :obj:`frozenset`\[:class:`python:str`] | :obj:`set`\[:class:`python:str`] | :data:`python:None`
+           Allowed hosts to supply to the function.
+
+       **offline** : :ref:`bool <python:bltin-boolean-values>`
+           Offline to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: astream(profile: LLMProfile, messages: Sequence[dict[str, Any]], *, tools: Sequence[dict[str, Any]] | None = None, max_tokens: int | None = None, temperature: float | None = None, api_key: str | None = None, api_base: str | None = None, api_version: str | None = None, allowed_hosts: frozenset[str] | set[str] | None = None, offline: bool = False)
+   :async:
+
+
+   
+   Async streaming seam — yields OpenAI-shaped chunk dicts.
+
+
+   :Parameters:
+
+       **profile** : :obj:`LLMProfile`
+           Profile to supply to the function.
+
+       **messages** : :obj:`Sequence`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Messages to supply to the function.
+
+       **tools** : :obj:`Sequence`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]] | :data:`python:None`
+           Tools to supply to the function.
+
+       **max_tokens** : :class:`python:int` | :data:`python:None`
+           Maximum number of tokens to supply to the function.
+
+       **temperature** : :class:`python:float` | :data:`python:None`
+           Temperature to supply to the function.
+
+       **api_key** : :class:`python:str` | :data:`python:None`
+           API key to supply to the function.
+
+       **api_base** : :class:`python:str` | :data:`python:None`
+           API base to supply to the function.
+
+       **api_version** : :class:`python:str` | :data:`python:None`
+           API version to supply to the function.
+
+       **allowed_hosts** : :obj:`frozenset`\[:class:`python:str`] | :obj:`set`\[:class:`python:str`] | :data:`python:None`
+           Allowed hosts to supply to the function.
+
+       **offline** : :ref:`bool <python:bltin-boolean-values>`
+           Offline to supply to the function.
+
+
+
+   :Returns:
+
+       :obj:`Any`
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: warm_cache(profile: LLMProfile, system_prompt: str, *, tools: Sequence[dict[str, Any]] | None = None, api_key: str | None = None, api_base: str | None = None, api_version: str | None = None, allowed_hosts: frozenset[str] | set[str] | None = None, offline: bool = False) -> dict[str, int] | None
+   :async:
+
+
+   
+   Prime the provider's prompt cache with the stable system prefix.
+
+   Sends a minimal completion (the system prefix plus a one-token reply cap)
+   so the next real turn reads the cached prefix instead of re-ingesting
+   it after an idle period. No-op (returns ``None``) when the profile has
+   no caching mechanism, when offline, or when there is no prefix.
+   Errors are swallowed. Warming is best-effort and must never break a
+   request path. Returns the normalized usage on success.
+
+   :Parameters:
+
+       **profile** : :obj:`LLMProfile`
+           Profile to supply to the function.
+
+       **system_prompt** : :class:`python:str`
+           System prompt to supply to the function.
+
+       **tools** : :obj:`Sequence`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]] | :data:`python:None`
+           Tools to supply to the function.
+
+       **api_key** : :class:`python:str` | :data:`python:None`
+           API key to supply to the function.
+
+       **api_base** : :class:`python:str` | :data:`python:None`
+           API base to supply to the function.
+
+       **api_version** : :class:`python:str` | :data:`python:None`
+           API version to supply to the function.
+
+       **allowed_hosts** : :obj:`frozenset`\[:class:`python:str`] | :obj:`set`\[:class:`python:str`] | :data:`python:None`
+           Allowed hosts to supply to the function.
+
+       **offline** : :ref:`bool <python:bltin-boolean-values>`
+           Offline to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :class:`python:int`] | :data:`python:None`
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: DEFAULT_MODEL
+   :value: 'gpt-4o-mini'
+
+
+.. py:data:: PROVIDER_OPENAI
+   :value: 'openai'
+
+
+.. py:data:: PROVIDER_AZURE
+   :value: 'azure'
+
+
+.. py:data:: PROVIDER_ANTHROPIC
+   :value: 'anthropic'
+
+
+.. py:data:: PROVIDER_GEMINI
+   :value: 'gemini'
+
+
+.. py:data:: PROVIDER_COMPAT
+   :value: 'compat'
+
+
+.. py:data:: CACHE_OPENAI_AUTO
+   :value: 'openai_auto'
+
+
+.. py:data:: CACHE_ANTHROPIC
+   :value: 'anthropic_cache_control'
+
+
+.. py:data:: CACHE_GEMINI
+   :value: 'gemini_context'
+
+
+.. py:data:: CACHE_NONE
+   :value: 'none'
+
+
+.. py:data:: TRANSPORT_LITELLM
+   :value: 'litellm'
+
+
+.. py:data:: TRANSPORT_COMPAT
+   :value: 'openai_compat'
+
+
+.. py:data:: PROVIDER_HOSTS
+   :type:  dict[str, frozenset[str]]
+
+
+

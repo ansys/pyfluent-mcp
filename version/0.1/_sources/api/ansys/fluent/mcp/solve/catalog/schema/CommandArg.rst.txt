@@ -1,0 +1,99 @@
+
+
+
+
+
+
+:class:`CommandArg`
+===================
+
+
+.. py:class:: ansys.fluent.mcp.solve.catalog.schema.CommandArg
+
+   
+   One argument of a command or query.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: CommandArg
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~name`
+            - 
+          * - :py:attr:`~py_name`
+            - 
+          * - :py:attr:`~type_hint`
+            - 
+          * - :py:attr:`~help`
+            - 
+          * - :py:attr:`~file_purpose`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.catalog.schema import CommandArg
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: name
+   :type:  str
+
+.. py:attribute:: py_name
+   :type:  str
+
+.. py:attribute:: type_hint
+   :type:  str
+
+.. py:attribute:: help
+   :type:  str
+
+.. py:attribute:: file_purpose
+   :type:  str | None
+   :value: None
+
+
+
+
+
+

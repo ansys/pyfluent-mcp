@@ -1,0 +1,362 @@
+
+
+
+
+
+
+The ``file_handlers.py`` module
+===============================
+
+.. py:module:: ansys.fluent.mcp.common.file_handlers
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: file_handlers
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.file_handlers.FileProbe`
+            - Result of probing a file for product-relevant metadata.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.file_handlers.FileHandler`
+            - Describes one file type the agent can route to a backend.
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~normalize_path_for_fluent`
+            - Return ``path`` as a forward-slash POSIX-style string.
+
+
+          * - :py:obj:`~register_handler`
+            - Register a new handler. First match (by longest suffix) wins.
+
+
+          * - :py:obj:`~list_handlers`
+            - Return a copy of the current registry (for introspection/tests).
+
+
+          * - :py:obj:`~find_handler`
+            - Return the first registered handler whose suffix matches ``path``.
+
+
+          * - :py:obj:`~find_all_handlers`
+            - Return every registered handler whose suffix matches ``path``.
+
+
+          * - :py:obj:`~supported_suffixes`
+            - Flat, de-duplicated list of every registered suffix.
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> FileProbe</api/ansys/fluent/mcp/common/file_handlers/FileProbe>
+    <span class="nf nf-cod-symbol_class"></span> FileHandler</api/ansys/fluent/mcp/common/file_handlers/FileHandler>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Modular registry mapping file suffixes to product/component handlers.
+
+Used by the ``read_file`` agent tool to:
+
+1. Recognize a user-supplied filesystem path by suffix.
+2. Probe the file (cheap, read-only) for product-relevant metadata, such
+   as dimension and precision for a Fluent ``.cas.h5`` archive.
+3. Decide which backend (PyFluent solver, Fluids One solve, …) and
+   which launch options (precision, dimension, lightweight) to use.
+
+Adding a new file type is a single registry call. See
+:func:`register_handler`. The registry is intentionally tiny. Each
+handler owns its own suffix list, candidate-product list, probe
+function, and launch-argument builder.
+
+Design constraints:
+
+* No I/O at import time. All probing is lazy and read-only.
+* Optional dependencies (``h5py``) are imported inside probe functions
+  so the agent works even when the extra is not installed.
+* Probes never write to the file, never lock it, and never modify the
+  user's session.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: normalize_path_for_fluent(path: str | pathlib.Path) -> str
+
+   
+   Return ``path`` as a forward-slash POSIX-style string.
+
+   Cross-platform safe: works whether the input is a ``pathlib.Path``
+   object, a Windows-style raw string (``"C:\\\\foo\\bar"``), a
+   Windows-style forward-slash string (``"C:/foo/bar"``), or a POSIX
+   path (``"/foo/bar"``). Output is safe to embed inside a Python
+   source code snippet bound for Fluent — no Python string-escape
+   pitfalls — and is accepted by Fluent's settings API on both
+   Windows and Linux solver builds.
+
+   Notable shapes preserved by the conversion:
+
+   * Drive letters: ``C:\\foo`` → ``C:/foo``.
+   * UNC paths: ``\\\\server\\share\\file`` → ``//server/share/file``.
+   * Mixed separators: ``C:/foo\\bar`` → ``C:/foo/bar``.
+   * No trailing slashes (matches Fluent's expected form).
+
+   Why not ``str(path).replace('\\', '/')``? That works for the common
+   case but leaves redundant separators and doesn't normalize mixed
+   ``./``/``../`` segments. Routing through ``PureWindowsPath``
+   handles those cases consistently. ``..`` resolution is left to the
+   caller (we never want to silently rewrite ``..`` paths — the
+   ``_validate_read_file_path`` guard rejects them outright).
+
+   :Parameters:
+
+       **path** : :class:`python:str` | :obj:`Path`
+           Fluent object path or file-system path to inspect.
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           String result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: register_handler(handler: FileHandler) -> None
+
+   
+   Register a new handler. First match (by longest suffix) wins.
+
+   Registration is idempotent by ``handler.name``. Re-registering a
+   handler with the same name replaces the prior entry instead of
+   appending a duplicate. This lets an optional consuming layer (one
+   that adds non-solve geometry / Prime meshing CAD handlers) import its
+   registration module more than once without bloating the registry.
+
+   Boundary note: this OSS package is **solve-only**. It registers
+   ONLY Fluent solver file types (case/mesh/data/project/HDF5).
+   Geometry (CAD import) and Prime meshing (readcad) handlers are NOT
+   registered here. They belong to the geometry/mesh products and are
+   registered into this same registry by an optional higher-level layer
+   via :func:`register_handler`. A standalone ``ansys-fluent-mcp``
+   install therefore exposes a solve-only registry, which is correct
+   for the solve leaf's ``compare_files`` tool.
+
+   :Parameters:
+
+       **handler** : :obj:`FileHandler`
+           Callable inspected or registered by the helper.
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: list_handlers() -> list[FileHandler]
+
+   
+   Return a copy of the current registry (for introspection/tests).
+
+
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:obj:`FileHandler`]
+           Collection containing the operation results.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: find_handler(path: str | pathlib.Path) -> FileHandler | None
+
+   
+   Return the first registered handler whose suffix matches ``path``.
+
+
+   :Parameters:
+
+       **path** : :class:`python:str` | :obj:`Path`
+           Fluent object path or file-system path to inspect.
+
+
+
+   :Returns:
+
+       :obj:`FileHandler` | :data:`python:None`
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: find_all_handlers(path: str | pathlib.Path) -> list[FileHandler]
+
+   
+   Return every registered handler whose suffix matches ``path``.
+
+   Used by ``read_file`` to disambiguate suffixes that legitimately
+   belong to more than one component. For example, ``.fmd`` is valid as
+   both a CAD geometry import (Fluids One Geometry component) and a
+   Prime meshing CAD read (Mesh component). The caller resolves the
+   ambiguity by inspecting ``handler.component`` against a user-
+   supplied ``component`` argument or by prompting the user.
+
+   :Parameters:
+
+       **path** : :class:`python:str` | :obj:`Path`
+           Fluent object path or file-system path to inspect.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:obj:`FileHandler`]
+           Collection containing the operation results.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: supported_suffixes() -> list[str]
+
+   
+   Flat, de-duplicated list of every registered suffix.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:class:`python:str`]
+           Collection containing the operation results.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

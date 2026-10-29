@@ -1,0 +1,189 @@
+
+
+
+
+
+
+The ``config.py`` module
+========================
+
+.. py:module:: ansys.fluent.mcp.common.config
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: config
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.config.FluidsMCPConfig`
+            - Resolved configuration values.
+
+
+
+
+    .. tab-item:: Exceptions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.config.ConfigError`
+            - Raised when an environment variable is set to an invalid value.
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~load_config`
+            - Read and validate every recognized environment variable.
+
+
+          * - :py:obj:`~validate_config`
+            - Validate configuration.
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> FluidsMCPConfig</api/ansys/fluent/mcp/common/config/FluidsMCPConfig>
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-md-lightning_bolt"></span> ConfigError</api/ansys/fluent/mcp/common/config/ConfigError>
+
+
+
+
+
+
+
+Description
+-----------
+
+Centralized environment-variable configuration for PyFluent MPP.
+
+Every ``FLUIDS_MCP_*`` variable is read once at startup and validated. ``validate_config()``
+is called from each leaf's CLI entry point so a typo or out-of-range
+value fails fast with a clear message instead of silently corrupting
+runtime behavior later.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: load_config(env: Optional[dict[str, str]] = None) -> FluidsMCPConfig
+
+   
+   Read and validate every recognized environment variable.
+
+   Pass ``env`` to inject a synthetic environment for unit tests.
+   Unknown ``FLUIDS_MCP_*`` variables produce a warning string in the
+   returned config (also logged at WARNING level), but do not abort.
+
+   :Parameters:
+
+       **env** : :obj:`Optional`\[:class:`python:dict`\[:class:`python:str`, :class:`python:str`]]
+           Environment mapping to read instead of the process environment.
+
+
+
+   :Returns:
+
+       :obj:`FluidsMCPConfig`
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: validate_config(env: Optional[dict[str, str]] = None) -> FluidsMCPConfig
+
+   
+   Validate configuration.
+
+   Alias of :func:`load_config` that raises :class:`ConfigError` on any issue.
+   Call once from each CLI entry point.
+
+   :Parameters:
+
+       **env** : :obj:`Optional`\[:class:`python:dict`\[:class:`python:str`, :class:`python:str`]]
+           Environment mapping to read instead of the process environment.
+
+
+
+   :Returns:
+
+       :obj:`FluidsMCPConfig`
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

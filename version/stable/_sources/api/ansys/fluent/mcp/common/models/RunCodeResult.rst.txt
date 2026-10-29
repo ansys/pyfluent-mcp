@@ -1,0 +1,122 @@
+
+
+
+
+
+
+:class:`RunCodeResult`
+======================
+
+
+.. py:class:: ansys.fluent.mcp.common.models.RunCodeResult(/, **data: Any)
+
+   Bases: :py:obj:`pydantic.BaseModel`
+
+
+   
+   Result of a code execution call.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: RunCodeResult
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~status`
+            - 
+          * - :py:attr:`~stdout`
+            - 
+          * - :py:attr:`~stderr`
+            - 
+          * - :py:attr:`~return_value`
+            - 
+          * - :py:attr:`~message`
+            - 
+          * - :py:attr:`~error_code`
+            - 
+          * - :py:attr:`~warnings`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.models import RunCodeResult
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: status
+   :type:  Literal['ok', 'error']
+
+.. py:attribute:: stdout
+   :type:  str
+   :value: ''
+
+
+.. py:attribute:: stderr
+   :type:  str
+   :value: ''
+
+
+.. py:attribute:: return_value
+   :type:  Any
+   :value: None
+
+
+.. py:attribute:: message
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: error_code
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: warnings
+   :type:  list[str]
+   :value: []
+
+
+
+
+
+

@@ -1,0 +1,93 @@
+
+
+
+
+
+
+:class:`RetrySpec`
+==================
+
+
+.. py:class:: ansys.fluent.mcp.common.llm_wire.RetrySpec
+
+   
+   Retry/backoff policy applied by the transport seam.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: RetrySpec
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~max_attempts`
+            - 
+          * - :py:attr:`~backoff_base`
+            - 
+          * - :py:attr:`~timeout_s`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.llm_wire import RetrySpec
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: max_attempts
+   :type:  int
+   :value: 3
+
+
+.. py:attribute:: backoff_base
+   :type:  float
+   :value: 0.5
+
+
+.. py:attribute:: timeout_s
+   :type:  float
+   :value: 60.0
+
+
+
+
+
+
