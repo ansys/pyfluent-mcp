@@ -24,6 +24,9 @@ General settings
      - Cap on deterministic tool-loop iterations (default ``30``)
    * - ``FLUIDS_MCP_INTENT_GUARD``
      - ``0`` turns off the ``run_code`` crash-signature guard (default on)
+   * - ``FLUIDS_MCP_HOST_MIDDLEWARE``
+     - ``0`` turns off the host middleware: trace ids, timeout-safe long
+       operations, error guidance, and elicitation (default on)
 
 Execution and retrieval behavior
 --------------------------------
@@ -38,6 +41,30 @@ The repository provides:
 - backend abstraction
 - deterministic tool execution
 - MCP transport support
+
+Host contract
+-------------
+
+Every tool declares MCP behavior hints (``readOnlyHint``, ``destructiveHint``,
+``idempotentHint``) so clients such as VS Code can run read-only tools without
+confirmation. The server also installs this middleware on every leaf:
+
+- **Trace ids:** each result's ``_meta`` carries ``fluent/trace_id`` and
+  ``fluent/duration_ms``, and the server logs the same id.
+- **Timeout-safe long operations:** when a client times out and retries a
+  long-running mutating call, the original keeps running and the identical
+  retry joins it. A finished result of an idempotent call such as ``connect``
+  is returned once to that retry. Progress notifications are sent every 10
+  seconds.
+- **Error guidance:** every error result carries ``retryable`` and, when known,
+  ``next_action``.
+- **Elicitation:** a result with ``input_request`` is answered through MCP
+  elicitation when the client supports it. Secrets are never requested this
+  way.
+
+The solve leaf also publishes the ``fluent://session/status``,
+``fluent://solver/status`` and ``fluent://case/named-objects`` resources and the
+``fluent_setup_change`` and ``fluent_diagnose_divergence`` prompts.
 
 Transport security
 ------------------

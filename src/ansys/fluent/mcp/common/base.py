@@ -46,6 +46,11 @@ from ansys.fluent.mcp.common.errors import (
     typed_guard,
 )
 from ansys.fluent.mcp.common.file_handlers import normalize_path_for_fluent
+from ansys.fluent.mcp.common.host import (
+    annotations_for,
+    host_middleware_enabled,
+    install_host_middleware,
+)
 from ansys.fluent.mcp.common.models import ConnectResult, SessionStatus
 
 logger = logging.getLogger("ansys.fluent.mcp.base")
@@ -159,6 +164,11 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
     #: ``"prepare"`` (geometry), ``"mesh"`` (Prime), ``"fluent"`` (Fluent).
     component_label: str = ""
 
+    #: Install the host middleware stack (trace ids, timeout-safe long
+    #: operations, error guidance, elicitation). Subclasses that install
+    #: their own equivalent stack set this to ``False``.
+    host_middleware: bool = True
+
     def __init__(
         self,
         *,
@@ -205,9 +215,67 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         # :func:`register_run_code_observer_factory`.
         self._run_code_observers: list[Callable[..., Awaitable[None] | None]] = []
 
+        # Host contract: trace ids, timeout-safe long operations, error
+        # guidance and elicitation (see ``ansys.fluent.mcp.common.host``).
+        self._host_middleware_installed = self.host_middleware and host_middleware_enabled()
+        if self._host_middleware_installed:
+            install_host_middleware(self, hint_lookup=self.tool_annotations_for)
+
         self._register_tools()
         self._register_resources()
         self._attach_default_observers()
+
+    def tool_annotations_for(self, tool_name: str | None) -> dict[str, bool] | None:
+        """Return the MCP behavior hints for one of this server's tools.
+
+        Subclasses that register extra tools override this to add their own
+        classifications and fall back to ``super()``.
+
+        Parameters
+        ----------
+        tool_name : str | None
+            Registered tool name.
+
+        Returns
+        -------
+        dict[str, bool] | None
+            ``readOnlyHint`` / ``destructiveHint`` / ``idempotentHint``, or
+            ``None`` when the tool is unclassified.
+        """
+        return annotations_for(tool_name)
+
+    def tool(self, name_or_fn: Any = None, *args: Any, **kwargs: Any) -> Any:  # type: ignore[override]
+        """Register a tool, attaching its behavior hints unless given explicitly.
+
+        Parameters
+        ----------
+        name_or_fn : Any
+            Tool name or function, as accepted by ``FastMCP.tool``.
+        args : Any
+            Positional arguments forwarded to ``FastMCP.tool``.
+        kwargs : Any
+            Keyword arguments forwarded to ``FastMCP.tool``.
+
+        Returns
+        -------
+        Any
+            Whatever ``FastMCP.tool`` returns (a decorator or a tool).
+        """
+        name = kwargs.get("name") or (name_or_fn if isinstance(name_or_fn, str) else None)
+        if name is None and callable(name_or_fn):
+            name = getattr(name_or_fn, "__name__", None)
+        if name is not None:
+            if kwargs.get("annotations") is None:
+                kwargs["annotations"] = self.tool_annotations_for(name)
+            return super().tool(name_or_fn, *args, **kwargs)
+        parent_tool = super().tool
+
+        def _decorate(fn: Callable[..., Any]) -> Any:
+            if kwargs.get("annotations") is None:
+                kwargs["annotations"] = self.tool_annotations_for(getattr(fn, "__name__", None))
+            return parent_tool(fn, *args, **kwargs)
+
+        return _decorate
 
     def _attach_default_observers(self) -> None:
         """Retrieve and attach default ``run_code`` observers from registered factories.

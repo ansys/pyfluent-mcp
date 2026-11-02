@@ -232,6 +232,33 @@ will:
 - return rich error envelopes the host's planner can branch on,
 - never retry, queue, or sequence steps internally.
 
+### What every tool result carries (host contract)
+
+- **Behavior hints.** Every tool declares `readOnlyHint`,
+  `destructiveHint` and `idempotentHint`. Read-only tools are safe to
+  run without confirmation; `run_code` is destructive and must not be
+  retried blindly.
+- **Error guidance.** Every error result has `retryable` and, when
+  known, `next_action`. Follow `next_action`; never resend a call with
+  `retryable: false` unchanged.
+- **Timeouts are safe to retry.** A long call that outlives your
+  request timeout keeps running. An identical retry joins the
+  still-running call (or, for idempotent tools such as `connect`,
+  returns its finished result once) instead of starting the work again.
+  Progress notifications arrive every 10 s while it runs.
+- **Trace id.** Each result's `_meta` holds `fluent/trace_id` and
+  `fluent/duration_ms`; the server logs the same id.
+- **Missing user input.** A result may carry `input_request`; hosts that
+  support MCP elicitation are asked directly, otherwise ask the user and
+  call again with that argument.
+- **Resources and prompts.** `fluent://session/status`,
+  `fluent://solver/status` and `fluent://case/named-objects` are
+  attachable context; `fluent_setup_change` and
+  `fluent_diagnose_divergence` are workflow prompts.
+
+Disable the middleware with `FLUIDS_MCP_HOST_MIDDLEWARE=0` if your host
+implements its own.
+
 ### Intent-guard error codes (defense-in-depth at `run_code`)
 
 `run_code` runs an offline, stateless **intent guard** before
