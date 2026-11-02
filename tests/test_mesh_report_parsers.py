@@ -14,7 +14,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ansys.fluent.mcp.solve.backends.mesh_report_parsers import parse_mesh_check, parse_mesh_quality
+from ansys.fluent.mcp.solve.backends.mesh_report_parsers import (
+    parse_mesh_check,
+    parse_mesh_quality,
+    parse_mesh_size,
+)
+
+
+def test_parse_mesh_size_reads_level_zero_row():
+    text = (
+        "\nMesh Size\n\nLevel    Cells    Faces    Nodes   Partitions\n"
+        "    0   125957   271385    30854            2\n\n 4 cell zones, 18 face zones.\n"
+    )
+    assert parse_mesh_size(text) == {
+        "cell_count": 125957,
+        "face_count": 271385,
+        "node_count": 30854,
+    }
+    empty = {"cell_count": None, "face_count": None, "node_count": None}
+    assert parse_mesh_size(None) == empty
+    assert parse_mesh_size("Error: no mesh") == empty
 
 
 def test_parse_mesh_quality_extracts_headline_values():
