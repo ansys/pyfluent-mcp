@@ -26,8 +26,10 @@ feature flag::
     (enable-feature 'utl)
 
 There is **no PyFluent settings-API equivalent** for this toggle as of
-Fluent 27.1 and PyFluent 0.38.1he Ansys-authored UTL regression
-scripts themselves use ``solver.execute_tui("(enable-feature 'utl)")``.
+Fluent 27.1 and PyFluent 0.43 (``preferences.General.UTLMode`` is null
+in no-GUI sessions and does not switch the namespace). The Ansys-authored
+UTL regression scripts themselves use
+``solver.execute_tui("(enable-feature 'utl)")``.
 This module isolates that one Scheme call in
 :func:`enable_utl`/:func:`disable_utl` and documents the exception.
 Every other UTL interaction goes through the PyFluent settings API.
@@ -116,6 +118,9 @@ async def detect_utl_mode(backend: Any) -> bool | None:
     """
     if backend is None or not getattr(backend, "is_connected", lambda: False)():
         return None
+    live = await _probe_physics_active(backend)
+    if live is not None:
+        return live
     try:
         state = await backend.get_state([UTL_PROBE_PATH])
     except Exception:  # probes are advisory
@@ -128,6 +133,51 @@ async def detect_utl_mode(backend: Any) -> bool | None:
     # Anything that resolves as not-inactive means physics namespace
     # is live, which is the UTL signal.
     return val is not None
+
+
+async def _probe_physics_active(backend: Any) -> bool | None:
+    """Ask the live solver whether ``setup.physics`` is active.
+
+    ``get_state(["setup.physics"])`` cannot serve as the detection
+    signal under UTL: Fluent 27.1 fails the state read with
+    ``GENERAL-CAR-CDR: invalid argument [1]: improper list``.
+
+    Parameters
+    ----------
+    backend : Any
+        Backend to supply to the function.
+
+    Returns
+    -------
+    bool | None
+        ``is_active()`` of ``setup.physics``, or ``None`` when the
+        backend has no live settings root or the call fails.
+    """
+    solver = getattr(backend, "_solver", None)
+    settings = getattr(solver, "settings", None)
+    if settings is None:
+        return None
+    import asyncio
+    import contextlib
+
+    def _read() -> bool | None:
+        """Read ``setup.physics.is_active()`` on the solver thread.
+
+        Returns
+        -------
+        bool | None
+            Boolean result, or ``None`` when the value is not a bool.
+        """
+        value = settings.setup.physics.is_active()
+        return value if isinstance(value, bool) else None
+
+    lock = getattr(backend, "_lock", None)
+    try:
+        async with lock if isinstance(lock, asyncio.Lock) else contextlib.nullcontext():
+            return await asyncio.to_thread(_read)
+    except Exception as exc:  # probes are advisory
+        logger.debug("utl probe via setup.physics.is_active() failed: %s", exc)
+        return None
 
 
 async def enable_utl(backend: Any) -> bool:
@@ -151,6 +201,12 @@ async def enable_utl(backend: Any) -> bool:
 
 async def disable_utl(backend: Any) -> bool:
     """Disable UTL on the live session. Returns ``True`` on success.
+
+    Only meaningful before a case is read. Fluent 27.1 does not support
+    disabling UTL once a case is loaded: it prints "Disabling UTL after
+    a case has been loaded has not been implemented" and leaves
+    ``setup.boundary_conditions`` active but empty. Callers should
+    refuse the toggle on a loaded case.
 
     Parameters
     ----------

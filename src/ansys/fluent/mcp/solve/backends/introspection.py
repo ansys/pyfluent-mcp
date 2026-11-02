@@ -248,6 +248,12 @@ def discover_named_objects_via_scheme(solver: Any) -> Optional[dict[str, list[st
     They fall back to the unwrapped form if the Scheme dialect does
     not support that pattern.
 
+    Read-only Scheme is kept here because the settings API has no
+    equivalent. On a 126k-cell, 22-collection case (Fluent 27.1),
+    this call takes about 3 s; :func:`discover_named_objects_via_walk`
+    takes about 33 s and reports child-group names rather than every
+    populated collection.
+
     Parameters
     ----------
     solver : Any

@@ -1576,42 +1576,36 @@ def test_pyfluent_run_code_validate_help_mesh_reports_and_screenshot(monkeypatch
     )
     assert asyncio.run(backend.mesh_check())["raw"] == ""
 
-    backend._solver = SimpleNamespace(scheme=FakeScheme(values={}))
-    assert asyncio.run(backend.mesh_counts()) == {
-        "cell_count": None,
-        "face_count": None,
-        "node_count": None,
-    }
-    backend._solver = SimpleNamespace(
-        scheme=FakeScheme(values={next(iter(FakeScheme().values), "unused"): [10, "20", 0]})
+    none_counts = {"cell_count": None, "face_count": None, "node_count": None}
+    size_text = (
+        "\nMesh Size\n\nLevel    Cells    Faces    Nodes   Partitions\n"
+        "    0       10       20       30            2\n\n 1 cell zones, 3 face zones.\n"
     )
-    assert asyncio.run(backend.mesh_counts()) == {
-        "cell_count": None,
-        "face_count": None,
-        "node_count": None,
-    }
-    backend._solver = SimpleNamespace(scheme=lambda _expr: ["10", "20.0", 30])
+    backend._solver = SimpleNamespace(settings=SimpleNamespace())
+    size_calls = []
+
+    def _size_info(code, stdout=size_text, status="ok"):
+        size_calls.append(code)
+        return asyncio.sleep(0, RunCodeResult(status=status, stdout=stdout))
+
+    monkeypatch.setattr(backend, "run_code", _size_info)
     assert asyncio.run(backend.mesh_counts()) == {
         "cell_count": 10,
         "face_count": 20,
         "node_count": 30,
     }
+    assert size_calls == ["session.settings.mesh.size_info()"]
     backend.invalidate_mesh_cache()
-    backend._solver = SimpleNamespace(scheme=lambda _expr: [None, "bad", False])
-    assert asyncio.run(backend.mesh_counts()) == {
-        "cell_count": None,
-        "face_count": None,
-        "node_count": None,
-    }
-    backend.invalidate_mesh_cache()
-    backend._solver = SimpleNamespace(
-        scheme=lambda _expr: (_ for _ in ()).throw(RuntimeError("scheme down"))
-    )
-    assert asyncio.run(backend.mesh_counts()) == {
-        "cell_count": None,
-        "face_count": None,
-        "node_count": None,
-    }
+    monkeypatch.setattr(backend, "run_code", lambda c: _size_info(c, stdout="No mesh.\n"))
+    assert asyncio.run(backend.mesh_counts()) == none_counts
+    monkeypatch.setattr(backend, "run_code", lambda c: _size_info(c, status="error"))
+    assert asyncio.run(backend.mesh_counts()) == none_counts
+
+    async def _boom(_code):
+        raise RuntimeError("size_info down")
+
+    monkeypatch.setattr(backend, "run_code", _boom)
+    assert asyncio.run(backend.mesh_counts()) == none_counts
     backend.invalidate_mesh_cache()
     backend._solver = SimpleNamespace()
     assert asyncio.run(backend.mesh_counts()) == {
