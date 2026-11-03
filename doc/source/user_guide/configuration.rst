@@ -81,7 +81,7 @@ HTTP operations.
    * - ``FLUIDS_MCP_CA_BUNDLE``
      - Path to a PEM CA bundle (also reads ``SSL_CERT_FILE`` / ``REQUESTS_CA_BUNDLE``)
    * - ``FLUIDS_MCP_VERIFY_TLS``
-     - Enable or disable TLS verification (default enabled)
+     - Turn TLS verification on or off (default on)
    * - ``FLUIDS_MCP_HTTP_TIMEOUT``
      - Timeout for outbound HTTP operations
 
