@@ -173,5 +173,22 @@ class SolveMCP(FluidsLeafMCP):
         # behave as plain leaves — exactly the goal of the MCP/agent
         # split. This package never imports or names that agent layer.
 
+    def _register_resources(self) -> None:
+        """Register the base resources plus live-context resources and workflow prompts.
+
+        Returns
+        -------
+        None
+            The function completes through its side effects.
+        """
+        super()._register_resources()
+        from ansys.fluent.mcp.solve.mcp.host_resources import (
+            register_solve_prompts,
+            register_solve_resources,
+        )
+
+        register_solve_resources(self)
+        register_solve_prompts(self)
+
 
 __all__ = ["SolveMCP"]

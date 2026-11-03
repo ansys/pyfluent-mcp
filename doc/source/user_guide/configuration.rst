@@ -24,6 +24,9 @@ General settings
      - Cap on deterministic tool-loop iterations (default ``30``)
    * - ``FLUIDS_MCP_INTENT_GUARD``
      - ``0`` turns off the ``run_code`` crash-signature guard (default on)
+   * - ``FLUIDS_MCP_HOST_CONTRACT``
+     - ``0`` turns off the host contract: trace ids, timeout-safe long
+       operations, and error guidance (default on)
 
 Execution and retrieval behavior
 --------------------------------
@@ -38,6 +41,27 @@ The repository provides:
 - backend abstraction
 - deterministic tool execution
 - MCP transport support
+
+Host contract
+-------------
+
+Every tool declares MCP behavior hints (``readOnlyHint``, ``destructiveHint``,
+``idempotentHint``) so clients such as VS Code can run read-only tools without
+confirmation. Every tool call also gets:
+
+- **Trace ids:** the server logs one line per call with a short trace id, its
+  duration, and its outcome. Error results carry the same id as ``trace_id``.
+- **Timeout-safe long operations:** when a client times out and retries a
+  long-running mutating call, the original keeps running and the identical
+  retry joins it. A finished result of an idempotent call such as ``connect``
+  is returned once to that retry.
+- **Error guidance:** every error result carries ``retryable`` and, when known,
+  ``next_action``. A result with ``input_request`` tells the client to ask the
+  user for the named argument and call again.
+
+The solve leaf also publishes the ``fluent://session/status``,
+``fluent://solver/status`` and ``fluent://case/named-objects`` resources and the
+``fluent_setup_change`` and ``fluent_diagnose_divergence`` prompts.
 
 Transport security
 ------------------
@@ -54,7 +78,7 @@ HTTP operations.
    * - ``FLUIDS_MCP_CA_BUNDLE``
      - Path to a PEM CA bundle (also reads ``SSL_CERT_FILE`` / ``REQUESTS_CA_BUNDLE``)
    * - ``FLUIDS_MCP_VERIFY_TLS``
-     - Enable or disable TLS verification (default enabled)
+     - Turn TLS verification on or off (default on)
    * - ``FLUIDS_MCP_HTTP_TIMEOUT``
      - Timeout for outbound HTTP operations
 
