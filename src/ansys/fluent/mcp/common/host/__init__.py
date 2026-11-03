@@ -16,74 +16,155 @@
 
 """Host-facing contract for generic MCP hosts.
 
-:func:`install_host_middleware` gives a FastMCP server the behavior generic
-hosts (VS Code Copilot, Claude Desktop, Cursor) rely on, outermost first:
+Generic MCP hosts (VS Code Copilot, Claude Desktop, Cursor) rely on:
 
-1. :class:`~ansys.fluent.mcp.common.host.trace.TraceMiddleware`: per-call trace id.
-2. :class:`~ansys.fluent.mcp.common.host.operations.LongOperationMiddleware`:
-   timeout-safe long operations.
-3. :class:`~ansys.fluent.mcp.common.host.guidance.ErrorGuidanceMiddleware`:
-   ``retryable`` / ``next_action`` on errors.
-4. :class:`~ansys.fluent.mcp.common.host.elicitation.ElicitationMiddleware`:
-   asks the user for a tool's missing input (innermost, so its single re-run
-   goes straight to the tool).
+* behavior hints on every tool (:mod:`ansys.fluent.mcp.common.host.annotations`);
+* ``retryable`` / ``next_action`` guidance on error results
+  (:mod:`ansys.fluent.mcp.common.host.guidance`);
+* long-running mutating calls that survive host timeouts
+  (:mod:`ansys.fluent.mcp.common.host.operations`);
+* per-call trace ids in the server log (:mod:`ansys.fluent.mcp.common.host.trace`).
 
-Tool annotations come from :mod:`ansys.fluent.mcp.common.host.annotations`.
-Set ``FLUIDS_MCP_HOST_MIDDLEWARE=0`` to disable the middleware.
+:class:`HostContract` applies all of this by wrapping each tool function at
+registration time. It uses only the standard library, so this package does not
+depend on the internals of the MCP server framework. Set
+``FLUIDS_MCP_HOST_CONTRACT=0`` to turn it off.
 """
 
 from __future__ import annotations
 
+import functools
+import inspect
 import os
+import time
 from typing import Any, Callable
 
 from ansys.fluent.mcp.common.host.annotations import annotations_for
-from ansys.fluent.mcp.common.host.elicitation import ElicitationMiddleware
-from ansys.fluent.mcp.common.host.guidance import ErrorGuidanceMiddleware, error_guidance
-from ansys.fluent.mcp.common.host.operations import LongOperationMiddleware
-from ansys.fluent.mcp.common.host.trace import TraceMiddleware, current_trace_id
+from ansys.fluent.mcp.common.host.guidance import enrich_result, error_code_of, error_guidance
+from ansys.fluent.mcp.common.host.operations import CallCoordinator, call_key
+from ansys.fluent.mcp.common.host.trace import (
+    bind_trace_id,
+    current_trace_id,
+    log_call,
+    new_trace_id,
+    reset_trace_id,
+)
 
-HOST_MIDDLEWARE_ENV = "FLUIDS_MCP_HOST_MIDDLEWARE"
-"""Environment variable that disables the host middleware when set to ``0``."""
+HOST_CONTRACT_ENV = "FLUIDS_MCP_HOST_CONTRACT"
+"""Environment variable that turns the host contract off when set to ``0``."""
 
 
-def host_middleware_enabled() -> bool:
-    """Return whether the host middleware should be installed.
+def host_contract_enabled() -> bool:
+    """Return whether the host contract should wrap tools.
 
     Returns
     -------
     bool
-        ``False`` only when ``FLUIDS_MCP_HOST_MIDDLEWARE`` is a falsy value.
+        ``False`` only when ``FLUIDS_MCP_HOST_CONTRACT`` is a falsy value.
     """
-    raw = os.environ.get(HOST_MIDDLEWARE_ENV, "1").strip().lower()
+    raw = os.environ.get(HOST_CONTRACT_ENV, "1").strip().lower()
     return raw not in {"0", "false", "no", "off"}
 
 
-def install_host_middleware(
-    server: Any,
-    *,
-    hint_lookup: Callable[[str], dict[str, bool] | None] = annotations_for,
-) -> None:
-    """Install the host middleware stack on a FastMCP server.
+def _outcome(result: Any) -> str:
+    dump = getattr(result, "model_dump", None)
+    payload = result if isinstance(result, dict) or not callable(dump) else dump()
+    code = error_code_of(payload)
+    return f"error:{code}" if code else "ok"
+
+
+class HostContract:
+    """Wrap tool functions with trace ids, timeout-safe execution and error guidance.
 
     Parameters
     ----------
-    server : Any
-        FastMCP server exposing ``add_middleware``.
     hint_lookup : Callable[[str], dict[str, bool] | None], default: annotations_for
-        Returns a tool's behavior hints for the long-operation middleware.
+        Returns a tool's behavior hints.
+    coordinator : CallCoordinator, optional
+        Joins and replays mutating calls; one per server.
     """
-    server.add_middleware(TraceMiddleware())
-    server.add_middleware(LongOperationMiddleware(hint_lookup=hint_lookup))
-    server.add_middleware(ErrorGuidanceMiddleware())
-    server.add_middleware(ElicitationMiddleware())
+
+    def __init__(
+        self,
+        hint_lookup: Callable[[str], dict[str, bool] | None] = annotations_for,
+        *,
+        coordinator: CallCoordinator | None = None,
+    ) -> None:
+        """Store the hint lookup and the per-server call coordinator."""
+        self._hint_lookup = hint_lookup
+        self._coordinator = coordinator or CallCoordinator()
+
+    def wrap(self, tool: str, fn: Callable[..., Any]) -> Callable[..., Any]:
+        """Return ``fn`` wrapped with the host contract.
+
+        The wrapper keeps ``fn``'s signature (``functools.wraps``), so the MCP
+        framework derives the same input schema.
+
+        Parameters
+        ----------
+        tool : str
+            Registered tool name.
+        fn : Callable[..., Any]
+            Tool function, sync or async.
+
+        Returns
+        -------
+        Callable[..., Any]
+            The wrapped tool function.
+        """
+        hints = self._hint_lookup(tool)
+        mutating = hints is not None and not hints.get("readOnlyHint")
+        idempotent = bool(hints and hints.get("idempotentHint"))
+        coordinator = self._coordinator
+
+        if inspect.iscoroutinefunction(fn):
+
+            @functools.wraps(fn)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                trace_id = new_trace_id()
+                token = bind_trace_id(trace_id)
+                started = time.monotonic()
+                outcome = "raised"
+                try:
+                    if mutating:
+                        result = await coordinator.run(
+                            call_key(tool, kwargs),
+                            lambda: fn(*args, **kwargs),
+                            idempotent=idempotent,
+                        )
+                    else:
+                        result = await fn(*args, **kwargs)
+                    result = enrich_result(result, trace_id=trace_id)
+                    outcome = _outcome(result)
+                    return result
+                finally:
+                    reset_trace_id(token)
+                    log_call(tool, trace_id, int((time.monotonic() - started) * 1000), outcome)
+
+            return async_wrapper
+
+        @functools.wraps(fn)
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+            trace_id = new_trace_id()
+            token = bind_trace_id(trace_id)
+            started = time.monotonic()
+            outcome = "raised"
+            try:
+                result = enrich_result(fn(*args, **kwargs), trace_id=trace_id)
+                outcome = _outcome(result)
+                return result
+            finally:
+                reset_trace_id(token)
+                log_call(tool, trace_id, int((time.monotonic() - started) * 1000), outcome)
+
+        return sync_wrapper
 
 
 __all__ = [
-    "HOST_MIDDLEWARE_ENV",
+    "HOST_CONTRACT_ENV",
+    "HostContract",
     "annotations_for",
     "current_trace_id",
     "error_guidance",
-    "host_middleware_enabled",
-    "install_host_middleware",
+    "host_contract_enabled",
 ]

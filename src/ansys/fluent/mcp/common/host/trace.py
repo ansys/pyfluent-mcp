@@ -16,33 +16,33 @@
 
 """Per-call trace ids so host-side and server-side logs line up.
 
-:class:`TraceMiddleware` gives every tool call a short ``trace_id``, logs one
-line per call (tool, trace id, duration, outcome) and attaches
-``{"fluent/trace_id", "fluent/duration_ms"}`` to the MCP result ``_meta``.
-Code running inside the call can read :func:`current_trace_id`.
+Every wrapped tool call gets a short trace id. The server logs one line per
+call (tool, trace id, duration, outcome); error results carry the id as
+``trace_id``; code running inside the call can read :func:`current_trace_id`.
 """
 
 from __future__ import annotations
 
 import contextvars
 import logging
-import time
-from typing import Any
 import uuid
 
-from fastmcp.server.middleware import Middleware
-
 logger = logging.getLogger("ansys.fluent.mcp.trace")
-
-TRACE_ID_KEY = "fluent/trace_id"
-"""Result ``_meta`` key carrying the trace id."""
-
-DURATION_KEY = "fluent/duration_ms"
-"""Result ``_meta`` key carrying the call duration in milliseconds."""
 
 _TRACE_ID: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "ansys_fluent_mcp_trace_id", default=None
 )
+
+
+def new_trace_id() -> str:
+    """Return a new 12-character trace id.
+
+    Returns
+    -------
+    str
+        Random hexadecimal id.
+    """
+    return uuid.uuid4().hex[:12]
 
 
 def current_trace_id() -> str | None:
@@ -56,74 +56,50 @@ def current_trace_id() -> str | None:
     return _TRACE_ID.get()
 
 
-def _ms(started: float) -> int:
-    return int((time.monotonic() - started) * 1000)
+def bind_trace_id(trace_id: str) -> contextvars.Token[str | None]:
+    """Make ``trace_id`` the current trace id.
+
+    Parameters
+    ----------
+    trace_id : str
+        Trace id of the call that is starting.
+
+    Returns
+    -------
+    contextvars.Token[str | None]
+        Token to pass to :func:`reset_trace_id` when the call ends.
+    """
+    return _TRACE_ID.set(trace_id)
 
 
-def _outcome(result: Any) -> str:
-    if getattr(result, "is_error", False):
-        return "error"
-    structured = getattr(result, "structured_content", None)
-    if (
-        isinstance(structured, dict)
-        and set(structured) == {"result"}
-        and isinstance(structured["result"], dict)
-    ):
-        structured = structured["result"]
-    if isinstance(structured, dict) and (
-        structured.get("status") == "error"
-        or structured.get("error_code")
-        or structured.get("ok") is False
-    ):
-        return f"error:{structured.get('error_code') or structured.get('error') or 'unknown'}"
-    return "ok"
+def reset_trace_id(token: contextvars.Token[str | None]) -> None:
+    """Restore the trace id that was current before :func:`bind_trace_id`.
+
+    Parameters
+    ----------
+    token : contextvars.Token[str | None]
+        Token returned by :func:`bind_trace_id`.
+    """
+    _TRACE_ID.reset(token)
 
 
-class TraceMiddleware(Middleware):
-    """Assign, log and return a trace id for every tool call."""
+def log_call(tool: str, trace_id: str, duration_ms: int, outcome: str) -> None:
+    """Log one line for a finished tool call.
 
-    async def on_call_tool(self, context: Any, call_next: Any) -> Any:
-        """Run the tool inside a trace.
-
-        Parameters
-        ----------
-        context : Any
-            FastMCP middleware context.
-        call_next : Any
-            Next handler in the middleware chain.
-
-        Returns
-        -------
-        Any
-            The tool result with trace metadata attached.
-        """
-        trace_id = uuid.uuid4().hex[:12]
-        token = _TRACE_ID.set(trace_id)
-        name = getattr(context.message, "name", "?")
-        started = time.monotonic()
-        result = None
-        try:
-            result = await call_next(context)
-        finally:
-            _TRACE_ID.reset(token)
-            if result is None:
-                logger.info(
-                    "tool=%s trace_id=%s duration_ms=%d outcome=raised",
-                    name,
-                    trace_id,
-                    _ms(started),
-                )
-        duration = _ms(started)
-        logger.info(
-            "tool=%s trace_id=%s duration_ms=%d outcome=%s",
-            name,
-            trace_id,
-            duration,
-            _outcome(result),
-        )
-        if hasattr(result, "meta"):
-            result.meta = {**(result.meta or {}), TRACE_ID_KEY: trace_id, DURATION_KEY: duration}
-        return result
+    Parameters
+    ----------
+    tool : str
+        Tool name.
+    trace_id : str
+        Trace id of the call.
+    duration_ms : int
+        Wall time in milliseconds.
+    outcome : str
+        ``ok``, ``error:<code>``, or ``raised``.
+    """
+    logger.info(
+        "tool=%s trace_id=%s duration_ms=%d outcome=%s", tool, trace_id, duration_ms, outcome
+    )
 
 
-__all__ = ["DURATION_KEY", "TRACE_ID_KEY", "TraceMiddleware", "current_trace_id"]
+__all__ = ["bind_trace_id", "current_trace_id", "log_call", "new_trace_id", "reset_trace_id"]

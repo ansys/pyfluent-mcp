@@ -48,7 +48,7 @@ _KNOWN_ENV_VARS: frozenset[str] = frozenset(
         "FLUIDS_MCP_SESSION_LOG_DIR",
         "FLUIDS_MCP_SESSION_LOG_LEVEL",
         "FLUIDS_MCP_INTENT_GUARD",
-        "FLUIDS_MCP_HOST_MIDDLEWARE",
+        "FLUIDS_MCP_HOST_CONTRACT",
     }
 )
 

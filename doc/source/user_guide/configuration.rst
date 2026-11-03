@@ -24,9 +24,9 @@ General settings
      - Cap on deterministic tool-loop iterations (default ``30``)
    * - ``FLUIDS_MCP_INTENT_GUARD``
      - ``0`` turns off the ``run_code`` crash-signature guard (default on)
-   * - ``FLUIDS_MCP_HOST_MIDDLEWARE``
-     - ``0`` turns off the host middleware: trace ids, timeout-safe long
-       operations, error guidance, and elicitation (default on)
+   * - ``FLUIDS_MCP_HOST_CONTRACT``
+     - ``0`` turns off the host contract: trace ids, timeout-safe long
+       operations, and error guidance (default on)
 
 Execution and retrieval behavior
 --------------------------------
@@ -47,20 +47,17 @@ Host contract
 
 Every tool declares MCP behavior hints (``readOnlyHint``, ``destructiveHint``,
 ``idempotentHint``) so clients such as VS Code can run read-only tools without
-confirmation. The server also installs this middleware on every leaf:
+confirmation. Every tool call also gets:
 
-- **Trace ids:** each result's ``_meta`` carries ``fluent/trace_id`` and
-  ``fluent/duration_ms``, and the server logs the same id.
+- **Trace ids:** the server logs one line per call with a short trace id, its
+  duration, and its outcome. Error results carry the same id as ``trace_id``.
 - **Timeout-safe long operations:** when a client times out and retries a
   long-running mutating call, the original keeps running and the identical
   retry joins it. A finished result of an idempotent call such as ``connect``
-  is returned once to that retry. Progress notifications are sent every 10
-  seconds.
+  is returned once to that retry.
 - **Error guidance:** every error result carries ``retryable`` and, when known,
-  ``next_action``.
-- **Elicitation:** a result with ``input_request`` is answered through MCP
-  elicitation when the client supports it. Secrets are never requested this
-  way.
+  ``next_action``. A result with ``input_request`` tells the client to ask the
+  user for the named argument and call again.
 
 The solve leaf also publishes the ``fluent://session/status``,
 ``fluent://solver/status`` and ``fluent://case/named-objects`` resources and the

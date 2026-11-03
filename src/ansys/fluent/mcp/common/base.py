@@ -46,11 +46,7 @@ from ansys.fluent.mcp.common.errors import (
     typed_guard,
 )
 from ansys.fluent.mcp.common.file_handlers import normalize_path_for_fluent
-from ansys.fluent.mcp.common.host import (
-    annotations_for,
-    host_middleware_enabled,
-    install_host_middleware,
-)
+from ansys.fluent.mcp.common.host import HostContract, annotations_for, host_contract_enabled
 from ansys.fluent.mcp.common.models import ConnectResult, SessionStatus
 
 logger = logging.getLogger("ansys.fluent.mcp.base")
@@ -164,10 +160,10 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
     #: ``"prepare"`` (geometry), ``"mesh"`` (Prime), ``"fluent"`` (Fluent).
     component_label: str = ""
 
-    #: Install the host middleware stack (trace ids, timeout-safe long
-    #: operations, error guidance, elicitation). Subclasses that install
-    #: their own equivalent stack set this to ``False``.
-    host_middleware: bool = True
+    #: Apply the host contract (trace ids, timeout-safe long operations,
+    #: error guidance) to every registered tool. Subclasses that apply their
+    #: own equivalent contract set this to ``False``.
+    host_contract: bool = True
 
     def __init__(
         self,
@@ -215,11 +211,13 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         # :func:`register_run_code_observer_factory`.
         self._run_code_observers: list[Callable[..., Awaitable[None] | None]] = []
 
-        # Host contract: trace ids, timeout-safe long operations, error
-        # guidance and elicitation (see ``ansys.fluent.mcp.common.host``).
-        self._host_middleware_installed = self.host_middleware and host_middleware_enabled()
-        if self._host_middleware_installed:
-            install_host_middleware(self, hint_lookup=self.tool_annotations_for)
+        # Host contract: trace ids, timeout-safe long operations and error
+        # guidance on every tool (see ``ansys.fluent.mcp.common.host``).
+        self._host_contract: HostContract | None = (
+            HostContract(self.tool_annotations_for)
+            if self.host_contract and host_contract_enabled()
+            else None
+        )
 
         self._register_tools()
         self._register_resources()
@@ -245,7 +243,10 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         return annotations_for(tool_name)
 
     def tool(self, name_or_fn: Any = None, *args: Any, **kwargs: Any) -> Any:  # type: ignore[override]
-        """Register a tool, attaching its behavior hints unless given explicitly.
+        """Register a tool with behavior hints and the host contract applied.
+
+        Accepts every ``FastMCP.tool`` call form (direct function, positional
+        or keyword name, bare decorator). Explicit ``annotations=`` win.
 
         Parameters
         ----------
@@ -261,19 +262,23 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         Any
             Whatever ``FastMCP.tool`` returns (a decorator or a tool).
         """
-        name = kwargs.get("name") or (name_or_fn if isinstance(name_or_fn, str) else None)
-        if name is None and callable(name_or_fn):
-            name = getattr(name_or_fn, "__name__", None)
-        if name is not None:
-            if kwargs.get("annotations") is None:
-                kwargs["annotations"] = self.tool_annotations_for(name)
-            return super().tool(name_or_fn, *args, **kwargs)
         parent_tool = super().tool
+        explicit = kwargs.get("name") or (name_or_fn if isinstance(name_or_fn, str) else None)
+
+        def _prepare(fn: Callable[..., Any]) -> Callable[..., Any]:
+            tool_name = explicit or getattr(fn, "__name__", "")
+            if kwargs.get("annotations") is None:
+                kwargs["annotations"] = self.tool_annotations_for(tool_name)
+            contract = getattr(self, "_host_contract", None)
+            return contract.wrap(tool_name, fn) if contract is not None else fn
+
+        if callable(name_or_fn):
+            fn = _prepare(name_or_fn)
+            return parent_tool(fn, *args, **kwargs)
 
         def _decorate(fn: Callable[..., Any]) -> Any:
-            if kwargs.get("annotations") is None:
-                kwargs["annotations"] = self.tool_annotations_for(getattr(fn, "__name__", None))
-            return parent_tool(fn, *args, **kwargs)
+            prepared = _prepare(fn)
+            return parent_tool(name_or_fn, *args, **kwargs)(prepared)
 
         return _decorate
 

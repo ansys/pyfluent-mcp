@@ -55,7 +55,8 @@ def test_names_descriptions_and_schemas_suit_strict_clients(tools):
             problems.append(f"{tool.name}: bad name")
         if not (tool.description or "").strip() or len(tool.description) > 2048:
             problems.append(f"{tool.name}: description missing or longer than 2048")
-        schema = tool.inputSchema
+        # MCP SDK v2 renamed ``inputSchema`` to ``input_schema``; support both.
+        schema = getattr(tool, "input_schema", None) or tool.inputSchema
         if schema.get("type") != "object" or "$ref" in json.dumps(schema):
             problems.append(f"{tool.name}: schema is not a flat object")
         for key, prop in (schema.get("properties") or {}).items():
@@ -64,13 +65,13 @@ def test_names_descriptions_and_schemas_suit_strict_clients(tools):
     assert problems == []
 
 
-def test_server_can_disable_host_middleware(monkeypatch):
-    class _OwnStack(SolveMCP):
-        host_middleware = False
+def test_server_can_turn_off_host_contract(monkeypatch):
+    class _OwnContract(SolveMCP):
+        host_contract = False
 
-    assert _OwnStack()._host_middleware_installed is False
-    monkeypatch.setenv("FLUIDS_MCP_HOST_MIDDLEWARE", "0")
-    assert SolveMCP()._host_middleware_installed is False
+    assert _OwnContract()._host_contract is None
+    monkeypatch.setenv("FLUIDS_MCP_HOST_CONTRACT", "0")
+    assert SolveMCP()._host_contract is None
 
 
 async def test_offline_error_contract_and_trace_id():
@@ -80,7 +81,7 @@ async def test_offline_error_contract_and_trace_id():
     assert payload["error_code"] == "not_connected"
     assert payload["retryable"] is True
     assert "connect" in payload["next_action"]
-    assert "fluent/trace_id" in result.meta
+    assert len(payload["trace_id"]) == 12
 
 
 async def test_resources_and_prompts_offline():
@@ -127,6 +128,6 @@ async def test_stdio_round_trip(tmp_path):
     transport = PythonStdioTransport(script_path=str(script), python_cmd=sys.executable)
     async with Client(transport, timeout=120) as client:
         names = {t.name for t in await client.list_tools()}
-        result = await client.call_tool("session_status", {}, raise_on_error=False)
+        result = await client.call_tool("get_state", {}, raise_on_error=False)
     assert {"session_status", "run_code", "describe_path"} <= names
-    assert result.meta and "fluent/trace_id" in result.meta
+    assert result.structured_content["retryable"] is True

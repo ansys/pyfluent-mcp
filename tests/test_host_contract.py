@@ -14,30 +14,46 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Host contract middleware: guidance, long operations, trace ids, elicitation."""
+"""Host contract: annotations, error guidance, timeout-safe calls, trace ids."""
 
 from __future__ import annotations
 
+import ast
 import asyncio
-import json
 import logging
-from types import SimpleNamespace
-from typing import Optional
+from pathlib import Path
 
-from fastmcp import Client, FastMCP
-from fastmcp.client.elicitation import ElicitResult
-from fastmcp.tools.tool import ToolResult
-from mcp.types import TextContent
+from pydantic import BaseModel
 import pytest
 
-from ansys.fluent.mcp.common.host import install_host_middleware
+from ansys.fluent.mcp.common.host import HostContract
 from ansys.fluent.mcp.common.host.annotations import annotations_for
-from ansys.fluent.mcp.common.host.elicitation import input_request_of
-from ansys.fluent.mcp.common.host.guidance import enrich_tool_result, error_guidance
-from ansys.fluent.mcp.common.host.operations import LongOperationMiddleware
-from ansys.fluent.mcp.common.host.trace import DURATION_KEY, TRACE_ID_KEY, current_trace_id
+from ansys.fluent.mcp.common.host.guidance import enrich_result, error_guidance
+from ansys.fluent.mcp.common.host.operations import CallCoordinator, call_key
+from ansys.fluent.mcp.common.host.trace import current_trace_id
 
-# Annotations --------------------------------------------------------------
+SRC = Path(__file__).resolve().parents[1] / "src"
+
+# Framework independence -----------------------------------------------------
+
+
+def test_src_never_imports_the_mcp_framework_directly():
+    offenders = []
+    for path in SRC.rglob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            names = []
+            if isinstance(node, ast.Import):
+                names = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+                names = [node.module]
+            for name in names:
+                if name.split(".")[0] in {"fastmcp", "mcp"}:
+                    offenders.append(f"{path.relative_to(SRC)}: {name}")
+    assert offenders == []
+
+
+# Annotations ----------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -64,7 +80,7 @@ def test_unknown_tool_has_no_annotations():
     assert annotations_for(None) is None
 
 
-# Error guidance -------------------------------------------------------------
+# Error guidance ---------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -90,225 +106,154 @@ def test_unknown_error_code_has_no_action():
     assert error_guidance("something_odd") == (False, None)
 
 
-def _result(payload):
-    return ToolResult(
-        content=[TextContent(type="text", text=json.dumps(payload))], structured_content=payload
+def test_enrich_result_on_mappings():
+    error = {"status": "error", "error_code": "not_connected", "message": "x"}
+    enriched = enrich_result(error, trace_id="abc")
+    assert enriched["retryable"] is True and "connect" in enriched["next_action"]
+    assert enriched["trace_id"] == "abc"
+    assert "retryable" not in error, "the tool's own mapping is not mutated"
+    ok = {"status": "ok", "value": 1}
+    assert enrich_result(ok) is ok
+
+
+def test_enrich_result_keeps_tool_guidance_and_handles_ok_false():
+    custom = {"status": "error", "error_code": "not_connected", "next_action": "custom"}
+    assert enrich_result(custom)["next_action"] == "custom"
+    asked = enrich_result(
+        {
+            "ok": False,
+            "error": "target_required",
+            "input_request": {"argument": "target", "message": "?", "options": ["a", "b"]},
+        }
     )
+    assert asked["retryable"] is True and "a, b" in asked["next_action"]
 
 
-def test_enrich_updates_structured_and_text_content():
-    enriched = enrich_tool_result(
-        _result({"status": "error", "error_code": "not_connected", "message": "x"})
-    )
-    assert enriched.structured_content["retryable"] is True
-    assert json.loads(enriched.content[0].text) == enriched.structured_content
+def test_enrich_result_on_models():
+    class TypedError(BaseModel):
+        status: str = "error"
+        error_code: str
+        message: str
+
+    class Ok(BaseModel):
+        status: str = "ok"
+
+    enriched = enrich_result(TypedError(error_code="timeout", message="slow"))
+    assert enriched["error_code"] == "timeout" and enriched["retryable"] is True
+    ok = Ok()
+    assert enrich_result(ok) is ok
 
 
-def test_enrich_keeps_tool_provided_guidance_and_ignores_success():
-    payload = {
-        "status": "error",
-        "error_code": "not_connected",
-        "retryable": False,
-        "next_action": "custom",
-    }
-    enriched = enrich_tool_result(_result(payload))
-    assert enriched.structured_content["next_action"] == "custom"
-    assert enriched.structured_content["retryable"] is False
-    ok = _result({"status": "ok", "value": 1})
-    assert enrich_tool_result(ok) is ok
+# Call coordination --------------------------------------------------------------
 
 
-def test_enrich_handles_ok_false_and_input_request():
-    enriched = enrich_tool_result(
-        _result(
-            {
-                "ok": False,
-                "error": "target_required",
-                "input_request": {"argument": "target", "message": "?", "options": ["a", "b"]},
-            }
-        )
-    )
-    assert enriched.structured_content["retryable"] is True
-    assert "a, b" in enriched.structured_content["next_action"]
-
-
-# Long operations ------------------------------------------------------------
-
-
-class _Backend:
+class _Calls:
     def __init__(self, *, delay=0.0, result=None):
-        self.calls = 0
+        self.count = 0
         self.delay = delay
         self.result = result
 
-    async def __call__(self, context):
-        self.calls += 1
+    async def __call__(self):
+        self.count += 1
         if self.delay:
             await asyncio.sleep(self.delay)
-        if self.result is not None:
-            return self.result
-        return SimpleNamespace(is_error=False, structured_content={"status": "ok", "n": self.calls})
+        return self.result if self.result is not None else {"status": "ok", "n": self.count}
 
 
-def _ctx(name, arguments=None, progress=None):
-    return SimpleNamespace(
-        message=SimpleNamespace(name=name, arguments=arguments or {}), fastmcp_context=progress
-    )
-
-
-async def test_read_only_calls_pass_through():
-    middleware, backend = LongOperationMiddleware(), _Backend()
-    await middleware.on_call_tool(_ctx("get_state"), backend)
-    await middleware.on_call_tool(_ctx("get_state"), backend)
-    assert backend.calls == 2
+def test_call_key_ignores_unserializable_arguments():
+    assert call_key("connect", {"ip": "a", "ctx": object()}) == call_key("connect", {"ip": "a"})
+    assert call_key("connect", {"ip": "a"}) != call_key("connect", {"ip": "b"})
 
 
 async def test_identical_concurrent_calls_join():
-    middleware, backend = LongOperationMiddleware(heartbeat_s=0.01), _Backend(delay=0.05)
+    coordinator, calls = CallCoordinator(), _Calls(delay=0.05)
+    key = call_key("run_code", {"code": "x"})
     first, second = await asyncio.gather(
-        middleware.on_call_tool(_ctx("run_code", {"code": "x"}), backend),
-        middleware.on_call_tool(_ctx("run_code", {"code": "x"}), backend),
+        coordinator.run(key, calls, idempotent=False),
+        coordinator.run(key, calls, idempotent=False),
     )
-    assert backend.calls == 1 and first is second
+    assert calls.count == 1 and first is second
 
 
-async def test_idempotent_result_replayed_once_and_cleared_by_other_mutation():
-    middleware, backend = LongOperationMiddleware(), _Backend()
-    await middleware.on_call_tool(_ctx("connect"), backend)
-    await middleware.on_call_tool(_ctx("connect"), backend)
-    assert backend.calls == 1
-    await middleware.on_call_tool(_ctx("connect"), backend)
-    assert backend.calls == 2
-    await middleware.on_call_tool(_ctx("disconnect"), backend)
-    await middleware.on_call_tool(_ctx("connect"), backend)
-    assert backend.calls == 4
+async def test_replay_once_and_cleared_by_other_mutation():
+    coordinator, calls = CallCoordinator(), _Calls()
+    connect, disconnect = call_key("connect", {}), call_key("disconnect", {})
+    await coordinator.run(connect, calls, idempotent=True)
+    await coordinator.run(connect, calls, idempotent=True)
+    assert calls.count == 1
+    await coordinator.run(connect, calls, idempotent=True)
+    assert calls.count == 2
+    await coordinator.run(disconnect, calls, idempotent=True)
+    await coordinator.run(connect, calls, idempotent=True)
+    assert calls.count == 4
 
 
-async def test_non_idempotent_and_error_results_are_not_replayed():
-    middleware, backend = LongOperationMiddleware(), _Backend()
-    await middleware.on_call_tool(_ctx("run_code", {"code": "iterate"}), backend)
-    await middleware.on_call_tool(_ctx("run_code", {"code": "iterate"}), backend)
-    assert backend.calls == 2
-    failing = _Backend(
-        result=SimpleNamespace(is_error=False, structured_content={"ok": False, "error": "timeout"})
-    )
-    await middleware.on_call_tool(_ctx("connect"), failing)
-    await middleware.on_call_tool(_ctx("connect"), failing)
-    assert failing.calls == 2
+async def test_errors_and_non_idempotent_calls_are_not_replayed():
+    coordinator = CallCoordinator()
+    calls = _Calls()
+    key = call_key("run_code", {"code": "iterate"})
+    await coordinator.run(key, calls, idempotent=False)
+    await coordinator.run(key, calls, idempotent=False)
+    assert calls.count == 2
+    failing = _Calls(result={"ok": False, "error": "timeout"})
+    await coordinator.run(call_key("connect", {}), failing, idempotent=True)
+    await coordinator.run(call_key("connect", {}), failing, idempotent=True)
+    assert failing.count == 2
+
+
+async def test_replay_expires():
+    now = [0.0]
+    coordinator = CallCoordinator(replay_ttl_s=60, clock=lambda: now[0])
+    calls = _Calls()
+    await coordinator.run(call_key("connect", {}), calls, idempotent=True)
+    now[0] = 61
+    await coordinator.run(call_key("connect", {}), calls, idempotent=True)
+    assert calls.count == 2
 
 
 async def test_host_cancellation_does_not_interrupt_work():
-    middleware, backend = LongOperationMiddleware(heartbeat_s=0.01), _Backend(delay=0.05)
-    waiter = asyncio.ensure_future(middleware.on_call_tool(_ctx("connect"), backend))
+    coordinator, calls = CallCoordinator(), _Calls(delay=0.05)
+    key = call_key("connect", {})
+    waiter = asyncio.ensure_future(coordinator.run(key, calls, idempotent=True))
     await asyncio.sleep(0.01)
     waiter.cancel()
     with pytest.raises(asyncio.CancelledError):
         await waiter
-    retry = await middleware.on_call_tool(_ctx("connect"), backend)
-    assert backend.calls == 1 and retry.structured_content["n"] == 1
+    retry = await coordinator.run(key, calls, idempotent=True)
+    assert calls.count == 1 and retry["n"] == 1
 
 
-async def test_heartbeat_progress_while_running():
-    reports = []
-
-    class _Progress:
-        async def report_progress(self, progress, total=None, message=None):
-            reports.append(message)
-
-    middleware = LongOperationMiddleware(heartbeat_s=0.01)
-    await middleware.on_call_tool(_ctx("run_code", progress=_Progress()), _Backend(delay=0.05))
-    assert reports and all("run_code still running" in m for m in reports)
+# Wrapper --------------------------------------------------------------------------
 
 
-async def test_custom_hint_lookup():
-    middleware = LongOperationMiddleware(
-        hint_lookup=lambda name: {"readOnlyHint": False, "idempotentHint": True}
-    )
-    backend = _Backend()
-    await middleware.on_call_tool(_ctx("custom_tool"), backend)
-    await middleware.on_call_tool(_ctx("custom_tool"), backend)
-    assert backend.calls == 1
+async def test_wrapper_traces_guides_and_coordinates(caplog):
+    caplog.set_level(logging.INFO, logger="ansys.fluent.mcp.trace")
+    seen = []
 
-
-# End to end on a small server -------------------------------------------------
-
-
-def _server():
-    server = FastMCP(name="host-contract-test")
-    install_host_middleware(server)
-    seen: list = []
-
-    @server.tool(name="echo")
-    async def echo(value: str) -> dict:
+    async def connect(ip: str = "") -> dict:
+        """Connect."""
         seen.append(current_trace_id())
-        return {"status": "ok", "value": value}
+        return {"status": "error", "error_code": "not_connected", "message": "x"}
 
-    @server.tool(name="explode")
+    wrapped = HostContract().wrap("connect", connect)
+    assert wrapped.__wrapped__ is connect and wrapped.__doc__ == "Connect."
+    result = await wrapped(ip="h")
+    assert result["retryable"] is True and result["trace_id"] == seen[0]
+    assert f"trace_id={seen[0]}" in caplog.text and "outcome=error:not_connected" in caplog.text
+    assert current_trace_id() is None
+
+
+async def test_wrapper_logs_raised_and_supports_sync_tools(caplog):
+    caplog.set_level(logging.INFO, logger="ansys.fluent.mcp.trace")
+
     async def explode() -> dict:
         raise RuntimeError("boom")
 
-    @server.tool(name="choose_target")
-    async def choose_target(target: Optional[str] = None) -> dict:
-        if target is None:
-            return {
-                "ok": False,
-                "error": "target_required",
-                "message": "Which target?",
-                "input_request": {
-                    "argument": "target",
-                    "message": "Which target?",
-                    "options": ["a", "b"],
-                },
-            }
-        return {"status": "ok", "target": target}
+    def ping() -> dict:
+        return {"status": "ok"}
 
-    return server, seen
-
-
-async def test_trace_ids_in_meta_log_and_context(caplog):
-    server, seen = _server()
-    caplog.set_level(logging.INFO, logger="ansys.fluent.mcp.trace")
-    async with Client(server) as client:
-        first = await client.call_tool("echo", {"value": "a"})
-        second = await client.call_tool("echo", {"value": "b"})
-        boom = await client.call_tool("explode", {}, raise_on_error=False)
-    ids = [first.meta[TRACE_ID_KEY], second.meta[TRACE_ID_KEY]]
-    assert ids[0] != ids[1] and seen == ids
-    assert isinstance(first.meta[DURATION_KEY], int)
-    assert boom.is_error and "outcome=raised" in caplog.text
-
-
-async def test_elicitation_accept_decline_and_unsupported():
-    async def accept(message, response_type, params, context):
-        return "b"
-
-    async def decline(message, response_type, params, context):
-        return ElicitResult(action="decline")
-
-    server, _ = _server()
-    async with Client(server, elicitation_handler=accept) as client:
-        accepted = await client.call_tool("choose_target", {}, raise_on_error=False)
-    async with Client(server, elicitation_handler=decline) as client:
-        declined = await client.call_tool("choose_target", {}, raise_on_error=False)
-    async with Client(server) as client:
-        unsupported = await client.call_tool("choose_target", {}, raise_on_error=False)
-    assert accepted.structured_content == {"status": "ok", "target": "b"}
-    for result in (declined, unsupported):
-        assert result.structured_content["error"] == "target_required"
-        assert "Ask the user" in result.structured_content["next_action"]
-
-
-@pytest.mark.parametrize(
-    ("request_payload", "valid"),
-    [
-        ({"argument": "target", "message": "?", "options": ["a"]}, True),
-        ({"argument": "count", "message": "?", "kind": "number"}, True),
-        ({"argument": "target", "message": "?", "options": []}, False),
-        ({"argument": "x", "message": "?", "kind": "matrix"}, False),
-        ({"argument": "password", "message": "?"}, False),
-        ({"argument": "api_token", "message": "?"}, False),
-    ],
-)
-def test_input_request_validation(request_payload, valid):
-    result = SimpleNamespace(structured_content={"ok": False, "input_request": request_payload})
-    assert (input_request_of(result) is not None) is valid
+    contract = HostContract()
+    with pytest.raises(RuntimeError):
+        await contract.wrap("run_code", explode)()
+    assert "outcome=raised" in caplog.text
+    assert contract.wrap("ping", ping)() == {"status": "ok"}

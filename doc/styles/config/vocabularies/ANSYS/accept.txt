@@ -53,4 +53,3 @@ sandboxed
 streamable
 subtree
 walkthrough
-[Mm]iddleware

@@ -245,19 +245,17 @@ will:
   request timeout keeps running. An identical retry joins the
   still-running call (or, for idempotent tools such as `connect`,
   returns its finished result once) instead of starting the work again.
-  Progress notifications arrive every 10 s while it runs.
-- **Trace id.** Each result's `_meta` holds `fluent/trace_id` and
-  `fluent/duration_ms`; the server logs the same id.
-- **Missing user input.** A result may carry `input_request`; hosts that
-  support MCP elicitation are asked directly, otherwise ask the user and
-  call again with that argument.
+- **Trace id.** Error results carry `trace_id`; the server logs the
+  same id for every call.
+- **Missing user input.** A result may carry `input_request`; ask the
+  user for that argument and call again with it.
 - **Resources and prompts.** `fluent://session/status`,
   `fluent://solver/status` and `fluent://case/named-objects` are
   attachable context; `fluent_setup_change` and
   `fluent_diagnose_divergence` are workflow prompts.
 
-Disable the middleware with `FLUIDS_MCP_HOST_MIDDLEWARE=0` if your host
-implements its own.
+Turn the host contract off with `FLUIDS_MCP_HOST_CONTRACT=0` if your
+host implements its own.
 
 ### Intent-guard error codes (defense-in-depth at `run_code`)
 

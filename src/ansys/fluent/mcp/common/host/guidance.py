@@ -17,28 +17,23 @@
 """Uniform ``retryable`` / ``next_action`` guidance on tool error results.
 
 Leaf tools report failures as ``{"status": "error", "error_code", "message"}``
-(or ``{"ok": False, "error": "<code>"}``). A host LLM still has to guess
-whether to retry and what to do next. :class:`ErrorGuidanceMiddleware` adds:
+(or ``{"ok": False, "error": "<code>"}``, or a typed error model). A host LLM
+still has to guess whether to retry and what to do next. :func:`enrich_result`
+adds:
 
 * ``retryable``: ``True`` only when the same call can succeed after waiting or
   after the named recovery step.
 * ``next_action``: one concrete recovery step, when the error class has one.
 
-Values a tool already set are never overwritten. Error codes are classified by
-ordered name patterns, so new codes that follow the existing naming are
-covered automatically.
+Values a tool already set are never overwritten, and successful results are
+returned unchanged. Error codes are classified by ordered name patterns, so new
+codes that follow the existing naming are covered automatically.
 """
 
 from __future__ import annotations
 
-import json
 import re
 from typing import Any
-
-from fastmcp.server.middleware import Middleware
-from fastmcp.tools.tool import ToolResult
-
-from mcp.types import TextContent
 
 _RECONNECT = (
     "Call session_status, then connect (and activate the component with its manage_* tool) "
@@ -125,7 +120,21 @@ def error_guidance(error_code: str, message: str = "") -> tuple[bool, str | None
     return False, None
 
 
-def _error_code(payload: dict[str, Any]) -> str | None:
+def error_code_of(payload: Any) -> str | None:
+    """Return the error code of a result payload, or ``None`` for a success.
+
+    Parameters
+    ----------
+    payload : Any
+        Tool result as a mapping.
+
+    Returns
+    -------
+    str | None
+        The ``error_code`` (or ``error`` when ``ok`` is ``False``), else ``None``.
+    """
+    if not isinstance(payload, dict):
+        return None
     code = payload.get("error_code")
     if not code and payload.get("ok") is False:
         code = payload.get("error")
@@ -134,20 +143,12 @@ def _error_code(payload: dict[str, Any]) -> str | None:
     return code
 
 
-def _error_payload(structured: Any) -> dict[str, Any] | None:
-    if not isinstance(structured, dict):
-        return None
-    payload = structured
-    if set(structured) == {"result"} and isinstance(structured["result"], dict):
-        payload = structured["result"]
-    return payload if _error_code(payload) else None
-
-
 def enrich_error_payload(payload: dict[str, Any]) -> bool:
     """Add ``retryable`` and ``next_action`` to an error payload in place.
 
-    A payload carrying ``input_request`` (a missing user decision) is told to
-    ask the user and call again.
+    A payload carrying ``input_request`` (a missing user decision with an
+    ``argument`` name and optional ``options``) is told to ask the user and call
+    again.
 
     Parameters
     ----------
@@ -159,7 +160,7 @@ def enrich_error_payload(payload: dict[str, Any]) -> bool:
     bool
         Whether the payload was changed.
     """
-    code = _error_code(payload)
+    code = error_code_of(payload)
     if code is None:
         return False
     retryable, action = error_guidance(code, str(payload.get("message") or ""))
@@ -186,66 +187,36 @@ def enrich_error_payload(payload: dict[str, Any]) -> bool:
     return changed
 
 
-def enrich_tool_result(result: ToolResult) -> ToolResult:
-    """Return a tool result with error guidance in its structured and text content.
+def enrich_result(result: Any, *, trace_id: str | None = None) -> Any:
+    """Return a tool result with error guidance added; successes are returned unchanged.
+
+    Mappings are copied before they are changed. Pydantic error models (for
+    example ``TypedError``) are converted to a mapping so the guidance fields
+    can be added.
 
     Parameters
     ----------
-    result : ToolResult
-        Result produced by the tool.
+    result : Any
+        Value returned by a tool function.
+    trace_id : str | None, default: None
+        Trace id of the call, added to error results as ``trace_id``.
 
     Returns
     -------
-    ToolResult
-        The same object when nothing changed, otherwise an enriched copy.
+    Any
+        The original result, or an enriched mapping.
     """
-    original = result.structured_content
-    if _error_payload(original) is None:
+    payload = result
+    dump = getattr(result, "model_dump", None)
+    if not isinstance(result, dict) and callable(dump):
+        payload = dump()
+    if error_code_of(payload) is None:
         return result
-    structured = json.loads(json.dumps(original, default=str))
-    payload = _error_payload(structured)
-    if payload is None or not enrich_error_payload(payload):
-        return result
-    content = []
-    for block in result.content or []:
-        text = getattr(block, "text", None)
-        if isinstance(block, TextContent) and isinstance(text, str):
-            try:
-                parsed = json.loads(text)
-            except ValueError:
-                parsed = None
-            if parsed == original:
-                block = TextContent(type="text", text=json.dumps(structured, default=str))
-            elif isinstance(original, dict) and parsed == original.get("result"):
-                block = TextContent(type="text", text=json.dumps(payload, default=str))
-        content.append(block)
-    return ToolResult(content=content, structured_content=structured, meta=result.meta)
+    payload = dict(payload)
+    enrich_error_payload(payload)
+    if trace_id and "trace_id" not in payload:
+        payload["trace_id"] = trace_id
+    return payload
 
 
-class ErrorGuidanceMiddleware(Middleware):
-    """Apply :func:`enrich_tool_result` to every tool call."""
-
-    async def on_call_tool(self, context: Any, call_next: Any) -> Any:
-        """Run the tool and enrich an error result.
-
-        Parameters
-        ----------
-        context : Any
-            FastMCP middleware context.
-        call_next : Any
-            Next handler in the middleware chain.
-
-        Returns
-        -------
-        Any
-            The (possibly enriched) tool result.
-        """
-        return enrich_tool_result(await call_next(context))
-
-
-__all__ = [
-    "ErrorGuidanceMiddleware",
-    "enrich_error_payload",
-    "enrich_tool_result",
-    "error_guidance",
-]
+__all__ = ["enrich_error_payload", "enrich_result", "error_code_of", "error_guidance"]
