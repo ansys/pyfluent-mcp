@@ -73,6 +73,22 @@ def _outcome(result: Any) -> str:
     return f"error:{code}" if code else "ok"
 
 
+def _copy_annotations(source: Callable[..., Any], wrapper: Callable[..., Any]) -> None:
+    """Give ``wrapper`` the same resolved annotations as ``source``.
+
+    From Python 3.14, ``functools.wraps`` copies the lazy ``__annotate__``
+    function instead of ``__annotations__``. Tool functions whose
+    ``__annotations__`` were assigned by hand (to match a synthesized
+    ``__signature__``) would then expose annotations that disagree with their
+    signature, which breaks input-schema generation.
+    """
+    try:
+        annotations = dict(source.__annotations__)
+    except (AttributeError, NameError, TypeError):
+        return
+    wrapper.__annotations__ = annotations
+
+
 class HostContract:
     """Wrap tool functions with trace ids, timeout-safe execution and error guidance.
 
@@ -141,6 +157,7 @@ class HostContract:
                     reset_trace_id(token)
                     log_call(tool, trace_id, int((time.monotonic() - started) * 1000), outcome)
 
+            _copy_annotations(fn, async_wrapper)
             return async_wrapper
 
         @functools.wraps(fn)
@@ -157,6 +174,7 @@ class HostContract:
                 reset_trace_id(token)
                 log_call(tool, trace_id, int((time.monotonic() - started) * 1000), outcome)
 
+        _copy_annotations(fn, sync_wrapper)
         return sync_wrapper
 
 

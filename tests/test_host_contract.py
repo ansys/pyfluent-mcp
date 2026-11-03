@@ -257,3 +257,18 @@ async def test_wrapper_logs_raised_and_supports_sync_tools(caplog):
         await contract.wrap("run_code", explode)()
     assert "outcome=raised" in caplog.text
     assert contract.wrap("ping", ping)() == {"status": "ok"}
+
+
+def test_wrapper_keeps_hand_set_annotations():
+    import inspect
+
+    async def guarded(**kwargs) -> dict:
+        return {"status": "ok", **kwargs}
+
+    guarded.__signature__ = inspect.Signature(
+        [inspect.Parameter("include_check", inspect.Parameter.KEYWORD_ONLY, annotation=bool)]
+    )
+    guarded.__annotations__ = {"include_check": bool, "return": dict}
+    wrapped = HostContract().wrap("mesh_quality", guarded)
+    assert wrapped.__annotations__ == {"include_check": bool, "return": dict}
+    assert list(inspect.signature(wrapped).parameters) == ["include_check"]
