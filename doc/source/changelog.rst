@@ -9,6 +9,69 @@ This section contains the release notes for PyFluent-MCP.
 
 .. towncrier release notes start
 
+`0.6.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.6.0>`_ - November 03, 2026
+========================================================================================
+
+.. tab-set::
+
+
+  .. tab-item:: Added
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Host contract for generic MCP hosts, plus settings-API mesh totals and reliable UTL detection
+          - `#94 <https://github.com/ansys/pyfluent-mcp/pull/94>`_
+
+
+  .. tab-item:: Dependencies
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Bump codecov/codecov-action from 7.1.0 to 7.1.1 in the actions group
+          - `#80 <https://github.com/ansys/pyfluent-mcp/pull/80>`_
+
+        * - Bump the pre-commit group across 1 directory with 2 updates
+          - `#81 <https://github.com/ansys/pyfluent-mcp/pull/81>`_
+
+        * - Bump the pip-deps group across 1 directory with 3 updates
+          - `#82 <https://github.com/ansys/pyfluent-mcp/pull/82>`_
+
+        * - Bump the pre-commit group with 3 updates
+          - `#83 <https://github.com/ansys/pyfluent-mcp/pull/83>`_
+
+        * - Bump the pip-deps group with 2 updates
+          - `#84 <https://github.com/ansys/pyfluent-mcp/pull/84>`_
+
+        * - Bump https://github.com/astral-sh/ruff-pre-commit from v0.16.10 to 0.17.0 in the pre-commit group
+          - `#85 <https://github.com/ansys/pyfluent-mcp/pull/85>`_
+
+        * - Bump the pip-deps group across 1 directory with 4 updates
+          - `#91 <https://github.com/ansys/pyfluent-mcp/pull/91>`_
+
+        * - Bump the actions group across 1 directory with 16 updates
+          - `#92 <https://github.com/ansys/pyfluent-mcp/pull/92>`_
+
+
+  .. tab-item:: Maintenance
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Update CHANGELOG for v0.5.0
+          - `#76 <https://github.com/ansys/pyfluent-mcp/pull/76>`_
+
+        * - Bump development version to 0.6.dev0
+          - `#77 <https://github.com/ansys/pyfluent-mcp/pull/77>`_
+
+        * - Remove the obsolete PyFluent local launcher shim from the test suite
+          - `#90 <https://github.com/ansys/pyfluent-mcp/pull/90>`_
+
+
 `0.5.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.5.0>`_ - September 25, 2026
 =========================================================================================
 
