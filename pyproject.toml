@@ -37,7 +37,7 @@ classifiers = [
 
 dependencies = [
     "ansys-common-mcp>=0.3.3",
-    "ansys-fluent-core>=0.41.0",
+    "ansys-fluent-core>=0.43.0",
     "httpx>=0.27",
     "pydantic>=2",
 ]
