@@ -3152,25 +3152,19 @@ class PyFluentBackend(Backend):
             return await asyncio.to_thread(_do)
 
     async def mesh_counts(self) -> dict[str, int | None]:
-        """Probe live mesh element totals via Fluent Scheme.
+        """Probe live mesh element totals via ``mesh.size_info()``.
 
         Returns ``{"cell_count", "face_count", "node_count"}``; each
-        value is ``int`` when the Scheme call resolved or ``None``
-        when unavailable (no mesh loaded, partition pending, Scheme
-        call failed). Never raises — surfaces failures as an all-
-        ``None`` payload so callers can branch on ``is None`` without
-        try/except.
+        value is ``int`` when the size table was printed or ``None``
+        when unavailable (no mesh loaded, command failed). Never
+        raises — surfaces failures as an all-``None`` payload so
+        callers can branch on ``is None`` without try/except.
 
-        Why Scheme: Fluent does not surface mesh-element totals on
-        the settings tree. The canonical accessor is
-        ``(inquire-grids)`` — it returns a list whose LAST element is
-        the global grid summary in the shape
-        ``(<id-or-name> cells faces nodes ...)``. ``cadr``/``caddr``/
-        ``cadddr`` extract the three counts. This matches the pattern
-        Fluent itself uses internally (e.g. in
-        ``wb-is-data-file-compatible?`` for cross-file count checks)
-        and is stable across versions back to 19.0. ``rpgetvar
-        'tinfo/n-cells`` does NOT exist as an rpvar.
+        Fluent has no structured mesh-total accessor on the settings
+        tree; ``mesh.size_info()`` is the settings-API command that
+        prints the global ``Level / Cells / Faces / Nodes`` table, which
+        :func:`parse_mesh_size` reads (same capture path as
+        :meth:`mesh_quality`).
 
         Returns
         -------
@@ -3190,84 +3184,15 @@ class PyFluentBackend(Backend):
         from ansys.fluent.mcp.common.backend_trace import trace_call
 
         trace_call("mesh_counts")
-
-        # Ask Fluent for cells / faces / nodes in a single round-trip:
-        # (inquire-grids) -> ((<g0> ...) ... (<gN> cells faces nodes ...))
-        # The last element is the global summary; cadr/caddr/cadddr
-        # pull the three counts. Wrapped in `if (pair? ...)` to return
-        # an empty list when no mesh is loaded so Python sees `[]`/`()`
-        # instead of a Scheme error.
-        _mesh_count_scheme = (
-            "(let ((__all (inquire-grids))) "
-            "  (if (pair? __all) "
-            "      (let ((__g (car (reverse __all)))) "
-            "        (list (cadr __g) (caddr __g) (cadddr __g))) "
-            "      '()))"
-        )
-
-        def _to_int(raw: Any) -> int | None:
-            """Convert a value to an integer.
-
-            Parameters
-            ----------
-            raw : Any
-                Raw string value to parse or validate.
-
-            Returns
-            -------
-            int | None
-                Optional value produced by the operation.
-            """
-            if raw is None or raw is False:
-                return None
-            try:
-                n = int(raw)
-            except (TypeError, ValueError):
-                try:
-                    n = int(float(raw))
-                except (TypeError, ValueError):
-                    return None
-            # Counts are always positive when a mesh is loaded; treat
-            # zero as "no mesh" (matches Fluent's pre-load behavior
-            # where the surface evaluates to 0 / nil).
-            return n if n > 0 else None
-
-        def _do() -> dict[str, int | None]:
-            """Execute the nested helper for the enclosing operation.
-
-            Returns
-            -------
-            dict[str, int | None]
-                Mapping containing the operation result.
-            """
-            solver = self._solver
-            if solver is None:
-                return empty
-            scheme = getattr(solver, "scheme", None) or getattr(solver, "scheme_eval", None)
-            if scheme is None:
-                return empty
-            try:
-                if hasattr(scheme, "eval"):
-                    raw = scheme.eval(_mesh_count_scheme)
-                else:
-                    raw = scheme(_mesh_count_scheme)
-            except Exception:  # fail-soft per docstring
-                return empty
-            # Expect a 3-element sequence (cells faces nodes). Anything
-            # shorter means no mesh / partial state.
-            if not isinstance(raw, (list, tuple)) or len(raw) < 3:
-                return empty
-            return {
-                "cell_count": _to_int(raw[0]),
-                "face_count": _to_int(raw[1]),
-                "node_count": _to_int(raw[2]),
-            }
+        from ansys.fluent.mcp.solve.backends.mesh_report_parsers import parse_mesh_size
 
         try:
-            async with self._lock:
-                counts = await asyncio.to_thread(_do)
-        except Exception:  # boundary
+            result = await self.run_code("session.settings.mesh.size_info()")
+        except Exception:  # fail-soft per docstring
             return empty
+        if getattr(result, "status", None) != "ok":
+            return empty
+        counts = parse_mesh_size(getattr(result, "stdout", "") or "")
         if any(v is not None for v in counts.values()):
             self._mesh_cache_put("mesh_counts", counts)
         return counts
