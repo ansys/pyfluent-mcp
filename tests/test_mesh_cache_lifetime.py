@@ -263,13 +263,14 @@ def test_pyfluent_mesh_counts_uses_mesh_cache():
     backend = _make_pyfluent_backend()
 
     call_counter = {"n": 0}
+    size_text = "Level    Cells    Faces    Nodes   Partitions\n    0   1000   3000   500   1\n"
 
-    class _CountingScheme:
-        def eval(self, _expr):
-            call_counter["n"] += 1
-            return [1000, 3000, 500]
+    async def _run_code(_code):
+        call_counter["n"] += 1
+        return SimpleNamespace(status="ok", stdout=size_text)
 
-    backend._solver = SimpleNamespace(scheme=_CountingScheme())
+    backend._solver = SimpleNamespace()
+    backend.run_code = _run_code
 
     first = asyncio.run(backend.mesh_counts())
     assert first == {"cell_count": 1000, "face_count": 3000, "node_count": 500}
@@ -287,11 +288,11 @@ def test_pyfluent_mesh_counts_all_none_is_not_cached():
     """An all-``None`` payload = "no mesh loaded"; don't pin it."""
     backend = _make_pyfluent_backend()
 
-    class _EmptyScheme:
-        def eval(self, _expr):
-            return []
+    async def _run_code(_code):
+        return SimpleNamespace(status="ok", stdout="")
 
-    backend._solver = SimpleNamespace(scheme=_EmptyScheme())
+    backend._solver = SimpleNamespace()
+    backend.run_code = _run_code
     result = asyncio.run(backend.mesh_counts())
     assert result == {"cell_count": None, "face_count": None, "node_count": None}
     assert backend._mesh_cache_get("mesh_counts") is None

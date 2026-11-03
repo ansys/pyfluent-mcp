@@ -199,6 +199,45 @@ def parse_mesh_quality(stdout: str | None) -> dict[str, float | None]:
 
 
 # ---------------------------------------------------------------------------
+# parse_mesh_size
+# ---------------------------------------------------------------------------
+
+# ``mesh.size_info`` prints (Fluent 27.1):
+#   "Mesh Size"
+#   "Level    Cells    Faces    Nodes   Partitions"
+#   "    0   125957   271385    30854            2"
+_RE_MESH_SIZE_ROW = re.compile(
+    r"Level\s+Cells\s+Faces\s+Nodes[^\n]*\n\s*0\s+(\d+)\s+(\d+)\s+(\d+)",
+    re.IGNORECASE,
+)
+
+
+def parse_mesh_size(stdout: str | None) -> dict[str, int | None]:
+    """Extract level-0 cell, face, and node totals from a ``mesh.size_info`` report.
+
+    The returned mapping contains ``"cell_count"``, ``"face_count"``, and
+    ``"node_count"``. Each value is ``None`` when the table is missing
+    (no mesh loaded, command failed) or the count is zero. Never raises.
+
+    Parameters
+    ----------
+    stdout : str | None
+        Stdout to supply to the function.
+
+    Returns
+    -------
+    dict[str, int | None]
+        Parsed mesh totals.
+    """
+    out: dict[str, int | None] = {"cell_count": None, "face_count": None, "node_count": None}
+    m = _RE_MESH_SIZE_ROW.search(stdout or "")
+    if m:
+        for key, raw in zip(out, m.groups()):
+            out[key] = int(raw) or None
+    return out
+
+
+# ---------------------------------------------------------------------------
 # parse_mesh_check
 # ---------------------------------------------------------------------------
 

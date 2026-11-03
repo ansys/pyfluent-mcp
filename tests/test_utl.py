@@ -115,6 +115,68 @@ def test_detect_utl_mode_handles_connected_states_and_failures():
     )
 
 
+def _physics_solver(is_active):
+    """Build a fake solver whose ``setup.physics.is_active`` is ``is_active``.
+
+    Parameters
+    ----------
+    is_active : Any
+        Callable installed as ``settings.setup.physics.is_active``.
+
+    Returns
+    -------
+    SimpleNamespace
+        Fake solver handle.
+    """
+    physics = SimpleNamespace(is_active=is_active)
+    return SimpleNamespace(settings=SimpleNamespace(setup=SimpleNamespace(physics=physics)))
+
+
+@pytest.mark.parametrize("active", [True, False])
+def test_detect_utl_mode_prefers_live_is_active_over_get_state(active):
+    """Verify that the live ``is_active()`` probe wins over ``get_state``.
+
+    Under UTL, Fluent 27.1 fails ``get_state(["setup.physics"])`` with
+    ``GENERAL-CAR-CDR``; the state read must not decide the mode.
+
+    Parameters
+    ----------
+    active : bool
+        Value returned by the fake ``is_active()``.
+
+    Returns
+    -------
+    None
+        The function completes through its side effects.
+    """
+    backend = FakeBackend(
+        solver=_physics_solver(lambda: active),
+        state={utl.UTL_PROBE_PATH: {"error": "GENERAL-CAR-CDR: improper list"}},
+    )
+    backend._lock = asyncio.Lock()
+    assert asyncio.run(utl.detect_utl_mode(backend)) is active
+
+
+def test_detect_utl_mode_falls_back_to_get_state_when_live_probe_fails():
+    """Verify that a failing or non-bool live probe falls back to ``get_state``.
+
+    Returns
+    -------
+    None
+        The function completes through its side effects.
+    """
+
+    def boom():
+        raise RuntimeError("no settings root")
+
+    for probe in (boom, lambda: "yes"):
+        backend = FakeBackend(
+            solver=_physics_solver(probe),
+            state={utl.UTL_PROBE_PATH: {"inactive": True}},
+        )
+        assert asyncio.run(utl.detect_utl_mode(backend)) is False
+
+
 def test_enable_disable_utl_toggle_solver_and_invalidate_cache():
     """Verify that enable disable utl toggle solver and invalidate cache.
 
