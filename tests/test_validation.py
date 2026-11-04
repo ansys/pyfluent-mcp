@@ -164,3 +164,23 @@ def test_sanitize_python_code_leaves_empty_and_bad_tokens_unchanged():
     """
     assert sanitize_python_code("  ") == ("  ", [])
     assert sanitize_python_code("x = (true") == ("x = (true", [])
+
+
+def test_sandbox_rejections_name_the_supported_alternative():
+    """Every sandbox rejection should tell the caller what to use instead."""
+    from ansys.fluent.mcp.common.validation import sandbox_alternatives_hint, validate_python_source
+
+    tui = validate_python_source("solver.tui.mesh.check()", strict=True)
+    assert tui.error_code == "tui_not_allowed"
+    assert "describe_path" in tui.message
+
+    opened = validate_python_source("open('x.txt')", strict=True)
+    assert opened.status == "error"
+    assert "Alternatives:" in opened.message
+
+    imported = validate_python_source("import contextlib\n", strict=True)
+    assert imported.error_code == "forbidden_import"
+    assert "mesh_quality(include_check=True)" in imported.message
+
+    assert "delete(name_list=" in sandbox_alternatives_hint("x.__delitem__('a')")
+    assert sandbox_alternatives_hint("solver.settings.setup.models.energy.enabled = True") == ""
