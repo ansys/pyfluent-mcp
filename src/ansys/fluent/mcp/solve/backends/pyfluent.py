@@ -57,6 +57,7 @@ from ansys.fluent.mcp.common.validation import (
     _ALLOWED_IMPORTS,
     _FORBIDDEN_ATTRIBUTES,
     _SAFE_DUNDER_READS,
+    sandbox_alternatives_hint,
     validate_python_source,
 )
 from ansys.fluent.mcp.solve.backends.introspection import (
@@ -2849,8 +2850,12 @@ class PyFluentBackend(Backend):
                 error_code="forbidden_call",
                 message=(
                     "Reflection-based writes are forbidden: "
-                    f"{sorted(set(reflection))}. Use direct attribute "
-                    "assignment (solver.x.y = value) or .set_state(...)."
+                    f"{sorted(set(reflection))}."
+                    + (
+                        sandbox_alternatives_hint(code, extra=tuple(reflection))
+                        or " Use direct attribute assignment (solver.x.y = value)"
+                        " or .set_state(...)."
+                    )
                 ),
             )
 
