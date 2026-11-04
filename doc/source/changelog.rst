@@ -9,6 +9,44 @@ This section contains the release notes for PyFluent-MCP.
 
 .. towncrier release notes start
 
+`0.7.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.7.0>`_ - November 04, 2026
+========================================================================================
+
+.. tab-set::
+
+
+  .. tab-item:: Dependencies
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Bump https://github.com/astral-sh/ruff-pre-commit from v0.17.0 to 0.17.3 in the pre-commit group
+          - `#97 <https://github.com/ansys/pyfluent-mcp/pull/97>`_
+
+        * - Bump the pip-deps group with 3 updates
+          - `#98 <https://github.com/ansys/pyfluent-mcp/pull/98>`_
+
+        * - Bump the actions group with 16 updates
+          - `#99 <https://github.com/ansys/pyfluent-mcp/pull/99>`_
+
+
+  .. tab-item:: Maintenance
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Update CHANGELOG for v0.6.0
+          - `#95 <https://github.com/ansys/pyfluent-mcp/pull/95>`_
+
+        * - Bump development version to 0.6.dev0
+          - `#96 <https://github.com/ansys/pyfluent-mcp/pull/96>`_
+
+        * - Fix \`run_code\` failures that previously returned an empty success response. Backend exceptions now reach callers as typed errors after cache invalidation and observer notification
+          - `#100 <https://github.com/ansys/pyfluent-mcp/pull/100>`_
+
+
 `0.6.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.6.0>`_ - November 03, 2026
 ========================================================================================
 
