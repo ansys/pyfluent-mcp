@@ -146,3 +146,94 @@ def typed_guard(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T 
             )
 
     return wrapper
+
+
+def _format_call(name: str, args: dict[str, Any]) -> str:
+    """Render ``name(k=v, ...)`` for a human-readable recovery hint."""
+    return f"{name}({', '.join(f'{key}={value!r}' for key, value in args.items())})"
+
+
+def not_connected_payload(
+    *,
+    tool: str,
+    product: str | None = None,
+    next_tool: str | None = None,
+    next_tool_args: dict[str, Any] | None = None,
+    next_tool_choices: list[dict[str, Any]] | None = None,
+    activate_tool: str | None = None,
+    activate_args: dict[str, Any] | None = None,
+    reason: str | None = None,
+) -> dict[str, Any]:
+    """Return the canonical, actionable ``not_connected`` tool result.
+
+    Every "no live session" outcome should use this shape so hosts can
+    recognise it (``error_code``), retry it (``retryable``), and fix it
+    without guessing (``next_tool`` / ``next_tool_args``).
+
+    This helper only formats. The caller (the MCP server) owns the
+    recovery arguments because only it knows its real tool interface:
+    a unified server's ``connect`` takes ``product``, a standalone leaf's
+    takes ``backend_kind`` / ``connect_kwargs``. Recovery guidance is
+    never guessed here.
+
+    Parameters
+    ----------
+    tool : str
+        Name of the tool that needed a session.
+    product : str | None
+        Product that owns ``tool`` (``solve``, ``geometry``, ...), when known.
+    next_tool : str | None
+        Registered tool that restores the session, or ``None`` when the
+        server exposes none.
+    next_tool_args : dict[str, Any] | None
+        Arguments valid for ``next_tool`` on THIS server. ``None`` when the
+        caller must pick one of ``next_tool_choices``.
+    next_tool_choices : list[dict[str, Any]] | None
+        Valid alternative argument sets when no single one can be chosen.
+    activate_tool : str | None
+        Registered tool that starts the component, when one exists.
+    activate_args : dict[str, Any] | None
+        Arguments valid for ``activate_tool`` on THIS server.
+    reason : str | None
+        Optional underlying cause.
+
+    Returns
+    -------
+    dict[str, Any]
+        Structured error payload.
+    """
+    scope = f"live {product} session" if product else "live session"
+    message = f"Tool {tool!r} needs a {scope}, and none is attached."
+    if reason:
+        message = f"{message} Cause: {reason}"
+
+    hints: list[str] = []
+    if next_tool and next_tool_args is not None:
+        hints.append(f"Call {_format_call(next_tool, next_tool_args)} and retry {tool!r}.")
+    elif next_tool and next_tool_choices:
+        options = " or ".join(_format_call(next_tool, args) for args in next_tool_choices)
+        hints.append(f"Call {options}, then retry {tool!r}.")
+    else:
+        hints.append(f"Attach a session to this server, then retry {tool!r}.")
+    if activate_tool:
+        hints.append(
+            "If the component is not running yet, call "
+            f"{_format_call(activate_tool, activate_args or {})} first."
+        )
+
+    payload: dict[str, Any] = {
+        "ok": False,
+        "status": "error",
+        "error_code": "not_connected",
+        "tool": tool,
+        "message": message,
+        "retryable": True,
+        "next_tool": next_tool,
+        "next_tool_args": next_tool_args,
+        "hint": " ".join(hints),
+    }
+    if product:
+        payload["product"] = product
+    if next_tool_choices:
+        payload["next_tool_choices"] = next_tool_choices
+    return payload
