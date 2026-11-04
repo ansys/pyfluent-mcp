@@ -43,6 +43,7 @@ from ansys.fluent.mcp.common.errors import (
     BackendUnavailableError,
     InvalidArgumentsError,
     NotConnectedError,
+    not_connected_payload,
     typed_guard,
 )
 from ansys.fluent.mcp.common.file_handlers import normalize_path_for_fluent
@@ -116,6 +117,9 @@ ALL_TOOLS = (
     "summarize_setup",
     "simulation_report",
 )
+
+#: Leaf names that correspond to a single product.
+_PRODUCT_LEAVES = frozenset({"solve", "geometry", "mesh", "post"})
 
 
 class FluidsLeafMCP(PyAnsysBaseMCP):
@@ -475,6 +479,157 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         """
         return self.backend
 
+    async def _ensure_live_session(self, backend: "Any") -> bool:
+        """Return True when ``backend`` is connected, attaching once if allowed.
+
+        A tool that needs a live session should not fail just because the
+        caller never issued ``connect`` while the product is already running.
+        Inspection tools call this implicitly, so the attach must have NO
+        side effects: it may only attach to a component that is already up,
+        and must never launch an application or activate a component.
+
+        A method name alone cannot promise that: existing
+        ``attach_if_running()`` implementations activate components or
+        launch processes. The backend must therefore opt in explicitly by
+        setting ``attach_if_running_is_passive = True``. Without that
+        declaration no attach is attempted and the tool reports
+        ``not_connected``, leaving the mutating step to an explicit
+        ``connect`` / ``manage_*`` call.
+
+        Parameters
+        ----------
+        backend : Any
+            Backend resolved for the tool.
+
+        Returns
+        -------
+        bool
+            Whether the backend is connected after the optional attach.
+        """
+
+        def _connected() -> bool:
+            try:
+                return bool(backend.is_connected())
+            except Exception:  # noqa: BLE001 - any probe failure means "not connected"
+                return False
+
+        if _connected():
+            return True
+        attach = getattr(backend, "attach_if_running", None)
+        # ``is True`` (not truthiness) so a mock or an unrelated attribute
+        # can never enable an implicit, possibly mutating, attach.
+        passive = getattr(backend, "attach_if_running_is_passive", False) is True
+        if callable(attach) and passive:
+            try:
+                await attach()
+            except Exception:  # noqa: BLE001 - attach is best-effort
+                logger.debug("attach_if_running failed", exc_info=True)
+        return _connected()
+
+    # ---- not-connected recovery guidance ------------------------------
+
+    def _owning_product(self, tool_name: str) -> Optional[str]:
+        """Return the product that owns ``tool_name`` on this server.
+
+        A product leaf owns all of its tools. A multi-product server
+        (for example a unified server routing tools to per-product
+        backends) must override this so recovery guidance names the
+        tool's real product rather than a default.
+
+        Parameters
+        ----------
+        tool_name : str
+            Registered tool name.
+
+        Returns
+        -------
+        Optional[str]
+            ``solve`` / ``geometry`` / ``mesh`` / ``post``, or ``None`` when
+            this server cannot tell.
+        """
+        del tool_name
+        return self.leaf_name if self.leaf_name in _PRODUCT_LEAVES else None
+
+    def _connect_recovery(self, product: Optional[str]) -> dict[str, Any]:
+        """Return the reconnect instruction valid for THIS server's ``connect``.
+
+        The base ``connect`` tool accepts ``backend_kind`` and
+        ``connect_kwargs``; it has no ``product`` argument. Servers that
+        register a different ``connect`` signature must override this.
+
+        Parameters
+        ----------
+        product : Optional[str]
+            Product that owns the failing tool (unused by the base leaf,
+            whose ``connect`` is already product-scoped).
+
+        Returns
+        -------
+        dict[str, Any]
+            ``next_tool`` plus either ``next_tool_args`` or
+            ``next_tool_choices``.
+        """
+        del product
+        if "connect" not in self._exposed:
+            return {"next_tool": None, "next_tool_args": None}
+        kind = self._active_kind or self.default_backend_kind
+        if kind is None and len(self._backends) == 1:
+            kind = next(iter(self._backends))
+        if kind is not None and kind in self._backends:
+            return {"next_tool": "connect", "next_tool_args": {"backend_kind": kind}}
+        return {
+            "next_tool": "connect",
+            "next_tool_args": None,
+            "next_tool_choices": [{"backend_kind": k} for k in self._backends],
+        }
+
+    def _activate_recovery(self, product: Optional[str]) -> dict[str, Any]:
+        """Return the component-activation instruction valid for THIS server.
+
+        Mirrors :meth:`_tool_manage_component`, which registers
+        ``manage_<label>`` with a single ``action`` argument.
+
+        Parameters
+        ----------
+        product : Optional[str]
+            Product that owns the failing tool (unused by the base leaf).
+
+        Returns
+        -------
+        dict[str, Any]
+            ``activate_tool`` / ``activate_args``, or an empty dict when the
+            server exposes no lifecycle tool.
+        """
+        del product
+        if "manage_component" not in self._exposed:
+            return {}
+        label = self.component_label or self.leaf_name
+        return {"activate_tool": f"manage_{label}", "activate_args": {"action": "activate"}}
+
+    def _not_connected(self, tool_name: str, *, reason: Optional[str] = None) -> dict[str, Any]:
+        """Build the ``not_connected`` result with recovery valid on this server.
+
+        Parameters
+        ----------
+        tool_name : str
+            Tool that needed a live session.
+        reason : Optional[str]
+            Optional underlying cause.
+
+        Returns
+        -------
+        dict[str, Any]
+            Canonical ``not_connected`` payload.
+        """
+        product = self._owning_product(tool_name)
+        return not_connected_payload(
+            tool=tool_name,
+            product=product,
+            reason=reason,
+            **self._connect_recovery(product),
+            **self._activate_recovery(product),
+        )
+
     def _register_one_domain_tool(self, tool: "Any") -> None:
         """Bind one :class:`DomainTool` to ``self.tool``.
 
@@ -508,8 +663,6 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         """
         from inspect import Parameter, Signature, signature  # noqa: PLC0415
         from typing import get_type_hints  # noqa: PLC0415
-
-        from ansys.fluent.mcp.common.errors import NotConnectedError  # noqa: PLC0415
 
         spec = tool.spec
         handler = tool.handler
@@ -564,8 +717,6 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
             return_annotation=return_annotation,
         )
 
-        leaf_name = self.leaf_name
-
         async def _domain_impl(**kwargs: Any) -> dict[str, Any]:
             """Execute a domain tool against the resolved backend.
 
@@ -579,23 +730,13 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
             dict[str, Any]
                 Mapping containing the operation result.
             """
-            backend = self._resolve_domain_backend(tool)
-            if requires_session:
-                try:
-                    connected = bool(backend.is_connected())
-                except NotConnectedError:
-                    connected = False
-                except Exception:
-                    connected = False
-                if not connected:
-                    return {
-                        "error": (
-                            f"tool {spec.name!r} on leaf {leaf_name!r} "
-                            f"requires a live session; call "
-                            f"connect / start_fluent first."
-                        ),
-                        "ok": False,
-                    }
+            try:
+                backend = self._resolve_domain_backend(tool)
+            except NotConnectedError as exc:
+                # No backend selected for the tool's product yet.
+                return self._not_connected(spec.name, reason=exc.message)
+            if requires_session and not await self._ensure_live_session(backend):
+                return self._not_connected(spec.name)
             return await handler(backend, **kwargs)
 
         _domain_impl.__signature__ = public_sig  # type: ignore[attr-defined]
@@ -1345,18 +1486,23 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
             """
             if not code or not code.strip():
                 raise InvalidArgumentsError("code must be a non-empty string")
+            try:
+                backend = self.backend
+            except NotConnectedError as exc:
+                return self._not_connected("run_code", reason=exc.message)
+            if not await self._ensure_live_session(backend):
+                return self._not_connected("run_code")
             result: Any = None
             error: BaseException | None = None
             try:
-                result = await self.backend.run_code(code)
-                return result
+                result = await backend.run_code(code)
             except BaseException as exc:  # observers see the raw error
                 error = exc
             finally:
                 # Belt-and-braces: even backends that don't override
                 # `invalidate_live_caches` get them dropped here so the
                 # next live tool sees post-mutation state.
-                self.backend.invalidate_live_caches()
+                backend.invalidate_live_caches()
                 # Notify observers (learning, telemetry, audit) about
                 # the call. Observer failures must never break the
                 # tool result the caller already received.
@@ -1365,6 +1511,14 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
                     result=result,
                     error=error,
                 )
+            if error is not None:
+                # Re-raise AFTER observers ran. Swallowing it here returned
+                # ``None``: the host saw an empty "success" for a dead
+                # backend. ``typed_guard`` converts it to a typed error.
+                if isinstance(error, NotConnectedError):
+                    return self._not_connected("run_code", reason=error.message)
+                raise error
+            return result
 
     def register_run_code_observer(
         self,

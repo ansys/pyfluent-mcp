@@ -420,14 +420,232 @@ def test_run_code_observer_errors_and_backend_errors_are_swallowed_for_notificat
         server = _server(backend)
         server.register_run_code_observer(failing_observer)
         result = await server.call_tool("run_code", {"code": "raise RuntimeError()"})
-        # The backend error and the observer error are both swallowed:
-        # observers still fire (recording the backend error) and the tool
-        # returns a non-error result rather than propagating either.
-        assert not _is_error(result)
+        # Observers still fire (recording the backend error) and an observer
+        # failure is swallowed, but the BACKEND error must reach the caller
+        # as a typed error. Returning an empty "success" hid dead backends.
+        assert _is_error(result)
+        assert _structured(result)["error_code"] == "internal_error"
+        assert "backend exploded" in _structured(result)["message"]
 
     asyncio.run(scenario())
     assert seen[0]["error"].args == ("backend exploded",)
     assert backend.invalidated == 1
+
+
+def test_run_code_on_disconnected_backend_returns_actionable_not_connected():
+    """A dead backend must yield a retryable not_connected error, never an empty ok."""
+    backend = BaseFakeBackend(connected=False)
+
+    async def scenario():
+        server = _server(backend, expose_tools=("run_code", "connect"))
+        result = await server.call_tool("run_code", {"code": "__return__ = 1"})
+        payload = _structured(result)
+        assert payload["error_code"] == "not_connected"
+        assert payload["retryable"] is True
+        assert payload["next_tool"] == "connect"
+        assert backend.run_code_snippets == []
+
+    asyncio.run(scenario())
+
+
+def test_run_code_attaches_once_when_backend_declares_passive_attach():
+    """A backend that DECLARES a passive attach is attached before failing."""
+    backend = BaseFakeBackend(connected=False)
+    attached = []
+
+    async def attach_if_running():
+        attached.append(True)
+        backend.connected = True
+
+    backend.attach_if_running = attach_if_running
+    backend.attach_if_running_is_passive = True
+
+    async def scenario():
+        server = _server(backend)
+        result = await server.call_tool("run_code", {"code": "__return__ = 1"})
+        assert not _is_error(result)
+
+    asyncio.run(scenario())
+    assert attached == [True]
+    assert backend.run_code_snippets == ["__return__ = 1"]
+
+
+@pytest.mark.parametrize("passive_flag", [None, False, "yes", 1])
+def test_undeclared_attach_if_running_is_never_called_implicitly(passive_flag):
+    """``attach_if_running`` may mutate (activate/launch); only an explicit
+    ``attach_if_running_is_passive = True`` lets a tool call it implicitly."""
+    backend = BaseFakeBackend(connected=False)
+    attached = []
+
+    async def attach_if_running():
+        attached.append(True)  # stands in for "activated a component / launched an app"
+        backend.connected = True
+
+    backend.attach_if_running = attach_if_running
+    if passive_flag is not None:
+        backend.attach_if_running_is_passive = passive_flag
+
+    async def impl(backend, *, name: str) -> dict:
+        return {"status": "ok", "name": name}
+
+    tool = DomainTool(
+        spec=DomainToolSpec(name="inspect_thing", description="test"),
+        handler=impl,
+        requires_live_session=True,
+    )
+
+    async def scenario():
+        server = _server(backend)
+        server._register_domain_tools([tool])
+        run = _structured(await server.call_tool("run_code", {"code": "__return__ = 1"}))
+        inspect = _structured(await server.call_tool("inspect_thing", {"name": "x"}))
+        assert run["error_code"] == "not_connected"
+        assert inspect["error_code"] == "not_connected"
+
+    asyncio.run(scenario())
+    assert attached == []
+    assert backend.run_code_snippets == []
+
+
+def test_standalone_recovery_matches_standalone_connect_signature():
+    """Recovery args must be accepted by THIS server's ``connect`` tool."""
+    backend = BaseFakeBackend(connected=False)
+
+    async def scenario():
+        server = _server(backend, expose_tools=("run_code", "connect", "manage_component"))
+        payload = _structured(await server.call_tool("run_code", {"code": "__return__ = 1"}))
+        assert payload["next_tool"] == "connect"
+        # Standalone ``connect`` takes backend_kind / connect_kwargs, not product.
+        assert payload["next_tool_args"] == {"backend_kind": "pyfluent"}
+        assert "product" not in payload["next_tool_args"]
+        assert "connect(backend_kind='pyfluent')" in payload["hint"]
+        assert "manage_component(action='activate')" in payload["hint"]
+        # Following the instruction verbatim must succeed.
+        reconnect = await server.call_tool(payload["next_tool"], payload["next_tool_args"])
+        assert not _is_error(reconnect)
+        assert backend.connected is True
+
+    asyncio.run(scenario())
+
+
+def test_standalone_recovery_lists_choices_when_backend_is_ambiguous():
+    """With several backends and no default, recovery offers valid choices only."""
+
+    class MultiLeaf(BareLeaf):
+        default_backend_kind = None
+
+    first = BaseFakeBackend(connected=False)
+    second = BaseFakeBackend(connected=False)
+
+    async def scenario():
+        server = MultiLeaf(
+            backends={"pyfluent": first, "remote": second},
+            expose_tools=("run_code", "connect"),
+        )
+        payload = _structured(await server.call_tool("run_code", {"code": "__return__ = 1"}))
+        assert payload["error_code"] == "not_connected"
+        assert payload["next_tool"] == "connect"
+        assert payload["next_tool_args"] is None
+        assert payload["next_tool_choices"] == [
+            {"backend_kind": "pyfluent"},
+            {"backend_kind": "remote"},
+        ]
+        for args in payload["next_tool_choices"]:
+            assert not _is_error(await server.call_tool("connect", args))
+
+    asyncio.run(scenario())
+
+
+def test_recovery_omits_connect_when_server_does_not_expose_it():
+    """Never recommend a tool the server does not register."""
+    backend = BaseFakeBackend(connected=False)
+
+    async def scenario():
+        server = _server(backend, expose_tools=("run_code",))
+        payload = _structured(await server.call_tool("run_code", {"code": "__return__ = 1"}))
+        assert payload["error_code"] == "not_connected"
+        assert payload["next_tool"] is None
+        assert payload["next_tool_args"] is None
+        assert "connect(" not in payload["hint"]
+
+    asyncio.run(scenario())
+
+
+def test_recovery_uses_tool_owning_product_on_multi_product_server():
+    """A multi-product server's override decides the product, not a default."""
+
+    class TwoProductLeaf(BareLeaf):
+        leaf_name = "unified"
+
+        def _owning_product(self, tool_name):
+            return "geometry" if tool_name == "get_selection" else "solve"
+
+        def _connect_recovery(self, product):
+            return {"next_tool": "connect", "next_tool_args": {"product": product}}
+
+    backend = BaseFakeBackend(connected=False)
+
+    async def impl(backend) -> dict:
+        return {"status": "ok"}
+
+    tool = DomainTool(
+        spec=DomainToolSpec(name="get_selection", description="test"),
+        handler=impl,
+        requires_live_session=True,
+    )
+
+    async def scenario():
+        server = TwoProductLeaf(backends={"pyfluent": backend}, expose_tools=())
+        server._register_domain_tools([tool])
+        payload = _structured(await server.call_tool("get_selection", {}))
+        assert payload["product"] == "geometry"
+        assert payload["next_tool_args"] == {"product": "geometry"}
+
+    asyncio.run(scenario())
+
+
+def test_run_code_not_connected_error_mid_call_is_typed():
+    """NotConnectedError raised by the backend maps to the canonical payload."""
+    backend = BaseFakeBackend()
+
+    async def boom(code):
+        raise NotConnectedError("grpc channel closed")
+
+    backend.run_code = boom
+
+    async def scenario():
+        server = _server(backend)
+        result = await server.call_tool("run_code", {"code": "__return__ = 1"})
+        payload = _structured(result)
+        assert payload["error_code"] == "not_connected"
+        assert "grpc channel closed" in payload["message"]
+
+    asyncio.run(scenario())
+
+
+def test_domain_tool_session_guard_returns_canonical_not_connected():
+    """requires_live_session tools report the same actionable not_connected shape."""
+    backend = BaseFakeBackend(connected=False)
+
+    async def impl(backend, *, name: str) -> dict:
+        return {"status": "ok", "name": name}
+
+    tool = DomainTool(
+        spec=DomainToolSpec(name="needs_session", description="test"),
+        handler=impl,
+        requires_live_session=True,
+    )
+
+    async def scenario():
+        server = _server(backend, expose_tools=())
+        server._register_domain_tools([tool])
+        result = await server.call_tool("needs_session", {"name": "x"})
+        payload = _structured(result)
+        assert payload["error_code"] == "not_connected"
+        assert payload["tool"] == "needs_session"
+        assert payload["retryable"] is True
+
+    asyncio.run(scenario())
 
 
 def test_base_tool_error_branches_and_report_actions(tmp_path):

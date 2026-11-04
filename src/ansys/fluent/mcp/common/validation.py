@@ -240,6 +240,68 @@ _ALLOWED_BUILTINS: frozenset[str] = frozenset(
 )
 
 
+# Supported alternatives for patterns the sandbox rejects. Each entry is
+# (trigger tokens, hint). A rejection message appends the hints whose
+# tokens appear in the rejected code or the flagged names, so the caller
+# learns the working call instead of retrying blind.
+_SANDBOX_ALTERNATIVES: tuple[tuple[tuple[str, ...], str], ...] = (
+    (
+        ("__delitem__", "del "),
+        "delete a named object with <collection>.delete(name_list=['name']) "
+        "(or <collection>.delete_child(name) on older releases)",
+    ),
+    (
+        ("__setitem__", "setattr", "__setattr__"),
+        "write settings by direct assignment (solver.settings.a.b = value) "
+        "or <object>.set_state({...})",
+    ),
+    (
+        ("mesh.check", "redirect_stdout", "contextlib"),
+        "for mesh checks use the mesh_quality(include_check=True) tool; stdout "
+        "is captured automatically and returned in the tool result",
+    ),
+    (
+        ("tui", "execute_tui"),
+        "use the settings API (solver.settings...). find_api(query=...) and "
+        "describe_path(paths=[...]) locate the settings path and its allowed values",
+    ),
+    (
+        ("open", "os", "shutil", "subprocess", "pathlib"),
+        "file I/O is not available in run_code; use solver.settings.file "
+        "commands (read_case, write_case, export) or the checkpoint_case tool",
+    ),
+    (
+        ("eval", "exec", "compile", "globals", "locals", "vars", "__import__"),
+        "dynamic execution is blocked; write the settings calls explicitly, and use "
+        "getattr(obj, 'name') for dynamic attribute reads",
+    ),
+)
+
+
+def sandbox_alternatives_hint(code: str, *, extra: Iterable[str] = ()) -> str:
+    """Return a ' Alternatives: ...' suffix for a sandbox rejection, or ''.
+
+    Parameters
+    ----------
+    code : str
+        The rejected source.
+    extra : Iterable[str]
+        Flagged names / calls reported by the validator.
+
+    Returns
+    -------
+    str
+        Suffix to append to the rejection message.
+    """
+    haystack = " ".join([code or "", *[str(item) for item in extra]])
+    hints = [
+        hint for tokens, hint in _SANDBOX_ALTERNATIVES if any(tok in haystack for tok in tokens)
+    ]
+    if not hints:
+        return ""
+    return " Alternatives: " + "; ".join(dict.fromkeys(hints)) + "."
+
+
 def validate_python_source(
     code: str,
     *,
@@ -460,7 +522,7 @@ def _validate_python_source_uncached(
             error_code="tui_not_allowed",
             message=(
                 "TUI escape hatch is forbidden \u2014 use the settings API: "
-                f"{sorted(set(tui_flagged))}"
+                f"{sorted(set(tui_flagged))}" + sandbox_alternatives_hint(code, extra=("tui",))
             ),
         )
 
@@ -468,7 +530,10 @@ def _validate_python_source_uncached(
         return RunCodeResult(
             status="error",
             error_code="forbidden_call",
-            message=f"Forbidden call(s) detected: {sorted(set(flagged))}",
+            message=(
+                f"Forbidden call(s) detected: {sorted(set(flagged))}"
+                + sandbox_alternatives_hint(code, extra=tuple(flagged))
+            ),
         )
 
     if strict:
@@ -566,13 +631,19 @@ def _validate_python_source_uncached(
             return RunCodeResult(
                 status="error",
                 error_code="forbidden_import",
-                message=f"Imports outside allow-list: {sorted(set(bad_imports))}",
+                message=(
+                    f"Imports outside allow-list: {sorted(set(bad_imports))}"
+                    + sandbox_alternatives_hint(code, extra=tuple(bad_imports))
+                ),
             )
         if bad_names:
             return RunCodeResult(
                 status="error",
                 error_code="forbidden_name",
-                message=f"Names not in sandbox: {sorted(set(bad_names))[:10]}",
+                message=(
+                    f"Names not in sandbox: {sorted(set(bad_names))[:10]}"
+                    + sandbox_alternatives_hint(code, extra=tuple(bad_names))
+                ),
             )
 
     return RunCodeResult(
