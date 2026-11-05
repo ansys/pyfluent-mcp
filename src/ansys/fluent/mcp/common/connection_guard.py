@@ -22,6 +22,7 @@ import inspect
 from pydantic import BaseModel
 
 from ansys.fluent.mcp.common.errors import NotConnectedError
+from ansys.fluent.mcp.common.host import set_resolved_annotations
 
 
 def _missing_session_payload(result):
@@ -69,6 +70,7 @@ def with_connection_recovery(function, recover):
             except NotConnectedError as exc:
                 return recover(reason=exc.message)
 
+        _carry_resolved_annotations(function, async_wrapper)
         return async_wrapper
 
     @functools.wraps(function)
@@ -78,4 +80,18 @@ def with_connection_recovery(function, recover):
         except NotConnectedError as exc:
             return recover(reason=exc.message)
 
+    _carry_resolved_annotations(function, sync_wrapper)
     return sync_wrapper
+
+
+def _carry_resolved_annotations(function, wrapper) -> None:
+    """Keep ``wrapper``'s exposed type hints correct across Python versions.
+
+    See :func:`ansys.fluent.mcp.common.host.set_resolved_annotations` for why
+    ``functools.wraps`` alone is not sufficient on Python 3.14+.
+    """
+    try:
+        annotations = dict(function.__annotations__)
+    except (AttributeError, NameError, TypeError):
+        return
+    set_resolved_annotations(wrapper, annotations)

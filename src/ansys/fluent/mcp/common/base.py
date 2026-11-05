@@ -52,7 +52,12 @@ from ansys.fluent.mcp.common.errors import (
     typed_guard,
 )
 from ansys.fluent.mcp.common.file_handlers import normalize_path_for_fluent
-from ansys.fluent.mcp.common.host import HostContract, annotations_for, host_contract_enabled
+from ansys.fluent.mcp.common.host import (
+    HostContract,
+    annotations_for,
+    host_contract_enabled,
+    set_resolved_annotations,
+)
 from ansys.fluent.mcp.common.models import ConnectResult, SessionStatus
 
 logger = logging.getLogger("ansys.fluent.mcp.base")
@@ -748,13 +753,15 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
                 return self._not_connected(spec.name)
             return await handler(backend, **kwargs)
 
+        annotations = {p.name: p.annotation for p in public_params}
+        if return_annotation is not Signature.empty:
+            annotations["return"] = return_annotation
+
         _domain_impl.__signature__ = public_sig  # type: ignore[attr-defined]
         _domain_impl.__name__ = spec.name
         _domain_impl.__qualname__ = f"{type(self).__name__}._domain.{spec.name}"
         _domain_impl.__doc__ = spec.description
-        _domain_impl.__annotations__ = {p.name: p.annotation for p in public_params}
-        if return_annotation is not Signature.empty:
-            _domain_impl.__annotations__["return"] = return_annotation
+        set_resolved_annotations(_domain_impl, annotations)
 
         guarded = typed_guard(_domain_impl)
         # ``typed_guard`` uses ``functools.wraps`` which copies
@@ -762,7 +769,7 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         # tool exposes the correct schema to FastMCP. Re-apply for
         # safety in case wraps is patched.
         guarded.__signature__ = public_sig  # type: ignore[attr-defined]
-        guarded.__annotations__ = dict(_domain_impl.__annotations__)
+        set_resolved_annotations(guarded, annotations)
         self.tool(name=spec.name, description=spec.description)(guarded)
 
     # ------------------------------------------------------------------

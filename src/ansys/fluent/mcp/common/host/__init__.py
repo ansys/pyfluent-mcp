@@ -73,20 +73,34 @@ def _outcome(result: Any) -> str:
     return f"error:{code}" if code else "ok"
 
 
-def _copy_annotations(source: Callable[..., Any], wrapper: Callable[..., Any]) -> None:
-    """Give ``wrapper`` the same resolved annotations as ``source``.
+def set_resolved_annotations(fn: Callable[..., Any], annotations: dict[str, Any]) -> None:
+    """Give ``fn`` resolved annotations that survive Python 3.14's ``__annotate__``.
 
     From Python 3.14, ``functools.wraps`` copies the lazy ``__annotate__``
-    function instead of ``__annotations__``. Tool functions whose
+    slot (PEP 649) instead of ``__annotations__`` (see
+    https://github.com/pydantic/pydantic-ai/issues/3685). Functions whose
     ``__annotations__`` were assigned by hand (to match a synthesized
-    ``__signature__``) would then expose annotations that disagree with their
-    signature, which breaks input-schema generation.
+    ``__signature__``) would then expose their *original* annotations to
+    callers that resolve type hints via ``__annotate__``, which breaks
+    input-schema generation. Setting both attributes keeps schema generation
+    correct on Python 3.12, 3.13, and 3.14+.
     """
+    resolved = dict(annotations)
+    fn.__annotations__ = resolved
+
+    def _annotate(format: Any, _resolved: dict[str, Any] = resolved) -> dict[str, Any]:
+        return dict(_resolved)
+
+    fn.__annotate__ = _annotate  # type: ignore[attr-defined]
+
+
+def _copy_annotations(source: Callable[..., Any], wrapper: Callable[..., Any]) -> None:
+    """Give ``wrapper`` the same resolved annotations as ``source``."""
     try:
         annotations = dict(source.__annotations__)
     except (AttributeError, NameError, TypeError):
         return
-    wrapper.__annotations__ = annotations
+    set_resolved_annotations(wrapper, annotations)
 
 
 class HostContract:
