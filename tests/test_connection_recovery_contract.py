@@ -19,11 +19,11 @@
 import inspect
 
 import pytest
+from test_base_mcp import BareLeaf, _structured
 
 from ansys.fluent.mcp.common.connection_guard import with_connection_recovery
 from ansys.fluent.mcp.common.errors import NotConnectedError
 from ansys.fluent.mcp.common.models import TypedError
-from tests.test_base_mcp import BareLeaf, _structured
 
 CASES = [
     ("get_state", {}),
