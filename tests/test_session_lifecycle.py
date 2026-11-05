@@ -1,5 +1,19 @@
 # Copyright (C) 2026 Synopsys, Inc. and ANSYS, Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Concurrent connection, cancellation and shutdown ownership regressions."""
 
 import asyncio
@@ -10,6 +24,86 @@ import pytest
 
 from ansys.fluent.mcp.common.errors import BackendUnavailableError, NotConnectedError
 from ansys.fluent.mcp.solve.backends.pyfluent import PyFluentBackend
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("cancel_connect", [False, True])
+async def test_adoption_cannot_overtake_connection_publication(monkeypatch, cancel_connect):
+    """Reserve the session until launch publication or cancellation cleanup finishes."""
+    import ansys.fluent.core as core
+
+    entered, finish_launch, adopted = threading.Event(), threading.Event(), threading.Event()
+    closed, released, errors = [], [], []
+    launched = SimpleNamespace(exit=lambda **kwargs: closed.append("launched"))
+    borrowed = SimpleNamespace(exit=lambda **kwargs: closed.append("borrowed"))
+
+    def launch(**kwargs):
+        entered.set()
+        assert finish_launch.wait(5)
+        return launched
+
+    backend = PyFluentBackend()
+
+    def adopt():
+        try:
+            backend.adopt_session(borrowed, endpoint="test://borrowed", release=released.append)
+        except BackendUnavailableError as exc:
+            errors.append(exc)
+        finally:
+            adopted.set()
+
+    monkeypatch.setattr(core, "launch_fluent", launch)
+    connecting = asyncio.create_task(backend.connect(ui_mode="no_gui"))
+    adopter = threading.Thread(target=adopt)
+    try:
+        assert await asyncio.to_thread(entered.wait, 5)
+        if cancel_connect:
+            connecting.cancel()
+            await asyncio.sleep(0)
+        adopter.start()
+        finish_launch.set()
+        # Keep launch-result publication queued while the other thread adopts.
+        # Awaiting here would let connect win the race and hide the regression.
+        assert adopted.wait(5)
+        if cancel_connect:
+            with pytest.raises(asyncio.CancelledError):
+                await connecting
+        else:
+            assert (await connecting).status == "ok"
+            assert backend.require_solver() is launched
+        assert len(errors) == 1
+        assert "in progress" in str(errors[0])
+        assert id(borrowed) not in backend._borrowed
+    finally:
+        finish_launch.set()
+        if adopter.ident is not None:
+            await asyncio.to_thread(adopter.join, 5)
+        await backend.disconnect()
+
+    assert closed == ["launched"]
+    # A completed/cancelled connection must release the reservation for reuse.
+    backend.adopt_session(borrowed, endpoint="test://borrowed", release=released.append)
+    await backend.disconnect()
+    assert released == [borrowed]
+    assert backend._borrowed == {}
+
+
+@pytest.mark.asyncio
+async def test_failed_connect_allows_subsequent_adoption(monkeypatch):
+    """An unsuccessful launch must release its connection reservation."""
+    import ansys.fluent.core as core
+
+    def launch(**kwargs):
+        raise RuntimeError("injected launch failure")
+
+    monkeypatch.setattr(core, "launch_fluent", launch)
+    backend = PyFluentBackend()
+    assert (await backend.connect(ui_mode="no_gui")).status == "error"
+    released = []
+    borrowed = SimpleNamespace()
+    backend.adopt_session(borrowed, endpoint="test://borrowed", release=released.append)
+    await backend.disconnect()
+    assert released == [borrowed]
 
 
 @pytest.mark.asyncio

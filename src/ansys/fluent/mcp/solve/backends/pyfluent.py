@@ -972,6 +972,8 @@ class PyFluentBackend(Backend):
         # the same process; serialize to avoid interleaved RPCs.
         self._lock = asyncio.Lock()
         self._thread_lock = threading.RLock()
+        # Reserve the slot across the worker's completion and async publication.
+        self._connecting = False
         self._shutdown = False
 
     async def _run_thread(self, function, *args, **kwargs):
@@ -1210,46 +1212,61 @@ class PyFluentBackend(Backend):
 
         try:
             async with self._lock:
-                if self._retired_solvers:
-                    return ConnectResult(
-                        status="error", error_code="session_cleanup_required",
-                        backend_kind=self.kind,
-                        message=(
-                            "Disconnect to clean up the previous session before reconnecting."
-                        ),
-                    )
-                if self._solver is not None:
-                    return ConnectResult(
-                        status="error", error_code="already_connected", backend_kind=self.kind,
-                        endpoint=self.endpoint,
-                        message="Disconnect the current Fluent session before connecting again.",
-                    )
-                connect_task = asyncio.create_task(self._run_thread(_do_connect))
-                try:
-                    self._solver = await asyncio.shield(connect_task)
-                    from ansys.fluent.mcp.solve.backends.session_lifecycle import session_endpoint
-
-                    self._mode = "attach" if server_info_file or (ip and port) else "launch"
-                    self._owns_process = (
-                        self._mode == "launch" and effective.get("cleanup_on_exit") is not False
-                    )
-                    self.endpoint = session_endpoint(self._solver)
-                    if self._shutdown:
-                        self.close_sync()
-                        raise NotConnectedError(
-                            "The backend shut down while Fluent was connecting."
+                with self._thread_lock:
+                    if self._retired_solvers:
+                        return ConnectResult(
+                            status="error", error_code="session_cleanup_required",
+                            backend_kind=self.kind,
+                            message=(
+                                "Disconnect to clean up the previous session before reconnecting."
+                            ),
                         )
-                    self._session_kind = session_kind
-                except asyncio.CancelledError as cancellation:
-                    from ansys.fluent.mcp.solve.backends.session_lifecycle import (
-                        wait_for_completion,
-                    )
+                    if self._solver is not None:
+                        return ConnectResult(
+                            status="error", error_code="already_connected", backend_kind=self.kind,
+                            endpoint=self.endpoint,
+                            message=(
+                                "Disconnect the current Fluent session before connecting again."
+                            ),
+                        )
+                    self._connecting = True
+                try:
+                    connect_task = asyncio.create_task(self._run_thread(_do_connect))
+                    try:
+                        solver = await asyncio.shield(connect_task)
+                        from ansys.fluent.mcp.solve.backends.session_lifecycle import (
+                            session_endpoint,
+                        )
 
-                    self._solver = await wait_for_completion(connect_task)
-                    self._session_kind = session_kind
-                    close_task = asyncio.create_task(asyncio.to_thread(self._close_solver_sync))
-                    await wait_for_completion(close_task)
-                    raise cancellation
+                        with self._thread_lock:
+                            self._solver = solver
+                            self._mode = "attach" if server_info_file or (ip and port) else "launch"
+                            self._owns_process = (
+                                self._mode == "launch"
+                                and effective.get("cleanup_on_exit") is not False
+                            )
+                            self.endpoint = session_endpoint(solver)
+                            if self._shutdown:
+                                self.close_sync()
+                                raise NotConnectedError(
+                                    "The backend shut down while Fluent was connecting."
+                                )
+                            self._session_kind = session_kind
+                    except asyncio.CancelledError as cancellation:
+                        from ansys.fluent.mcp.solve.backends.session_lifecycle import (
+                            wait_for_completion,
+                        )
+
+                        solver = await wait_for_completion(connect_task)
+                        with self._thread_lock:
+                            self._solver = solver
+                            self._session_kind = session_kind
+                        close_task = asyncio.create_task(asyncio.to_thread(self._close_solver_sync))
+                        await wait_for_completion(close_task)
+                        raise cancellation
+                finally:
+                    with self._thread_lock:
+                        self._connecting = False
         except Exception as exc:  # boundary
             logger.exception("PyFluent connect failed")
             return ConnectResult(
@@ -1430,11 +1447,15 @@ class PyFluentBackend(Backend):
         Raises
         ------
         BackendUnavailableError
-            If this backend still holds a session; disconnect it first.
+            If a connection is in progress or this backend still holds a session.
         """
         with self._thread_lock:
             if self._shutdown:
                 raise NotConnectedError("The Fluent backend has been shut down.")
+            if self._connecting:
+                raise BackendUnavailableError(
+                    "A Fluent connection is in progress; wait for it to finish before adopting."
+                )
             if self._solver is not None:
                 raise BackendUnavailableError(
                     "This backend already holds a Fluent session; disconnect it or call "
