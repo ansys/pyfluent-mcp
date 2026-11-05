@@ -16,13 +16,13 @@
 
 """Modular registry mapping file suffixes to product/component handlers.
 
-Used by the ``read_file`` agent tool to:
+Clients use the registry to:
 
 1. Recognize a user-supplied filesystem path by suffix.
 2. Probe the file (cheap, read-only) for product-relevant metadata, such
    as dimension and precision for a Fluent ``.cas.h5`` archive.
-3. Decide which backend (PyFluent solver, Fluids One solve, …) and
-   which launch options (precision, dimension, lightweight) to use.
+3. Decide which backend and which launch options (precision, dimension,
+   lightweight) to use.
 
 Adding a new file type is a single registry call. See
 :func:`register_handler`. The registry is intentionally tiny. Each
@@ -33,7 +33,7 @@ Design constraints:
 
 * No I/O at import time. All probing is lazy and read-only.
 * Optional dependencies (``h5py``) are imported inside probe functions
-  so the agent works even when the extra is not installed.
+  so the registry works even when the extra is not installed.
 * Probes never write to the file, never lock it, and never modify the
   user's session.
 """
@@ -144,28 +144,23 @@ class FileProbe:
 
 @dataclass
 class FileHandler:
-    """Describes one file type the agent can route to a backend."""
+    """Describes one file type a client can route to a backend."""
 
     name: str  # e.g. "fluent_case"
     suffixes: tuple[str, ...]  # ordered, longest-first preferred
     file_type: str  # human label
-    candidate_products: tuple[str, ...]  # backend kinds, e.g. ("pyfluent","fluids_one")
+    candidate_products: tuple[str, ...]  # backend kinds, e.g. ("pyfluent","custom")
     needs_mode_choice: bool  # ask lightweight vs full?
     probe: Callable[[Path], FileProbe]
     build_launch_args: Callable[[str, FileProbe, dict[str, Any]], dict[str, Any]]
-    component: str = "solve"  # "solve" | "meshing" | "geometry"
+    # Owning component; this package registers only "solve" handlers.
+    component: str = "solve"
     description: str = ""  # surfaced to clients
-    # PyFluent settings method to call on load (under session.settings.file.*).
-    # Defaults to "read_case" for the Fluent case/mesh family. Data files use
-    # "read_data"; Workbench projects use "read_project" (routes to
-    # ``session.tui.file.parametric_project.open("<path>")``); etc.
+    # Loader name under ``session.settings.file.*``; "auto" defers to the probe.
+    # "read_project" marks archives that have no settings-API loader.
     load_command: str = "read_case"
-    # Optional: when set, ``_resolve_load_snippet`` uses this builder
-    # to produce the load snippet instead of the default
-    # ``session.settings.file.<load_command>(file_name="...")`` form.
-    # Used by handlers whose load idiom does not fit that template
-    # (e.g. Fluids One geometry CAD import which goes through
-    # ``geometry['geometry_1'].file.import_cad(...)``).
+    # Optional custom load-snippet builder ``(path, mode) -> code`` for loaders
+    # that do not fit the ``session.settings.file.<load_command>`` template.
     build_load_snippet: Callable[[str, str | None], str] | None = None
 
 
@@ -182,18 +177,14 @@ def register_handler(handler: FileHandler) -> None:
 
     Registration is idempotent by ``handler.name``. Re-registering a
     handler with the same name replaces the prior entry instead of
-    appending a duplicate. This lets an optional consuming layer (one
-    that adds non-solve geometry / Prime meshing CAD handlers) import its
-    registration module more than once without bloating the registry.
+    appending a duplicate, so an embedding application can register its
+    own file types more than once without bloating the registry.
 
-    Boundary note: this OSS package is **solve-only**. It registers
-    ONLY Fluent solver file types (case/mesh/data/project/HDF5).
-    Geometry (CAD import) and Prime meshing (readcad) handlers are NOT
-    registered here. They belong to the geometry/mesh products and are
-    registered into this same registry by an optional higher-level layer
-    via :func:`register_handler`. A standalone ``ansys-fluent-mcp``
-    install therefore exposes a solve-only registry, which is correct
-    for the solve leaf's ``compare_files`` tool.
+    Boundary note: this package registers ONLY Fluent solver file types
+    (case/mesh/data/project/HDF5). Applications that handle other file
+    types register them through this function. A standalone install
+    therefore exposes a solve-only registry, which is what the solve
+    leaf's ``compare_files`` tool expects.
 
     Parameters
     ----------
@@ -247,12 +238,10 @@ def find_handler(path: str | Path) -> FileHandler | None:
 def find_all_handlers(path: str | Path) -> list[FileHandler]:
     """Return every registered handler whose suffix matches ``path``.
 
-    Used by ``read_file`` to disambiguate suffixes that legitimately
-    belong to more than one component. For example, ``.fmd`` is valid as
-    both a CAD geometry import (Fluids One Geometry component) and a
-    Prime meshing CAD read (Mesh component). The caller resolves the
-    ambiguity by inspecting ``handler.component`` against a user-
-    supplied ``component`` argument or by prompting the user.
+    Used to disambiguate suffixes that an application registers for more
+    than one component. The caller resolves the ambiguity by inspecting
+    ``handler.component`` against a user-supplied ``component`` argument
+    or by prompting the user.
 
     Parameters
     ----------
@@ -369,8 +358,8 @@ def _probe_fluent_h5_generic(path: Path) -> FileProbe:
     * ``/results`` present without ``/meshes`` → standalone data file
 
     The detected load command is stored in ``probe.extra['load_command']``
-    so :func:`_resolve_load_snippet` can dispatch correctly. Falls
-    back to ``read_case`` when the structure can't be classified.
+    so loaders of ``load_command="auto"`` handlers can dispatch correctly.
+    Falls back to ``read_case`` when the structure can't be classified.
 
     Parameters
     ----------
@@ -499,11 +488,6 @@ def _build_fluent_launch_args(
         # ui_mode: "gui" | "headless"; agent runs headless by default.
         ui = choices.get("ui_mode")
         args["ui_mode"] = "gui" if ui == "gui" else "no_gui"
-    elif product == "fluids_one":
-        # Fluids One has its own session abstraction; surface user
-        # choices as instance hints.
-        if choices.get("instance_name"):
-            args["instance_name"] = choices["instance_name"]
     return args
 
 
@@ -514,7 +498,7 @@ register_handler(
         name="fluent_case_h5",
         suffixes=(".cas.h5", ".msh.h5"),
         file_type="Fluent case (HDF5)",
-        candidate_products=("pyfluent", "fluids_one"),
+        candidate_products=("pyfluent",),
         needs_mode_choice=True,
         probe=_probe_fluent_h5,
         build_launch_args=_build_fluent_launch_args,
@@ -530,7 +514,7 @@ register_handler(
         name="fluent_case_text",
         suffixes=(".cas", ".msh", ".cas.gz", ".msh.gz"),
         file_type="Fluent case (legacy text)",
-        candidate_products=("pyfluent", "fluids_one"),
+        candidate_products=("pyfluent",),
         needs_mode_choice=True,
         probe=_probe_fluent_text,
         build_launch_args=_build_fluent_launch_args,
@@ -547,7 +531,7 @@ register_handler(
         name="fluent_data",
         suffixes=(".dat.h5", ".dat", ".dat.gz"),
         file_type="Fluent solution data",
-        candidate_products=("pyfluent", "fluids_one"),
+        candidate_products=("pyfluent",),
         needs_mode_choice=False,
         probe=_probe_passthrough,
         build_launch_args=_build_fluent_launch_args,
@@ -564,13 +548,13 @@ register_handler(
 # or a Fluent data file. The probe inspects the HDF5 group structure
 # and stores the detected load_command in ``probe.extra``; the
 # load_command field below is the literal sentinel ``"auto"`` so
-# ``_resolve_load_snippet`` knows to consult the probe.
+# loaders know to consult the probe.
 register_handler(
     FileHandler(
         name="fluent_h5_generic",
         suffixes=(".h5",),
         file_type="Fluent archive (HDF5, auto-detect)",
-        candidate_products=("pyfluent", "fluids_one"),
+        candidate_products=("pyfluent",),
         needs_mode_choice=True,
         probe=_probe_fluent_h5_generic,
         build_launch_args=_build_fluent_launch_args,
@@ -582,37 +566,25 @@ register_handler(
     )
 )
 
-# Workbench / Fluent project archive. PyFluent v27.1 does not expose
-# this on ``session.settings.file``; the canonical path is the TUI
-# command ``session.tui.file.parametric_project.open("<path>")``
-# (positional file path, no kwargs). ``_resolve_load_snippet`` maps
-# the ``read_project`` load_command to that TUI call.
+# Workbench / Fluent project archive. PyFluent v27.1 has no settings-API
+# loader for it, so ``read_project`` marks it as recognized but not loadable.
 register_handler(
     FileHandler(
         name="fluent_project",
         suffixes=(".flprj", ".cffdb"),
         file_type="Fluent / Workbench project",
-        candidate_products=("pyfluent", "fluids_one"),
+        candidate_products=("pyfluent",),
         needs_mode_choice=False,
         probe=_probe_passthrough,
         build_launch_args=_build_fluent_launch_args,
         component="solve",
         description=(
-            "Fluent or Workbench project archive. Loaded via "
-            "tui.file.parametric_project.open; lightweight does not "
-            "apply."
+            "Fluent or Workbench project archive. Recognized only; the "
+            "PyFluent settings API has no project loader."
         ),
         load_command="read_project",
     )
 )
-
-
-# ---------------------------------------------------------------------------
-# Non-solve handlers (geometry CAD import, Prime meshing readcad) are
-# intentionally NOT registered here. This OSS package is solve-only; an
-# optional higher-level layer registers those into this registry via
-# :func:`register_handler`. See the boundary note on ``register_handler``.
-# ---------------------------------------------------------------------------
 
 
 __all__ = [

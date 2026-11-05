@@ -608,14 +608,7 @@ def get_meshing_api_index() -> ApiIndex:
     if _default_meshing_index is None:
         with _default_lock:
             if _default_meshing_index is None:
-                from ansys.fluent.mcp.solve.catalog.meshing_workflow_entries import (
-                    get_meshing_workflow_entries,
-                )
-
-                _default_meshing_index = ApiIndex(
-                    sessions=_MESHING_SESSIONS,
-                    extra_entries=get_meshing_workflow_entries(),
-                )
+                _default_meshing_index = ApiIndex(sessions=_MESHING_SESSIONS)
     return _default_meshing_index
 
 

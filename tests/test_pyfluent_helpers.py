@@ -453,13 +453,11 @@ def test_pyfluent_backend_basic_helpers_and_metadata_methods():
         )
     )
     backend._solver = SimpleNamespace(
-        settings=root, scheme=SimpleNamespace(eval=lambda _expr: True)
+        settings=root, scheme=SimpleNamespace(eval=lambda _expr: True), is_active=lambda: True
     )
 
     assert backend.is_connected() is True
     assert backend._settings_root() is root
-    assert backend._probe_live_named_for_guard() == {"setup.named_expressions": ["expr"]}
-    assert backend._probe_iterating_for_guard() is True
     assert asyncio.run(backend.get_allowed_values(["setup.allowed_node", "missing"])) == {
         "setup.allowed_node": ["a", "b"],
         "missing": [],
@@ -814,33 +812,6 @@ def test_pyfluent_connect_import_failure_launch_failure_and_close_fallback(monke
     assert backend._solver is None
 
 
-def test_pyfluent_guard_probe_failure_paths():
-    """Verify that pyfluent guard probe failure paths.
-
-    Returns
-    -------
-    None
-        The function completes through its side effects.
-    """
-    backend = pyfluent.PyFluentBackend()
-    assert backend._probe_live_named_for_guard() == {}
-    assert backend._probe_iterating_for_guard() is False
-
-    backend._solver = SimpleNamespace(
-        settings=SimpleNamespace(setup=SimpleNamespace()), scheme=None
-    )
-    assert backend._probe_live_named_for_guard() == {}
-    assert backend._probe_iterating_for_guard() is False
-
-    failing_named = SimpleNamespace(
-        get_object_names=lambda: (_ for _ in ()).throw(RuntimeError("inactive"))
-    )
-    backend._solver = SimpleNamespace(
-        settings=SimpleNamespace(setup=SimpleNamespace(named_expressions=failing_named)),
-        scheme=FakeScheme(raises=True),
-    )
-    assert backend._probe_live_named_for_guard() == {}
-    assert backend._probe_iterating_for_guard() is False
 
 
 def test_pyfluent_dry_run_write_previews_live_write_failures():
@@ -866,7 +837,7 @@ def test_pyfluent_dry_run_write_previews_live_write_failures():
         )
     )
     backend = pyfluent.PyFluentBackend()
-    backend._solver = SimpleNamespace(settings=root)
+    backend._solver = SimpleNamespace(settings=root, is_active=lambda: True)
 
     missing = asyncio.run(backend.dry_run_write("setup.missing", "x"))
     inactive_result = asyncio.run(backend.dry_run_write("setup.inactive", "x"))
@@ -1016,7 +987,7 @@ def test_pyfluent_live_context_methods_with_fake_settings_tree(monkeypatch):
         settings=root, scheme=FakeScheme(values={"(%cx-is-solution-iterating)": False})
     )
 
-    monkeypatch.setattr(pyfluent, "discover_named_objects_via_scheme", lambda _solver: None)
+    monkeypatch.setattr(backend, "discover_named_objects", lambda _solver: None)
     monkeypatch.setattr(
         pyfluent,
         "discover_named_objects_via_walk",
@@ -1374,7 +1345,10 @@ def test_pyfluent_mesh_adjacency_fields_and_status_helpers():
     fields = SimpleNamespace(get_scalar_field_info=lambda: {"pressure": {}, "velocity": {}})
     backend = pyfluent.PyFluentBackend()
     backend._solver = SimpleNamespace(
-        settings=root, field_info=fields, scheme=FakeScheme(values={})
+        settings=root,
+        field_info=fields,
+        fields=SimpleNamespace(field_data=SimpleNamespace(is_data_valid=lambda: True)),
+        scheme=FakeScheme(values={}),
     )
 
     assert asyncio.run(backend.mesh_adjacency_probe(["fluid", "solid"])) == {
@@ -1397,6 +1371,31 @@ def test_pyfluent_mesh_adjacency_fields_and_status_helpers():
     broken_backend._solver = SimpleNamespace(settings=SimpleNamespace())
     broken_status = asyncio.run(broken_backend.solver_status())
     assert broken_status == {"initialized": None, "utl_enabled": False}
+
+
+@pytest.mark.parametrize("valid", [True, False, None, "false", 1])
+def test_solver_status_uses_live_solution_data_availability(valid):
+    """Missing/non-boolean observations stay unknown rather than becoming false."""
+    backend = pyfluent.PyFluentBackend()
+    backend._solver = SimpleNamespace(
+        settings=SimpleNamespace(),
+        fields=SimpleNamespace(field_data=SimpleNamespace(is_data_valid=lambda: valid)),
+    )
+    status = asyncio.run(backend.solver_status())
+    assert status["initialized"] is (valid if type(valid) is bool else None)
+
+
+def test_solver_status_failed_data_probe_remains_unknown():
+    """A transport failure must not establish an uninitialized solver."""
+    def failed():
+        raise RuntimeError("field data unavailable")
+
+    backend = pyfluent.PyFluentBackend()
+    backend._solver = SimpleNamespace(
+        settings=SimpleNamespace(),
+        fields=SimpleNamespace(field_data=SimpleNamespace(is_data_valid=failed)),
+    )
+    assert asyncio.run(backend.solver_status())["initialized"] is None
 
 
 def test_pyfluent_mesh_adjacency_and_field_failure_fallbacks():

@@ -424,7 +424,6 @@ def _make_server(monkeypatch, backend, expose_tools=("session_status",)):
         The function completes through its side effects.
     """
     monkeypatch.setattr(solve_mcp, "SolveCompositeBackend", lambda: backend)
-    monkeypatch.setattr(solve_mcp, "_discover_external_solve_backends", lambda: {})
     return solve_mcp.SolveMCP(expose_tools=expose_tools, default_backend_kind="pyfluent")
 
 

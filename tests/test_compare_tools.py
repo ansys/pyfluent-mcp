@@ -341,14 +341,14 @@ def test_compare_files_impl_validation_and_failure_paths(monkeypatch, tmp_path):
     case_a.write_text("a")
     case_b.write_text("b")
 
-    assert "path must be a non-empty" in compare_tools._validate_compare_path(" ")[1]
+    assert "path must be a non-empty" in compare_tools.validate_compare_path(" ")[1]
     assert (
         "file not found"
-        in compare_tools._validate_compare_path(str(tmp_path / "missing.cas.h5"))[1]
+        in compare_tools.validate_compare_path(str(tmp_path / "missing.cas.h5"))[1]
     )
     unsupported = case_a.with_suffix(".txt")
     unsupported.write_text("x")
-    assert "unsupported file type" in compare_tools._validate_compare_path(str(unsupported))[1]
+    assert "unsupported file type" in compare_tools.validate_compare_path(str(unsupported))[1]
 
     same = asyncio.run(
         compare_files_impl(SimpleNamespace(), path_a=str(case_a), path_b=str(case_a))
@@ -370,6 +370,28 @@ def test_compare_files_impl_validation_and_failure_paths(monkeypatch, tmp_path):
         compare_files_impl(SimpleNamespace(), path_a=str(case_a), path_b=str(case_b))
     )
     assert result == {"error": "failed to read b.cas.h5", "detail": "cannot read"}
+
+
+def test_compare_files_uses_injected_factory_without_patching_module(tmp_path):
+    """Verify that callers can inject a backend factory instead of patching globals."""
+    case_a = tmp_path / "a.cas.h5"
+    case_b = tmp_path / "b.cas.h5"
+    case_a.write_text("a")
+    case_b.write_text("b")
+    original = compare_tools.ephemeral_pyfluent_backend
+    labels = []
+
+    def factory(label):
+        labels.append(label)
+        return _CompareBackend(label, connect_status="error")
+
+    result = asyncio.run(
+        compare_tools.compare_files(str(case_a), str(case_b), backend_factory=factory)
+    )
+
+    assert result["error"] == "failed to launch session A"
+    assert len(labels) == 2
+    assert compare_tools.ephemeral_pyfluent_backend is original
 
 
 def test_diff_and_format_helpers_handle_unhashable_and_root_paths():

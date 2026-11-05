@@ -19,7 +19,6 @@ import pytest
 from ansys.fluent.mcp.common.text_match import (
     edit_distance_le_one,
     fuzzy_normalize,
-    sanitize_named_object_key,
 )
 
 
@@ -88,20 +87,3 @@ def test_fuzzy_normalize_returns_unique_canonical_match_only():
     assert fuzzy_normalize("water-vapor", ["water-vapor", "air"]) is None
     assert fuzzy_normalize("cat", ["bat", "car"]) is None
     assert fuzzy_normalize(123, ["123"]) is None
-
-
-def test_sanitize_named_object_key_rewrites_whitespace_only():
-    """Verify that sanitize named object key rewrites whitespace only.
-
-    Returns
-    -------
-    None
-        The function completes through its side effects.
-    """
-    sanitized, notice = sanitize_named_object_key("  oil   inlet  ")
-
-    assert sanitized == "oil-inlet"
-    assert "contained whitespace" in notice
-    assert sanitize_named_object_key("phase-1") == ("phase-1", None)
-    assert sanitize_named_object_key("phase/1") == ("phase/1", None)
-    assert sanitize_named_object_key(123) == (123, None)

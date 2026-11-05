@@ -78,6 +78,10 @@ ansys-fluent-mcp = "ansys.fluent.mcp.__main__:launcher"
 [tool.flit.module]
 name = "ansys.fluent.mcp"
 
+[tool.flit.sdist]
+include = ["scripts/check_api_distribution.py", "scripts/public-api-files.json", "tests/*.py"]
+exclude = ["build/", "dist/", "doc/_build/", "doc/source/api/", "**/__pycache__/"]
+
 [tool.ruff]
 line-length = 100
 fix = true

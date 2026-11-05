@@ -102,8 +102,54 @@ _GROUP_KINDS: frozenset[str] = frozenset({"Group"})
 _NAMED_OBJECT_KINDS: frozenset[str] = frozenset(
     {"NamedObject", "NamedObjectContainer", "Named", "ListObject"}
 )
+_LIST_OBJECT_KINDS: frozenset[str] = frozenset({"ListObject"})
 _COMMAND_KINDS: frozenset[str] = frozenset({"Command", "Action"})
 _QUERY_KINDS: frozenset[str] = frozenset({"Query", "QueryObject"})
+
+
+def _normalize_kind(name: str) -> str:
+    """Lowercase and drop separators so ``NamedObject`` matches ``named_object``.
+
+    Parameters
+    ----------
+    name : str
+        Kind name as reported by a probe.
+
+    Returns
+    -------
+    str
+        Alphanumeric, lowercase form of ``name``.
+    """
+    return "".join(ch for ch in name.lower() if ch.isalnum())
+
+
+def _kind_in(kind: str | None, family: frozenset[str]) -> bool:
+    """Return whether ``kind`` names a member of ``family``.
+
+    Exact names, module-qualified names (``fluent.NamedObject``) and
+    snake/kebab-case spellings (``named_object``) all match.
+
+    Parameters
+    ----------
+    kind : str or None
+        Kind name as reported by a probe.
+    family : frozenset[str]
+        Canonical kind names of one family.
+
+    Returns
+    -------
+    bool
+        ``True`` when ``kind`` belongs to ``family``.
+    """
+    if not kind:
+        return False
+    if kind in family:
+        return True
+    bare = kind.rsplit(".", 1)[-1]
+    if bare in family:
+        return True
+    normalized = _normalize_kind(bare)
+    return any(_normalize_kind(name) == normalized for name in family)
 
 
 @dataclass(frozen=True)
@@ -229,22 +275,36 @@ class PathDescriptor:
     @property
     def is_parameter(self) -> bool:
         """True iff the path is a leaf value (writable via ``set``)."""
-        return self.kind in _PARAMETER_KINDS
+        return _kind_in(self.kind, _PARAMETER_KINDS)
 
     @property
     def is_group(self) -> bool:
         """True iff the path is a container of fields."""
-        return self.kind in _GROUP_KINDS
+        return _kind_in(self.kind, _GROUP_KINDS)
 
     @property
     def is_named_object(self) -> bool:
         """True iff the path is an indexed NamedObject collection."""
-        return self.kind in _NAMED_OBJECT_KINDS
+        return _kind_in(self.kind, _NAMED_OBJECT_KINDS)
+
+    @property
+    def is_list_object(self) -> bool:
+        """True iff the path is an integer-indexed ListObject collection.
+
+        ``is_named_object`` stays True for ListObjects; use this narrower
+        predicate to pick an indexed (rather than keyed) write shape.
+        """
+        return _kind_in(self.kind, _LIST_OBJECT_KINDS)
 
     @property
     def is_command(self) -> bool:
         """True iff the path is a callable command."""
-        return self.kind in _COMMAND_KINDS
+        return _kind_in(self.kind, _COMMAND_KINDS)
+
+    @property
+    def is_query(self) -> bool:
+        """True iff the path is a read-only query node."""
+        return _kind_in(self.kind, _QUERY_KINDS)
 
     @property
     def is_bounded_enum(self) -> bool:

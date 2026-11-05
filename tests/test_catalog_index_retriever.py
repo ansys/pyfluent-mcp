@@ -170,7 +170,6 @@ def test_lexical_retriever_and_api_hit_tool_dict(tmp_path):
         "score": 0.1235,
         "raw": "raw",
         "payload": {"source": "schema"},
-        "note": "Does not exist. Use solver.settings.mesh.check() instead.",
     }
     assert plain.to_tool_dict() == {
         "path": "setup.models.energy",

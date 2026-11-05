@@ -549,3 +549,17 @@ def test_describe_path_registered_in_domain_tool_catalogue():
 
     names = {tool.spec.name for tool in get_solve_domain_tools()}
     assert "describe_path" in names
+
+
+def test_kind_predicates_accept_qualified_and_snake_case_spellings():
+    """Kind predicates match qualified and snake-case kind names."""
+    for kind in ("NamedObject", "named_object", "fluent.NamedObject", "ListObject", "list-object"):
+        assert PathDescriptor(path="p", kind=kind).is_named_object, kind
+    assert PathDescriptor(path="p", kind="list_object").is_list_object
+    assert not PathDescriptor(path="p", kind="NamedObject").is_list_object
+    assert PathDescriptor(path="p", kind="action").is_command
+    assert PathDescriptor(path="p", kind="QueryObject").is_query
+    assert PathDescriptor(path="p", kind="Real").is_parameter
+    assert not PathDescriptor(path="p", kind="Real").is_named_object
+    empty = PathDescriptor(path="p")
+    assert not (empty.is_named_object or empty.is_list_object or empty.is_query or empty.is_group)

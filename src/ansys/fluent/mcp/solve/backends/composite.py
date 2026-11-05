@@ -49,13 +49,17 @@ class SolveCompositeBackend(Backend):
 
     kind = "pyfluent"
 
-    def __init__(self, *, label: str = "Solve (PyFluent)") -> None:
+    def __init__(
+        self, *, label: str = "Solve (PyFluent)", pyfluent_backend: Backend | None = None
+    ) -> None:
         """Initialize the SolveCompositeBackend instance.
 
         Parameters
         ----------
         label : str
             Human-readable label attached to the operation or test double.
+        pyfluent_backend : Backend | None
+            Optional execution backend supplied by an embedding application.
 
         Returns
         -------
@@ -64,7 +68,12 @@ class SolveCompositeBackend(Backend):
         """
         super().__init__()
         self.label = label
-        self._pyfluent = PyFluentBackend()
+        self._pyfluent = pyfluent_backend if pyfluent_backend is not None else PyFluentBackend()
+
+    @property
+    def pyfluent_backend(self) -> Backend:
+        """Return the execution backend every call is delegated to."""
+        return self._pyfluent
 
     # ------------------------------------------------------------------
     # Properties delegated to the PyFluent backend
@@ -165,7 +174,7 @@ class SolveCompositeBackend(Backend):
             status="ok",
             backend_kind=self.kind,
             endpoint=self._pyfluent.endpoint,
-            message=f"PyFluent connected ({self._pyfluent._mode}).",
+            message=f"PyFluent connected ({getattr(self._pyfluent, '_mode', None) or 'attach'}).",
         )
 
     async def disconnect(self) -> None:
@@ -414,6 +423,16 @@ class SolveCompositeBackend(Backend):
             Argument signature, or ``None`` when the path is not a command.
         """
         return await self._pyfluent.get_command_arguments(path)
+
+
+
+
+    async def dry_run_write(
+        self, path: str, value: Any, *, kind: str = "set",
+        key: str | None = None, index: int | None = None,
+    ) -> dict[str, Any]:
+        """Preserve semantic write checks through the composite backend."""
+        return await self._pyfluent.dry_run_write(path, value, kind=kind, key=key, index=index)
 
     async def list_fields(self, *, scope: str = "any") -> dict[str, Any] | None:
         """Enumerate solver field / variable names for reports & post.

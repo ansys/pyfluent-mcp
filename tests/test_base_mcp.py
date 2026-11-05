@@ -425,7 +425,7 @@ def test_run_code_observer_errors_and_backend_errors_are_swallowed_for_notificat
         # as a typed error. Returning an empty "success" hid dead backends.
         assert _is_error(result)
         assert _structured(result)["error_code"] == "internal_error"
-        assert "backend exploded" in _structured(result)["message"]
+        assert "backend exploded" not in _structured(result)["message"]
 
     asyncio.run(scenario())
     assert seen[0]["error"].args == ("backend exploded",)
@@ -552,6 +552,7 @@ def test_standalone_recovery_lists_choices_when_backend_is_ambiguous():
         ]
         for args in payload["next_tool_choices"]:
             assert not _is_error(await server.call_tool("connect", args))
+            await server.backend.disconnect()
 
     asyncio.run(scenario())
 
@@ -984,3 +985,27 @@ def test_select_named_objects_from_mapping_handles_aliases_and_missing_collectio
     missing = select_named_objects_from_mapping(named, collection="setup.unknown")
     assert missing["names"] == []
     assert missing["available_collections"] == sorted(named)
+
+
+@pytest.mark.asyncio
+async def test_disconnect_waits_for_connect_before_clearing_active_route():
+    """A concurrent disconnect must close the session that is still connecting."""
+    entered, release = asyncio.Event(), asyncio.Event()
+
+    class SlowBackend(BaseFakeBackend):
+        async def connect(self, **kwargs):
+            entered.set()
+            await release.wait()
+            return await super().connect(**kwargs)
+
+    backend = SlowBackend(connected=False)
+    server = _server(backend, expose_tools=("connect", "disconnect"))
+    connecting = asyncio.create_task(server.call_tool("connect", {}))
+    await entered.wait()
+    disconnecting = asyncio.create_task(server.call_tool("disconnect", {}))
+    await asyncio.sleep(0)
+    assert not disconnecting.done()
+    release.set()
+    await asyncio.gather(connecting, disconnecting)
+    assert not backend.connected
+    assert server._active_kind is None

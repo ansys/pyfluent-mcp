@@ -14,11 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""MCP resources and prompts for the solve leaf.
+"""Native MCP resources for the solve leaf.
 
 Resources are read-only live-context snapshots a user or host can attach to a
-chat without a tool call. Prompts are workflow playbooks that hosts surface as
-slash commands. Prompts only name tools the solve leaf publishes.
+chat without a tool call. Applications own workflow prompts and advice.
 """
 
 from __future__ import annotations
@@ -30,63 +29,6 @@ from ansys.fluent.mcp.common.errors import FluidsMCPError
 from ansys.fluent.mcp.common.host.guidance import error_guidance
 
 _JSON = "application/json"
-
-_RULES = (
-    "Rules: never use .tui or Scheme; check every write with `validate_code` and run it with "
-    "`run_code` only after the user approves; there is no undo on this server, so show the code "
-    "first; follow the 'next_action' field on errors; after a timeout call `session_status` "
-    "before retrying."
-)
-
-PROMPTS: dict[str, dict[str, str]] = {
-    "fluent_setup_change": {
-        "description": "Make a validated settings change on the connected Fluent case.",
-        "template": (
-            "Goal: {goal}\n\n"
-            "1. Call `session_status`; if not connected, call `connect`.\n"
-            "2. Call `summarize_setup` to read the current models, materials and boundary "
-            "conditions.\n"
-            "3. Find the settings paths with `find_api` and check them with `describe_path` "
-            "(exists, active, allowed values).\n"
-            "4. Write PyFluent settings-API code for the change and check it with "
-            "`validate_code`.\n"
-            "5. Show the code, run it with `run_code` after approval, then verify with "
-            "`get_state`.\n\n" + _RULES
-        ),
-    },
-    "fluent_diagnose_divergence": {
-        "description": "Diagnose a diverging or stalled Fluent run and propose fixes.",
-        "template": (
-            "Symptom: {symptom}\n\n"
-            "1. Call `solver_status` for iterations and residuals.\n"
-            "2. Call `mesh_quality` and `summarize_setup` to check mesh and numerics.\n"
-            "3. Explain the most likely cause in two sentences.\n"
-            "4. Propose at most three fixes (for example lower under-relaxation, better "
-            "initialization, first-order start), check each with `validate_code`, and apply only "
-            "what the user approves with `run_code`.\n\n" + _RULES
-        ),
-    },
-}
-"""Prompt name -> description and template."""
-
-
-def render_prompt(name: str, **arguments: str) -> str:
-    """Render one of :data:`PROMPTS`.
-
-    Parameters
-    ----------
-    name : str
-        Prompt name.
-    arguments : str
-        Values for the template placeholders.
-
-    Returns
-    -------
-    str
-        The rendered prompt text.
-    """
-    return PROMPTS[name]["template"].format(**arguments)
-
 
 def _dump(payload: Any) -> str:
     return json.dumps(payload, indent=2, default=str)
@@ -171,28 +113,6 @@ def register_solve_resources(server: Any) -> None:
         return await _read_connected(server, lambda backend: backend.list_named_objects())
 
 
-def register_solve_prompts(server: Any) -> None:
-    """Register the solve leaf's workflow prompts.
-
-    Parameters
-    ----------
-    server : Any
-        Solve leaf server.
-    """
-
-    @server.prompt(
-        name="fluent_setup_change",
-        description=PROMPTS["fluent_setup_change"]["description"],
-    )
-    def fluent_setup_change(goal: str) -> str:
-        return render_prompt("fluent_setup_change", goal=goal)
-
-    @server.prompt(
-        name="fluent_diagnose_divergence",
-        description=PROMPTS["fluent_diagnose_divergence"]["description"],
-    )
-    def fluent_diagnose_divergence(symptom: str = "residuals are rising") -> str:
-        return render_prompt("fluent_diagnose_divergence", symptom=symptom)
 
 
-__all__ = ["PROMPTS", "register_solve_prompts", "register_solve_resources", "render_prompt"]
+__all__ = ["register_solve_resources"]

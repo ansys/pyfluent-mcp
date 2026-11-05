@@ -23,24 +23,23 @@ This module owns the pure-domain pieces of the ``compare_files`` tool:
 * A recursive dictionary diff with stable named-object handling
 * Compact rendering helpers used by the markdown summary
 
-The leaf-side ``DomainTool`` entry point is
-:func:`compare_files_impl`. The agent's in-process handler delegates
-to the same coroutine so both surfaces share one source of truth.
+The leaf-side ``DomainTool`` entry point is :func:`compare_files_impl`.
+Embedding applications call :func:`compare_files` and may inject their own
+ephemeral backend factory.
 
-There is **no** ``state`` parameter and no reference to ``LoopState``
-on purpose. By the time this module is reached, all path validation
-and same-file checks have already passed in :func:`compare_files_impl`
-itself, using only the public :mod:`ansys.fluent.mcp.common.file_handlers`
-registry. The handler spawns its own ephemeral sessions so the live
-workspace (if any) is never touched.
+The module is stateless. Path validation and same-file checks use only
+the public :mod:`ansys.fluent.mcp.common.file_handlers` registry, and
+the tool spawns its own ephemeral sessions so the live workspace (if
+any) is never touched.
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from ansys.fluent.mcp.common.backend import Backend
 from ansys.fluent.mcp.common.file_handlers import (
@@ -301,18 +300,12 @@ def format_compare_summary(
 # ---------------------------------------------------------------------------
 
 
-def _validate_compare_path(raw: Any) -> tuple[Path | None, str | None]:
+def validate_compare_path(raw: Any) -> tuple[Path | None, str | None]:
     """Validate a user-supplied path for comparison.
 
     Resolve and validate a user-supplied path against the shared
-    :mod:`ansys.fluent.mcp.common.file_handlers` registry.
-
-    Mirrors the agent's ``_validate_read_file_path`` + handler check
-    but lives on the leaf side so the solve MCP can run without the
-    agent wheel installed. The leaf is invoked by trusted MCP hosts
-    (Claude Desktop, Copilot) on the same host; the check is purely
-    a defense-in-depth filter so we don't try to read non-case files
-    in PyFluent.
+    :mod:`ansys.fluent.mcp.common.file_handlers` registry. The check is a
+    defense-in-depth filter so non-case files are never read in PyFluent.
 
     Parameters
     ----------
@@ -394,10 +387,37 @@ async def compare_files_impl(
     dict[str, Any]
         Mapping containing the operation result.
     """
-    res_a, err_a = _validate_compare_path(path_a)
+    return await compare_files(path_a, path_b)
+
+
+async def compare_files(
+    path_a: str,
+    path_b: str,
+    *,
+    backend_factory: Callable[..., Backend] | None = None,
+) -> dict[str, Any]:
+    """Compare two case/mesh files using backends built by ``backend_factory``.
+
+    Parameters
+    ----------
+    path_a : str
+        First case or mesh file.
+    path_b : str
+        Second case or mesh file.
+    backend_factory : Callable[..., Backend] | None
+        Called with ``label=`` to build each ephemeral backend; defaults to
+        :func:`ephemeral_pyfluent_backend`.
+
+    Returns
+    -------
+    dict[str, Any]
+        Mapping containing the operation result.
+    """
+    factory = backend_factory or ephemeral_pyfluent_backend
+    res_a, err_a = validate_compare_path(path_a)
     if err_a:
         return {"error": f"path_a: {err_a}"}
-    res_b, err_b = _validate_compare_path(path_b)
+    res_b, err_b = validate_compare_path(path_b)
     if err_b:
         return {"error": f"path_b: {err_b}"}
     if res_a is None or res_b is None:
@@ -407,10 +427,10 @@ async def compare_files_impl(
     path_a_resolved = res_a
     path_b_resolved = res_b
 
-    backend_a = ephemeral_pyfluent_backend(
+    backend_a = factory(
         label=f"PyFluent (compare:{path_a_resolved.name})",
     )
-    backend_b = ephemeral_pyfluent_backend(
+    backend_b = factory(
         label=f"PyFluent (compare:{path_b_resolved.name})",
     )
     launch = {"ui_mode": "gui", "precision": "double"}
@@ -430,7 +450,7 @@ async def compare_files_impl(
 
         for backend_i, path in ((backend_a, path_a_resolved), (backend_b, path_b_resolved)):
             case_path = _normalize_path_for_fluent(path)
-            snippet = f'session.settings.file.read_case(file_name="{case_path}", lightweight_setup=True)\n'  # noqa: E501
+            snippet = f"session.settings.file.read_case(file_name={json.dumps(case_path)}, lightweight_setup=True)\n"  # noqa: E501
             run_res = await backend_i.run_code(snippet)
             if getattr(run_res, "error_code", None):
                 return {
@@ -476,6 +496,7 @@ async def compare_files_impl(
 
 
 __all__ = [
+    "compare_files",
     "compare_files_impl",
     "ephemeral_pyfluent_backend",
     "collect_compare_snapshot",
@@ -483,4 +504,5 @@ __all__ = [
     "format_compare_summary",
     "shorten_value",
     "split_diff_path",
+    "validate_compare_path",
 ]

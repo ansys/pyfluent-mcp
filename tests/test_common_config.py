@@ -57,8 +57,8 @@ def test_load_config_reads_known_environment_values():
     assert any("VERIFY_TLS is disabled" in warning for warning in config.warnings)
 
 
-def test_load_config_warns_for_unknown_fluids_mcp_variable():
-    """Verify that load config warns for unknown fluids mcp variable.
+def test_load_config_warns_for_unknown_configuration_variable():
+    """Verify that load config warns for unknown configuration variable.
 
     Returns
     -------
@@ -67,6 +67,22 @@ def test_load_config_warns_for_unknown_fluids_mcp_variable():
     """
     config = load_config({"FLUIDS_MCP_QRDANT_URL": "typo"})
 
+    assert len(config.warnings) == 1
+    assert "FLUIDS_MCP_QRDANT_URL" in config.warnings[0]
+
+
+def test_registered_env_vars_do_not_warn(monkeypatch):
+    """Verify that host-registered variables are accepted as known."""
+    import ansys.fluent.mcp.common.config as config_module
+
+    monkeypatch.setattr(config_module, "_REGISTERED_ENV_VARS", set())
+    assert "FLUIDS_MCP_HOST_ONLY_KNOB" not in config_module.known_env_vars()
+
+    config_module.register_known_env_vars("FLUIDS_MCP_HOST_ONLY_KNOB", "")
+    config = load_config({"FLUIDS_MCP_HOST_ONLY_KNOB": "1", "FLUIDS_MCP_QRDANT_URL": "typo"})
+
+    assert "FLUIDS_MCP_HOST_ONLY_KNOB" in config_module.known_env_vars()
+    assert "" not in config_module.known_env_vars()
     assert len(config.warnings) == 1
     assert "FLUIDS_MCP_QRDANT_URL" in config.warnings[0]
 
@@ -83,6 +99,20 @@ def test_load_config_warns_for_agent_owned_max_steps_variables():
     assert len(config.warnings) == 2
     assert "FLUIDS_MCP_LLM_MAX_STEPS" in config.warnings[0]
     assert "FLUIDS_MCP_MAX_STEPS" in config.warnings[1]
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "FLUIDS_MCP_SETTINGS_JSON",
+        "FLUIDS_MCP_BATCH_FAMILY_LIMIT",
+        "FLUIDS_MCP_STRICT_VALIDATION",
+        "FLUIDS_MCP_MAX_STATE_BYTES",
+    ],
+)
+def test_variables_read_by_the_package_are_known(name):
+    """Verify that variables the package honors never trigger the typo warning."""
+    assert load_config({name: "1"}).warnings == ()
 
 
 @pytest.mark.parametrize(

@@ -15,7 +15,6 @@
 # limitations under the License.
 
 import asyncio
-import logging
 
 from ansys.fluent.mcp.solve import mcp as solve_mcp
 from ansys.fluent.mcp.solve.lib.discovery_tools import list_fields_impl
@@ -121,78 +120,12 @@ def test_list_fields_impl_handles_disconnected_empty_success_and_errors():
     assert failed == {"error": "failed to list fields: boom"}
 
 
-def test_discover_external_solve_backends_loads_good_plugins_and_skips_bad(monkeypatch, caplog):
-    """Verify that discover external solve backends loads good plugins and skips bad.
 
-    Parameters
-    ----------
-    monkeypatch : Any
-        Pytest fixture used to patch environment variables or dependencies.
-    caplog : Any
-        Pytest fixture used to capture log records during the test.
-
-    Returns
-    -------
-    None
-        The function completes through its side effects.
-    """
-
-    class EntryPoint:
-        def __init__(self, name, loader):
-            """Initialize the EntryPoint instance.
-
-            Parameters
-            ----------
-            name : Any
-                Name of the object, module, or setting being processed.
-            loader : Any
-                Loader to supply to the function.
-
-            Returns
-            -------
-            None
-                The function completes through its side effects.
-            """
-            self.name = name
-            self._loader = loader
-
-        def load(self):
-            """Load data required by the operation.
-
-            Returns
-            -------
-            None
-                The function completes through its side effects.
-            """
-            return self._loader
-
-    good_backend = object()
-
-    def fake_entry_points(group=None):
-        """Return fake entry points for plugin discovery tests.
-
-        Parameters
-        ----------
-        group : Any
-            Group to supply to the function.
-
-        Returns
-        -------
-        None
-            The function completes through its side effects.
-        """
-        assert group == solve_mcp._SOLVE_BACKENDS_ENTRY_POINT_GROUP
-        return [
-            EntryPoint("empty", lambda: {}),
-            EntryPoint("good", lambda: {"custom": good_backend}),
-            EntryPoint("bad", lambda: (_ for _ in ()).throw(RuntimeError("plugin broke"))),
-        ]
-
-    monkeypatch.setattr("importlib.metadata.entry_points", fake_entry_points)
-    monkeypatch.setattr(solve_mcp.logger, "disabled", False)
-    caplog.set_level(logging.WARNING, logger="ansys.fluent.mcp.solve.mcp")
-
-    discovered = solve_mcp._discover_external_solve_backends()
-
-    assert discovered == {"custom": good_backend}
-    assert "Failed to load solve backend provider 'bad'" in caplog.text
+def test_backend_injection_does_not_load_entry_points(monkeypatch):
+    """Embedding is explicit and never imports application plugins."""
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Unexpected plugin discovery")
+    monkeypatch.setattr("importlib.metadata.entry_points", forbidden)
+    backend = solve_mcp.SolveCompositeBackend()
+    server = solve_mcp.SolveMCP(backends={"custom": backend}, default_backend_kind="custom")
+    assert server._backends == {"custom": backend}

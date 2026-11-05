@@ -16,11 +16,6 @@
 
 """Live introspection helpers shared by backends.
 
-These mirror the behavior of the legacy
-``/fluent_get_targeted_context`` and ``/fluent_get_state`` endpoints from
-``aali-flowkit-python``. Keeping the logic in one place keeps PyFluent and
-any future in-process backend (such as Discovery or Prime) consistent.
-
 All functions take a *root* (the ``Settings`` root of a connected solver)
 and operate on **caller-provided paths**. There are no hardcoded collection lists.
 """
@@ -50,7 +45,7 @@ FLUENT_GLOBAL_STATE_PATHS: tuple[str, ...] = (
     "setup/general/operating-conditions/operating-pressure",
 )
 
-# Caps lifted from the legacy targeted-context endpoint.
+# Bound discovery responses to keep native introspection inexpensive.
 _MAX_AV_ENTRIES = 100
 _MAX_AV_VALUES = 25
 _MAX_AV_DEPTH = 2
@@ -81,7 +76,7 @@ def _env_int(name: str, default: int) -> int:
     return value if value > 0 else default
 
 
-_MAX_STATE_BYTES = _env_int("FLUIDS_AGENT_MAX_STATE_BYTES", 5000)
+_MAX_STATE_BYTES = _env_int("FLUIDS_MCP_MAX_STATE_BYTES", 5000)
 _MAX_INSTANCE_STATE_BYTES = 8000
 
 
@@ -229,106 +224,6 @@ def resolve_path(root: Any, path: str) -> Any:
 # ---------------------------------------------------------------------------
 
 
-def discover_named_objects_via_scheme(solver: Any) -> Optional[dict[str, list[str]]]:
-    """Try the Scheme ``api-get-named-object-names`` API.
-
-    Returns a ``{path: [names]}`` mapping if successful, otherwise ``None``
-    (Caller falls back to a recursive walk.)
-
-    Fluent's ``api-get-named-object-names`` iterates every known
-    named-object type and calls ``api-get-object-names`` on each.
-    For inactive types (such as ``setup/solid-regions`` and
-    ``setup/turbo-interfaces`` when those physics aren't enabled), the
-    inner Scheme prints ``Error: api-get-object-names: Object is
-    invalid`` to the Fluent transcript as a side-effect of
-    ``err-protect``. The return value is still complete, but the
-    transcript noise is visible to the user. The call is wrapped in
-    ``with-output-to-port (open-output-string)`` so those diagnostic
-    prints land in a discarded string sink instead of the transcript.
-    They fall back to the unwrapped form if the Scheme dialect does
-    not support that pattern.
-
-    Read-only Scheme is kept here because the settings API has no
-    equivalent. On a 126k-cell, 22-collection case (Fluent 27.1),
-    this call takes about 3 s; :func:`discover_named_objects_via_walk`
-    takes about 33 s and reports child-group names rather than every
-    populated collection.
-
-    Parameters
-    ----------
-    solver : Any
-        Solver to supply to the function.
-
-    Returns
-    -------
-    Optional[dict[str, list[str]]]
-        Mapping containing the operation result.
-    """
-    scheme = getattr(solver, "scheme", None) or getattr(solver, "scheme_eval", None)
-    if scheme is None:
-        return None
-
-    _silenced = (
-        "(let* ((__sink (open-output-string))"
-        "       (__result (with-output-to-port __sink"
-        "                    (lambda ()"
-        "                      (err-protect"
-        "                        (api-get-named-object-names"
-        "                          (get flapi-objects root))))))) "
-        " __result)"
-    )
-    _plain = "(err-protect (api-get-named-object-names (get flapi-objects root)))"
-
-    def _eval(expr: str) -> Any:
-        """Evaluate the fake expression for the test.
-
-        Parameters
-        ----------
-        expr : str
-            Expr to supply to the function.
-
-        Returns
-        -------
-        None
-            The function completes through its side effects.
-        """
-        if hasattr(scheme, "eval"):
-            return scheme.eval(expr)
-        return scheme(expr)
-
-    raw: Any = None
-    try:
-        raw = _eval(_silenced)
-    except Exception:
-        raw = None
-    if not raw:
-        # Fallback to the unwrapped form — preserves prior behavior
-        # for Scheme dialects that lack with-output-to-port /
-        # open-output-string.
-        try:
-            raw = _eval(_plain)
-        except Exception:
-            return None
-
-    if not raw:
-        return None
-
-    out: dict[str, list[str]] = {}
-    if isinstance(raw, dict):
-        for k, v in raw.items():
-            out[str(k)] = [str(n) for n in (v or [])]
-    else:
-        # List of (path, *names) tuples returned by Scheme.
-        try:
-            for entry in raw:
-                if not entry:
-                    continue
-                path = str(entry[0])
-                names = [str(n) for n in entry[1:]]
-                out[path] = names
-        except Exception:
-            return None
-    return out or None
 
 
 def discover_named_objects_via_walk(
@@ -438,7 +333,7 @@ def discover_named_objects_via_walk(
         logger.warning(
             "discover_named_objects_via_walk truncated at max_entries=%d "
             "(max_depth=%d). Some named-object collections may be missing; "
-            "prefer the Scheme api-get-named-object-names path.",
+            "increase the discovery limits or query a specific collection.",
             max_entries,
             max_depth,
         )
@@ -1054,7 +949,6 @@ __all__ = [
     "FLUENT_GLOBAL_STATE_PATHS",
     "normalise_attr_path",
     "resolve_path",
-    "discover_named_objects_via_scheme",
     "discover_named_objects_via_walk",
     "collect_targeted_context",
     "collect_global_state",

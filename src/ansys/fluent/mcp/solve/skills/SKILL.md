@@ -249,64 +249,9 @@ will:
   same id for every call.
 - **Missing user input.** A result may carry `input_request`; ask the
   user for that argument and call again with it.
-- **Resources and prompts.** `fluent://session/status`,
+- **Resources.** `fluent://session/status`,
   `fluent://solver/status` and `fluent://case/named-objects` are
-  attachable context; `fluent_setup_change` and
-  `fluent_diagnose_divergence` are workflow prompts.
+  attachable context. Workflow prompts belong to the host.
 
 Turn the host contract off with `FLUIDS_MCP_HOST_CONTRACT=0` if your
 host implements its own.
-
-### Intent-guard error codes (defense-in-depth at `run_code`)
-
-`run_code` runs an offline, stateless **intent guard** before
-exec to catch a fixed set of Fluent-specific crash signatures. It is
-NOT a planner — it inspects only the snippet you submitted. Disable
-with `FLUIDS_MCP_INTENT_GUARD=0` if your host wants full control.
-
-When the guard fires, `run_code` returns one of these error codes:
-
-| `error_code` | Meaning | Correct response |
-|---|---|---|
-| `risk_blocked` | Snippet matches a known crash signature (e.g. boundary rename to a name with whitespace; `multiphase.number_of_phases = N` int direct-assign; setup mutation while iterating). | Read the suggestion in `stderr`, rewrite the snippet, then call `run_code` again. Do NOT retry the same snippet. |
-| `sequence_error` | Intra-snippet use-before-create (e.g. gravity references `expr_grav` before the snippet creates `setup.named_expressions["expr_grav"]`). | Reorder the statements (define first, then reference) and re-submit. |
-| `solver_disconnected` | The Fluent gRPC channel died during the call (or just before it). | Call `connect` again, re-load the case/data file, then re-issue the work. The session is already marked disconnected — `session_status` will reflect that on the very next call. |
-
-The **blocking signatures** (return `risk_blocked` / `sequence_error`)
-are:
-
-1. `bc.rename.whitespace` — boundary rename whose new name contains
-   whitespace. Use underscores instead (`"oil_inlet"`, not `"oil
-   inlet"`).
-2. `multiphase.number_of_phases.shape` — direct integer assignment
-   to `multiphase.number_of_phases`. Use
-   `multiphase.number_of_phases.number_of_eulerian_phases = N`.
-3. `seq.phase.material_before_rename` — phase rename happens AFTER
-   the material assignment in the same snippet. Rename first, then
-   assign material to the new key.
-4. `runtime.write_during_iter` — `setup.*` mutation while the
-   solver is iterating. Interrupt first
-   (`solver.solution.run_calculation.interrupt()`), then write.
-5. `seq.named_expr.use_before_create` — a named expression is
-   referenced before it is created in the same snippet. Reorder, or
-   split into two `run_code` calls.
-6. `reportdef.surface_field` — a report definition is given a
-   `surfaces` field (attribute, `.locations.surfaces`, or a
-   create-dict key). Report definitions take `surface_names=[...]`
-   (`surfaces` is the *graphics*-object field).
-
-In addition, **non-blocking advisories** are returned in the
-successful result's `warnings` list (they do NOT stop execution):
-
-- `named_expr.missing_units` — a named expression is created with a
-  bare number (`{"definition": "9.81"}`). Add a unit, e.g.
-  `"9.81 [m s^-2]"`; a unit-less number is dimensionless and fails
-  when consumed by a dimensioned slot.
-- `tui.usage` — the snippet uses `.tui.*`. Prefer the
-  `solver.settings.*` tree, which the rest of this server validates
-  against.
-
-These exist purely to prevent today's most expensive failure modes
-from killing the gRPC channel (blocks) or silently mis-configuring the
-case (warnings); they do not constitute a planner and they do not
-cross-call each other.

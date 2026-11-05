@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import functools
 import logging
-import traceback
 from typing import Any, Awaitable, Callable, TypeVar
 
 from ansys.fluent.mcp.common.models import TypedError
@@ -137,12 +136,11 @@ def typed_guard(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T 
         except FluidsMCPError as exc:
             logger.info("Typed error from %s: %s — %s", func.__name__, exc.error_code, exc.message)
             return exc.to_typed()
-        except Exception as exc:  # boundary
+        except Exception:  # boundary
             logger.exception("Unhandled error in %s", func.__name__)
             return TypedError(
                 error_code="internal_error",
-                message=str(exc),
-                details={"trace": traceback.format_exc(limit=5)},
+                message="An internal error occurred. Consult the server logs for details.",
             )
 
     return wrapper
