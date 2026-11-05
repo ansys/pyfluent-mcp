@@ -30,7 +30,7 @@ jobs:
       contents: write # Needed to read and write repository contents
       pull-requests: write # Needed to create pull requests
     steps:
-      - uses: ansys/actions/doc-deploy-changelog@87ff2e65e8884121f9afc97728ca9f213228ecc2 #v11.1.4
+      - uses: ansys/actions/doc-deploy-changelog@f5e1481b9c128197a30d1dc1dfc52b8cd6865555 #v11.1.5
         with:
           token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
           bot-user: ${{ secrets.PYANSYS_CI_BOT_USERNAME }}
@@ -43,7 +43,7 @@ jobs:
       contents: read # Needed to checkout the code
     steps:
       - name: "Run PyAnsys code style checks"
-        uses: ansys/actions/code-style@87ff2e65e8884121f9afc97728ca9f213228ecc2 #v11.1.4
+        uses: ansys/actions/code-style@f5e1481b9c128197a30d1dc1dfc52b8cd6865555 #v11.1.5
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
 
@@ -54,7 +54,7 @@ jobs:
       contents: read # Needed to checkout the code
     steps:
       - name: "Run Ansys documentation style checks"
-        uses: ansys/actions/doc-style@87ff2e65e8884121f9afc97728ca9f213228ecc2 #v11.1.4
+        uses: ansys/actions/doc-style@f5e1481b9c128197a30d1dc1dfc52b8cd6865555 #v11.1.5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -67,7 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check commit name
-        uses: ansys/actions/check-pr-title@87ff2e65e8884121f9afc97728ca9f213228ecc2 #v11.1.4
+        uses: ansys/actions/check-pr-title@f5e1481b9c128197a30d1dc1dfc52b8cd6865555 #v11.1.5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -77,7 +77,7 @@ jobs:
     permissions:
       contents: read # Needed to checkout and scan workflows
     steps:
-      - uses: ansys/actions/check-actions-security@87ff2e65e8884121f9afc97728ca9f213228ecc2 #v11.1.4
+      - uses: ansys/actions/check-actions-security@f5e1481b9c128197a30d1dc1dfc52b8cd6865555 #v11.1.5
         with:
           generate-summary: true
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -89,7 +89,7 @@ jobs:
     permissions:
       contents: read # Needed to checkout the code
     steps:
-      - uses: ansys/actions/check-vulnerabilities@87ff2e65e8884121f9afc97728ca9f213228ecc2 #v11.1.4
+      - uses: ansys/actions/check-vulnerabilities@f5e1481b9c128197a30d1dc1dfc52b8cd6865555 #v11.1.5
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           python-package-name: ${{ env.PACKAGE_NAME }}
@@ -114,7 +114,7 @@ jobs:
             os: macos-latest
     steps:
       - name: "Build wheelhouse and perform smoke test"
-        uses: ansys/actions/build-wheelhouse@87ff2e65e8884121f9afc97728ca9f213228ecc2 #v11.1.4
+        uses: ansys/actions/build-wheelhouse@f5e1481b9c128197a30d1dc1dfc52b8cd6865555 #v11.1.5
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           operating-system: ${{ matrix.os }}
@@ -133,7 +133,7 @@ jobs:
         python-version: ["3.12", "3.13", "3.14"]
     steps:
       - name: "Run unit tests"
-        uses: ansys/actions/tests-pytest@87ff2e65e8884121f9afc97728ca9f213228ecc2 #v11.1.4
+        uses: ansys/actions/tests-pytest@f5e1481b9c128197a30d1dc1dfc52b8cd6865555 #v11.1.5
         with:
           python-version: ${{ matrix.python-version }}
           pytest-markers: '-m "not integration"'
@@ -171,7 +171,7 @@ jobs:
       PYTEST_XDIST_AUTO_NUM_WORKERS: 1
     steps:
       - name: "Login to GitHub Container Registry"
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -181,7 +181,7 @@ jobs:
         run: docker pull ghcr.io/ansys/fluent:${FLUENT_IMAGE_TAG}
 
       - name: "Run live Fluent integration tests"
-        uses: ansys/actions/tests-pytest@87ff2e65e8884121f9afc97728ca9f213228ecc2 #v11.1.4
+        uses: ansys/actions/tests-pytest@f5e1481b9c128197a30d1dc1dfc52b8cd6865555 #v11.1.5
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           optional-dependencies-name: "tests"
@@ -195,7 +195,7 @@ jobs:
       contents: read # Needed to checkout the code
     steps:
       - name: Run Ansys documentation building action
-        uses: ansys/actions/doc-build@87ff2e65e8884121f9afc97728ca9f213228ecc2 # v11.1.4
+        uses: ansys/actions/doc-build@f5e1481b9c128197a30d1dc1dfc52b8cd6865555 # v11.1.5
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           sphinxopts: "-W --keep-going"
@@ -210,7 +210,7 @@ jobs:
       id-token: write # Required for OIDC authentication to upload provenance attestations
     steps:
       - name: "Build library source and wheel artifacts"
-        uses: ansys/actions/build-library@87ff2e65e8884121f9afc97728ca9f213228ecc2 # v11.1.4
+        uses: ansys/actions/build-library@f5e1481b9c128197a30d1dc1dfc52b8cd6865555 # v11.1.5
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
@@ -228,7 +228,7 @@ jobs:
     needs: [build-docs, package]
     steps:
       - name: "Deploy the latest documentation"
-        uses: ansys/actions/doc-deploy-dev@87ff2e65e8884121f9afc97728ca9f213228ecc2 #v11.1.4
+        uses: ansys/actions/doc-deploy-dev@f5e1481b9c128197a30d1dc1dfc52b8cd6865555 #v11.1.5
         with:
           cname: ${{ env.DOCUMENTATION_CNAME }}
           token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
@@ -244,7 +244,7 @@ jobs:
       contents: write # Needed to push documentation to gh-pages branch
     steps:
       - name: "Deploy the PR documentation"
-        uses: ansys/actions/doc-deploy-pr@87ff2e65e8884121f9afc97728ca9f213228ecc2 #v11.1.4
+        uses: ansys/actions/doc-deploy-pr@f5e1481b9c128197a30d1dc1dfc52b8cd6865555 #v11.1.5
         with:
           cname: ${{ env.DOCUMENTATION_CNAME }}
           token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
@@ -264,7 +264,7 @@ jobs:
       contents: write # Required for GitHub release
     steps:
       - name: "Release to GitHub"
-        uses: ansys/actions/release-github@87ff2e65e8884121f9afc97728ca9f213228ecc2 # v11.1.4
+        uses: ansys/actions/release-github@f5e1481b9c128197a30d1dc1dfc52b8cd6865555 # v11.1.5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           library-name: ${{ env.PACKAGE_NAME }}
@@ -288,7 +288,7 @@ jobs:
     needs: [release]
     steps:
       - name: "Deploy the stable documentation"
-        uses: ansys/actions/doc-deploy-stable@87ff2e65e8884121f9afc97728ca9f213228ecc2 #v11.1.4
+        uses: ansys/actions/doc-deploy-stable@f5e1481b9c128197a30d1dc1dfc52b8cd6865555 #v11.1.5
         with:
           cname: ${{ env.DOCUMENTATION_CNAME }}
           token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
