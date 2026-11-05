@@ -54,6 +54,7 @@ class DisconnectedBackend:
     def __getattr__(self, name):
         async def missing(*args, **kwargs):
             raise NotConnectedError("The backend has no session.")
+
         return missing
 
 
@@ -79,8 +80,12 @@ async def test_all_generic_tools_share_canonical_recovery(
 @pytest.mark.asyncio
 async def test_wrapper_preserves_signatures_and_existing_recovery(asynchronous):
     """Existing owning-product recovery stays intact and no parameters are added."""
-    payload = {"error_code": "not_connected", "retryable": True,
-               "next_tool": "custom_connect", "hint": "custom owning product"}
+    payload = {
+        "error_code": "not_connected",
+        "retryable": True,
+        "next_tool": "custom_connect",
+        "hint": "custom owning product",
+    }
 
     def sync(value: str = "x"):
         return payload
@@ -98,6 +103,7 @@ async def test_wrapper_preserves_signatures_and_existing_recovery(asynchronous):
 @pytest.mark.asyncio
 async def test_offline_success_and_other_typed_errors_are_preserved():
     """A disconnected backend can still serve offline catalog results."""
+
     def recover(**kwargs):
         pytest.fail("no missing-session error")
 

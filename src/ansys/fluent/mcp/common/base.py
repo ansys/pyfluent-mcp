@@ -276,7 +276,7 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         explicit = kwargs.get("name") or (name_or_fn if isinstance(name_or_fn, str) else None)
 
         def _prepare(fn: Callable[..., Any]) -> Callable[..., Any]:
-            tool_name = explicit or getattr(fn, "__name__", "")
+            tool_name = str(explicit or getattr(fn, "__name__", ""))
             if kwargs.get("annotations") is None:
                 kwargs["annotations"] = self.tool_annotations_for(tool_name)
             fn = with_connection_recovery(

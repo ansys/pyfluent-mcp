@@ -343,8 +343,7 @@ def test_compare_files_impl_validation_and_failure_paths(monkeypatch, tmp_path):
 
     assert "path must be a non-empty" in compare_tools.validate_compare_path(" ")[1]
     assert (
-        "file not found"
-        in compare_tools.validate_compare_path(str(tmp_path / "missing.cas.h5"))[1]
+        "file not found" in compare_tools.validate_compare_path(str(tmp_path / "missing.cas.h5"))[1]
     )
     unsupported = case_a.with_suffix(".txt")
     unsupported.write_text("x")

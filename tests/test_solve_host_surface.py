@@ -99,8 +99,6 @@ async def test_resources_and_prompts_offline():
     assert solver["error_code"] == "not_connected" and solver["retryable"] is True
 
 
-
-
 @pytest.mark.parametrize("host_contract", ["0", "1"])
 async def test_stdio_round_trip(tmp_path, monkeypatch, host_contract):
     monkeypatch.setenv("FLUIDS_MCP_HOST_CONTRACT", host_contract)

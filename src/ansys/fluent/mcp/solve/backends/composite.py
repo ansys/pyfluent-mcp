@@ -50,7 +50,7 @@ class SolveCompositeBackend(Backend):
     kind = "pyfluent"
 
     def __init__(
-        self, *, label: str = "Solve (PyFluent)", pyfluent_backend: Backend | None = None
+        self, *, label: str = "Solve (PyFluent)", pyfluent_backend: PyFluentBackend | None = None
     ) -> None:
         """Initialize the SolveCompositeBackend instance.
 
@@ -58,7 +58,7 @@ class SolveCompositeBackend(Backend):
         ----------
         label : str
             Human-readable label attached to the operation or test double.
-        pyfluent_backend : Backend | None
+        pyfluent_backend : PyFluentBackend | None
             Optional execution backend supplied by an embedding application.
 
         Returns
@@ -71,7 +71,7 @@ class SolveCompositeBackend(Backend):
         self._pyfluent = pyfluent_backend if pyfluent_backend is not None else PyFluentBackend()
 
     @property
-    def pyfluent_backend(self) -> Backend:
+    def pyfluent_backend(self) -> PyFluentBackend:
         """Return the execution backend every call is delegated to."""
         return self._pyfluent
 
@@ -424,12 +424,14 @@ class SolveCompositeBackend(Backend):
         """
         return await self._pyfluent.get_command_arguments(path)
 
-
-
-
     async def dry_run_write(
-        self, path: str, value: Any, *, kind: str = "set",
-        key: str | None = None, index: int | None = None,
+        self,
+        path: str,
+        value: Any,
+        *,
+        kind: str = "set",
+        key: str | None = None,
+        index: int | None = None,
     ) -> dict[str, Any]:
         """Preserve semantic write checks through the composite backend."""
         return await self._pyfluent.dry_run_write(path, value, kind=kind, key=key, index=index)

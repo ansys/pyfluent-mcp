@@ -120,11 +120,12 @@ def test_list_fields_impl_handles_disconnected_empty_success_and_errors():
     assert failed == {"error": "failed to list fields: boom"}
 
 
-
 def test_backend_injection_does_not_load_entry_points(monkeypatch):
     """Embedding is explicit and never imports application plugins."""
+
     def forbidden(*args, **kwargs):
         raise AssertionError("Unexpected plugin discovery")
+
     monkeypatch.setattr("importlib.metadata.entry_points", forbidden)
     backend = solve_mcp.SolveCompositeBackend()
     server = solve_mcp.SolveMCP(backends={"custom": backend}, default_backend_kind="custom")

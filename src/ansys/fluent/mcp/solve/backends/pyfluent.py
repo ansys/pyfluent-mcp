@@ -1215,7 +1215,8 @@ class PyFluentBackend(Backend):
                 with self._thread_lock:
                     if self._retired_solvers:
                         return ConnectResult(
-                            status="error", error_code="session_cleanup_required",
+                            status="error",
+                            error_code="session_cleanup_required",
                             backend_kind=self.kind,
                             message=(
                                 "Disconnect to clean up the previous session before reconnecting."
@@ -1223,7 +1224,9 @@ class PyFluentBackend(Backend):
                         )
                     if self._solver is not None:
                         return ConnectResult(
-                            status="error", error_code="already_connected", backend_kind=self.kind,
+                            status="error",
+                            error_code="already_connected",
+                            backend_kind=self.kind,
                             endpoint=self.endpoint,
                             message=(
                                 "Disconnect the current Fluent session before connecting again."
@@ -1516,8 +1519,6 @@ class PyFluentBackend(Backend):
     # ------------------------------------------------------------------
     # Session health and cleanup
     # ------------------------------------------------------------------
-
-
 
     def _mark_solver_disconnected(self) -> None:
         """Retire a dead solver handle for cleanup and invalidate live caches.
@@ -2551,9 +2552,6 @@ class PyFluentBackend(Backend):
         async with self._lock:
             return await self._run_thread(_do)
 
-
-
-
     async def list_fields(self, *, scope: str = "any") -> dict[str, Any] | None:
         """Enumerate solver field/variable names available for reports & post.
 
@@ -3082,8 +3080,10 @@ class PyFluentBackend(Backend):
                 tb = traceback.format_exc(limit=8)
                 if isinstance(exc, (BackendUnavailableError, InvalidArgumentsError, UpstreamError)):
                     return RunCodeResult(
-                        status="error", error_code=exc.error_code,
-                        stdout=stdout.getvalue(), stderr=stderr.getvalue() + "\n" + tb,
+                        status="error",
+                        error_code=exc.error_code,
+                        stdout=stdout.getvalue(),
+                        stderr=stderr.getvalue() + "\n" + tb,
                         message=str(exc),
                     )
                 # Dead-channel detection: classify gRPC / channel-closed

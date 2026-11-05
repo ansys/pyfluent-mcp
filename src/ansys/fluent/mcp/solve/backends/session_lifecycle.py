@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 async def run_locked(backend, function, *args, **kwargs):
     """Serialize solver work with shutdown and wait for canceled workers."""
+
     def work():
         with backend._thread_lock:
             if backend._shutdown:
@@ -83,15 +84,19 @@ def cleanup_sessions(backend, active):
             if connection is not None:
                 backend._cleanup_connections[id(solver)] = connection
             try:
-                _close_session(solver, owned=backend._owns_process,
-                               connection=backend._cleanup_connections.get(id(solver)))
+                _close_session(
+                    solver,
+                    owned=backend._owns_process,
+                    connection=backend._cleanup_connections.get(id(solver)),
+                )
             except Exception:
                 logger.exception("Fluent session cleanup failed; retaining the session handle")
                 failed.append(solver)
         backend._retired_solvers = failed
         backend._cleanup_connections = {
             id(solver): backend._cleanup_connections[id(solver)]
-            for solver in failed if id(solver) in backend._cleanup_connections
+            for solver in failed
+            if id(solver) in backend._cleanup_connections
         }
 
 
@@ -114,8 +119,11 @@ def _close_session(solver, *, owned, connection):
         accepts_options = any(
             item.kind is inspect.Parameter.VAR_KEYWORD for item in parameters.values()
         )
-        options = {key: value for key, value in {"timeout": 5.0, "wait": 5.0}.items()
-                   if accepts_options or key in parameters}
+        options = {
+            key: value
+            for key, value in {"timeout": 5.0, "wait": 5.0}.items()
+            if accepts_options or key in parameters
+        }
     wait = getattr(connection, "wait_process_finished", None)
     try:
         close(**options)

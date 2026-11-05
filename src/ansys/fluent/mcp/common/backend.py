@@ -429,9 +429,6 @@ class Backend(ABC):
         """
         return None
 
-
-
-
     async def list_fields(self, *, scope: str = "any") -> dict[str, Any] | None:
         """Enumerate solver field/variable names available for reports/post.
 

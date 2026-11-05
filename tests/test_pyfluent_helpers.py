@@ -812,8 +812,6 @@ def test_pyfluent_connect_import_failure_launch_failure_and_close_fallback(monke
     assert backend._solver is None
 
 
-
-
 def test_pyfluent_dry_run_write_previews_live_write_failures():
     """Verify that dry-run write catches live-path failures without mutating."""
 
@@ -1387,6 +1385,7 @@ def test_solver_status_uses_live_solution_data_availability(valid):
 
 def test_solver_status_failed_data_probe_remains_unknown():
     """A transport failure must not establish an uninitialized solver."""
+
     def failed():
         raise RuntimeError("field data unavailable")
 

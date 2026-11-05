@@ -283,8 +283,6 @@ def test_path_normalisation_and_resolution_support_indexed_keys():
     assert introspection.resolve_path(hot_wall, "phase.phase_1") is phase
 
 
-
-
 def test_discover_named_objects_via_walk_finds_collections_and_respects_caps():
     """Verify that discover named objects via walk finds collections and respects caps.
 

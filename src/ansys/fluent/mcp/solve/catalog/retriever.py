@@ -79,8 +79,6 @@ class ApiHit:
         return out
 
 
-
-
 class ApiRetriever(ABC):
     """ABC for an API retriever. Async by convention."""
 

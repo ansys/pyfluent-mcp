@@ -30,6 +30,7 @@ from ansys.fluent.mcp.common.host.guidance import error_guidance
 
 _JSON = "application/json"
 
+
 def _dump(payload: Any) -> str:
     return json.dumps(payload, indent=2, default=str)
 
@@ -111,8 +112,6 @@ def register_solve_resources(server: Any) -> None:
     )
     async def named_objects_resource() -> str:
         return await _read_connected(server, lambda backend: backend.list_named_objects())
-
-
 
 
 __all__ = ["register_solve_resources"]

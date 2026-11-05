@@ -82,7 +82,8 @@ def inspect_archive(path):
     with tarfile.open(path) as archive:
         return inspect_entries(
             (member.name, archive.extractfile(member).read())
-            for member in archive.getmembers() if member.isfile()
+            for member in archive.getmembers()
+            if member.isfile()
         )
 
 

@@ -254,13 +254,15 @@ async def test_cleanup_verification_failure_retains_native_connection_for_retry(
 @pytest.mark.asyncio
 async def test_verified_process_exit_overrides_native_cleanup_command_error():
     """Native cleanup may return an error after its process has already exited."""
+
     def close(**kwargs):
         raise RuntimeError("cleanup command returned 1")
 
     backend = PyFluentBackend()
     backend._owns_process = True
     backend._solver = SimpleNamespace(
-        exit=close, _fluent_connection=SimpleNamespace(wait_process_finished=lambda **kwargs: True),
+        exit=close,
+        _fluent_connection=SimpleNamespace(wait_process_finished=lambda **kwargs: True),
     )
     backend._mark_solver_disconnected()
     await backend.disconnect()
@@ -331,6 +333,7 @@ def test_connection_health_is_observed_even_with_solver_reference(healthy):
 
 def test_failed_health_probe_reports_disconnected():
     """Transport failure must never be reported as a healthy connection."""
+
     class Solver:
         @property
         def is_active(self):

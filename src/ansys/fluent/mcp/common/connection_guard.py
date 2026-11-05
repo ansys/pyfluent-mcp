@@ -51,6 +51,7 @@ def with_connection_recovery(function, recover):
     connect arguments and owning product. This applies independently of the
     optional host contract and preserves already complete recovery responses.
     """
+
     def normalize(result):
         payload = _missing_session_payload(result)
         if payload is None:
@@ -60,12 +61,14 @@ def with_connection_recovery(function, recover):
         return {**payload, **recover(reason=payload.get("message"))}
 
     if inspect.iscoroutinefunction(function):
+
         @functools.wraps(function)
         async def async_wrapper(*args, **kwargs):
             try:
                 return normalize(await function(*args, **kwargs))
             except NotConnectedError as exc:
                 return recover(reason=exc.message)
+
         return async_wrapper
 
     @functools.wraps(function)
@@ -74,4 +77,5 @@ def with_connection_recovery(function, recover):
             return normalize(function(*args, **kwargs))
         except NotConnectedError as exc:
             return recover(reason=exc.message)
+
     return sync_wrapper

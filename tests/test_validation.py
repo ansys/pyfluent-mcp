@@ -134,10 +134,6 @@ def scale(value, *rest, factor=2, **kwargs):
     assert result.status == "ok"
 
 
-
-
-
-
 def test_sandbox_rejections_name_the_supported_alternative():
     """Every sandbox rejection should tell the caller what to use instead."""
     from ansys.fluent.mcp.common.validation import sandbox_alternatives_hint, validate_python_source

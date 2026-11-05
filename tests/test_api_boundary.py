@@ -29,7 +29,9 @@ def test_reviewed_distribution_surface_is_enforced():
     audit = runpy.run_path(str(root / "scripts/check_api_distribution.py"))
     result = subprocess.run(
         [sys.executable, str(root / "scripts/check_api_distribution.py")],
-        capture_output=True, text=True, timeout=30,
+        capture_output=True,
+        text=True,
+        timeout=30,
     )
     assert result.returncode == 0, result.stdout + result.stderr
     findings = audit["inspect_entries"]([("ansys/fluent/mcp/hidden_policy.py", b"")])
@@ -61,7 +63,7 @@ def test_production_imports_use_only_native_api_and_declared_dependencies():
 
 def test_standalone_server_imports_without_application_packages():
     """Start a fresh process that permits only native and declared dependencies."""
-    code = '''
+    code = """
 import importlib.abc
 import sys
 class NativeOnly(importlib.abc.MetaPathFinder):
@@ -72,8 +74,11 @@ sys.meta_path.insert(0, NativeOnly())
 from ansys.fluent.mcp.solve import SolveMCP
 server = SolveMCP()
 assert set(server._backends) == {"pyfluent"}
-'''
+"""
     completed = subprocess.run(
-        [sys.executable, "-c", code], capture_output=True, text=True, timeout=30,
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        timeout=30,
     )
     assert completed.returncode == 0, completed.stderr

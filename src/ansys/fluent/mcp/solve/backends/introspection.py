@@ -224,8 +224,6 @@ def resolve_path(root: Any, path: str) -> Any:
 # ---------------------------------------------------------------------------
 
 
-
-
 def discover_named_objects_via_walk(
     root: Any,
     *,
