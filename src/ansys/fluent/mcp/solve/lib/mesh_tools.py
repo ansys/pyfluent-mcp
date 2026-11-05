@@ -46,7 +46,7 @@ async def _safe_mesh_counts(backend: Backend) -> dict[str, int | None]:
     """Fail-soft wrapper around ``Backend.mesh_counts``.
 
     Returns an all-``None`` payload when the backend has no live solver
-    (Fluids One geometry / mesh / post leaves) or the probe failed.
+    (managed backend geometry / mesh / post leaves) or the probe failed.
     Never raises — the cell-count addition must never break the
     quality-metrics path.
 

@@ -25,10 +25,8 @@ agent loop, planner, and recipes are not part of this package.
 
 This open-source leaf ships only the PyFluent backend. It always
 connects to PyFluent for code execution and live-model introspection.
-Additional backends (such as the internal Fluids One managed-service ``fluids_one_solve``
-backend) are contributed by other installed packages through the
-``ansys.fluent.mcp.solve_backends`` entry-point group and merged into
-the backend registry at construction time.
+Embedding applications may explicitly inject additional backends through
+the constructor. This package does not discover or import application packages.
 
 Usage::
 
@@ -39,51 +37,11 @@ Usage::
 
 from __future__ import annotations
 
-import logging
-from typing import TYPE_CHECKING, Any, Iterable, Optional
+from typing import Any, Iterable, Optional
 
+from ansys.fluent.mcp.common.backend import Backend
 from ansys.fluent.mcp.common.base import FluidsLeafMCP
 from ansys.fluent.mcp.solve.backends.composite import SolveCompositeBackend
-
-if TYPE_CHECKING:  # pragma: no cover - typing only
-    from ansys.fluent.mcp.common.backend import Backend
-
-logger = logging.getLogger("ansys.fluent.mcp.solve.mcp")
-
-_SOLVE_BACKENDS_ENTRY_POINT_GROUP = "ansys.fluent.mcp.solve_backends"
-
-
-def _discover_external_solve_backends() -> "dict[str, Backend]":
-    """Discover extra solve backends contributed via entry points.
-
-    Each entry point in the ``ansys.fluent.mcp.solve_backends`` group
-    must load to a zero-argument callable returning a mapping of
-    ``{backend_kind: Backend}``. Failures are logged and skipped so a
-    misbehaving plugin never prevents the leaf from starting with the
-    built-in PyFluent backend.
-
-    Returns
-    -------
-    'dict[str, Backend]'
-        Mapping containing the operation result.
-    """
-    from importlib.metadata import entry_points
-
-    discovered: dict[str, Backend] = {}
-    eps = entry_points(group=_SOLVE_BACKENDS_ENTRY_POINT_GROUP)
-    for ep in eps:
-        try:
-            factory = ep.load()
-            result = factory()
-            if result:
-                discovered.update(result)
-        except Exception:  # never let a plugin break startup
-            logger.warning(
-                "Failed to load solve backend provider %r",
-                getattr(ep, "name", ep),
-                exc_info=True,
-            )
-    return discovered
 
 
 class SolveMCP(FluidsLeafMCP):
@@ -93,11 +51,33 @@ class SolveMCP(FluidsLeafMCP):
     default_backend_kind = "pyfluent"
     component_label = "fluent"
 
+    #: Tools exposed when ``expose_tools`` is omitted. ``manage_component`` is
+    #: excluded because the bundled PyFluent backend has no managed component.
+    DEFAULT_TOOLS: tuple[str, ...] = (
+        "session_status",
+        "connect",
+        "disconnect",
+        "list_named_objects",
+        "find_named_object",
+        "select_named_objects",
+        "find_api",
+        "get_state",
+        "get_targeted_context",
+        "get_help",
+        "solver_status",
+        "run_code",
+        "validate_code",
+        "screenshot",
+        "summarize_setup",
+        "simulation_report",
+    )
+
     def __init__(
         self,
         *,
         expose_tools: Optional[Iterable[str]] = None,
         default_backend_kind: Optional[str] = None,
+        backends: Optional[dict[str, Backend]] = None,
         **fastmcp_kwargs: Any,
     ) -> None:
         """Initialize the SolveMCP instance.
@@ -108,6 +88,8 @@ class SolveMCP(FluidsLeafMCP):
             Whether MCP tools should be registered on the server.
         default_backend_kind : Optional[str]
             Default backend kind to supply to the function.
+        backends : Optional[dict[str, Backend]]
+            Explicit backend registry supplied by an embedding application.
         fastmcp_kwargs : Any
             Keyword arguments forwarded when constructing the FastMCP server.
 
@@ -118,30 +100,10 @@ class SolveMCP(FluidsLeafMCP):
         """
         if default_backend_kind is not None:
             self.default_backend_kind = default_backend_kind
-        backends: dict[str, Any] = {"pyfluent": SolveCompositeBackend()}
-        backends.update(_discover_external_solve_backends())
+        backends = backends if backends is not None else {"pyfluent": SolveCompositeBackend()}
 
         if expose_tools is None:
-            default_tools = [
-                "session_status",
-                "connect",
-                "disconnect",
-                "list_named_objects",
-                "find_named_object",
-                "select_named_objects",
-                "find_api",
-                "get_state",
-                "get_targeted_context",
-                "get_help",
-                "solver_status",
-                "manage_component",
-                "run_code",
-                "validate_code",
-                "screenshot",
-                "summarize_setup",
-                "simulation_report",
-            ]
-            expose_tools = tuple(default_tools)
+            expose_tools = self.DEFAULT_TOOLS
 
         super().__init__(
             backends=backends,
@@ -174,7 +136,7 @@ class SolveMCP(FluidsLeafMCP):
         # split. This package never imports or names that agent layer.
 
     def _register_resources(self) -> None:
-        """Register the base resources plus live-context resources and workflow prompts.
+        """Register the base resources plus native live-context resources.
 
         Returns
         -------
@@ -183,12 +145,10 @@ class SolveMCP(FluidsLeafMCP):
         """
         super()._register_resources()
         from ansys.fluent.mcp.solve.mcp.host_resources import (
-            register_solve_prompts,
             register_solve_resources,
         )
 
         register_solve_resources(self)
-        register_solve_prompts(self)
 
 
 __all__ = ["SolveMCP"]

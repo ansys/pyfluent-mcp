@@ -76,13 +76,13 @@ _CLASS_DOC_RE = re.compile(
 )
 
 
-def _cache_dir() -> Path:
+def cache_dir() -> Path:
     """Return ``~/.ansys-fluent-mcp/cache`` (created on demand).
 
-    A single shared user-cache directory keeps the lexical help map,
-    the learned-aliases SQLite store and any future cached artefacts
-    co-located. Overridable via ``FLUIDS_MCP_CACHE_DIR`` for tests and
-    sandboxes that should not write to ``$HOME``.
+    The shared user-cache directory for the help map and any cache an
+    embedding application wants co-located. Overridable via
+    ``FLUIDS_MCP_CACHE_DIR`` for tests and sandboxes that should not
+    write to ``$HOME``.
 
     Returns
     -------
@@ -190,7 +190,7 @@ def build_help_map(
         f"{path}|{int(stat.st_mtime)}|{stat.st_size}".encode("utf-8"),
         usedforsecurity=False,
     ).hexdigest()[:16]
-    cache_file = _cache_dir() / f"api_help_{cache_key}.json"
+    cache_file = cache_dir() / f"api_help_{cache_key}.json"
     if use_cache and cache_file.is_file():
         try:
             with cache_file.open("r", encoding="utf-8") as fh:
@@ -250,6 +250,7 @@ def reset_default_help_map() -> None:
 
 __all__ = [
     "build_help_map",
+    "cache_dir",
     "get_default_help_map",
     "reset_default_help_map",
 ]

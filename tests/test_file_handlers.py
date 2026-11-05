@@ -148,8 +148,8 @@ def test_register_handler_replaces_existing_and_finds_all_matches():
     assert [registered.name for registered in find_all_handlers("x.cas.h5")][0] == "fluent_case_h5"
 
 
-def test_builtin_data_project_and_fluids_one_launch_branches():
-    """Verify that builtin data project and fluids one launch branches.
+def test_builtin_data_project_and_native_launch_branches():
+    """Verify that builtin data and project handlers and native launch branches.
 
     Returns
     -------
@@ -167,12 +167,9 @@ def test_builtin_data_project_and_fluids_one_launch_branches():
     assert bare is not None
     assert bare.load_command == "auto"
 
-    args = data.build_launch_args(
-        "fluids_one",
-        FileProbe(file_type="data", suffix=".dat.h5"),
-        {"instance_name": "solver-1"},
-    )
-    assert args == {"instance_name": "solver-1"}
+    assert data.candidate_products == ("pyfluent",)
+    args = data.build_launch_args("pyfluent", FileProbe(file_type="data", suffix=".dat.h5"), {})
+    assert args == {"precision": "double", "ui_mode": "no_gui"}
 
 
 def test_probe_helpers_handle_missing_h5py_and_passthrough(monkeypatch, tmp_path):

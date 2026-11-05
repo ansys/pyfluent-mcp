@@ -55,6 +55,7 @@ class ApiHit:
     score: float  # higher is better; scale is retriever-specific
     raw: Optional[str] = None  # original payload line or document, when known
     payload: Optional[dict[str, Any]] = None  # extra metadata when available
+    note: Optional[str] = None  # Optional context supplied by an embedding retriever
 
     def to_tool_dict(self) -> dict[str, Any]:
         """Convert the object to a tool response dictionary.
@@ -73,36 +74,9 @@ class ApiHit:
             out["raw"] = self.raw
         if self.payload:
             out["payload"] = self.payload
-        note = _SCHEMA_ONLY_COMMANDS.get(self.path)
-        if note:
-            out["note"] = note
+        if self.note:
+            out["note"] = self.note
         return out
-
-
-# Paths that appear in the schema but are not callable at runtime on
-# solver instances.  Added as a ``note`` field in to_tool_dict() so
-# every consumer (agent loop and MCP) sees the warning without any
-# extra tokens unless the broken path actually surfaces in results.
-_SCHEMA_ONLY_COMMANDS: dict[str, str] = {
-    "results.scene.add_to_graphics": (
-        "SCHEMA-ONLY: not callable on scene instances at runtime. "
-        "Use results.scene['<name>'].graphics_objects.set_state("
-        "{'<obj-name>': {'name': '<obj-name>', 'transparency': 0-100}}) instead."
-    ),
-    "results.graphics.views.save_hardcopy": (
-        "Does not exist at runtime. "
-        "Use results.graphics.picture.save_picture(file_name='<path.png>') instead."
-    ),
-    "results.field_functions": (
-        "Does not exist. Use results.custom_field_functions.create(name=..., definition=...) instead."  # noqa: E501
-    ),
-    "mesh.check_mesh": ("Does not exist. Use solver.settings.mesh.check() instead."),
-    "results.report.surface_integrals": (
-        "Commands under results.report.* print to the Fluent console and return None — "
-        "NOT for programmatic data extraction. "
-        "For data use solution.report_definitions.<type>.create(...) then compute()."
-    ),
-}
 
 
 class ApiRetriever(ABC):

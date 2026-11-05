@@ -14,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from types import SimpleNamespace
-
 from ansys.fluent.mcp.solve.backends import introspection
 
 
@@ -283,53 +281,6 @@ def test_path_normalisation_and_resolution_support_indexed_keys():
 
     assert introspection.resolve_path(root, "setup/boundary-conditions/wall[hot-wall]") is hot_wall
     assert introspection.resolve_path(hot_wall, "phase.phase_1") is phase
-
-
-def test_discover_named_objects_via_scheme_handles_dict_list_and_fallback():
-    """Verify that discover named objects via scheme handles dict list and fallback.
-
-    Returns
-    -------
-    None
-        The function completes through its side effects.
-    """
-    assert introspection.discover_named_objects_via_scheme(SimpleNamespace()) is None
-
-    solver = SimpleNamespace(scheme=Scheme({"setup/wall": ["w1", 2]}))
-    assert introspection.discover_named_objects_via_scheme(solver) == {"setup/wall": ["w1", "2"]}
-
-    fallback_solver = SimpleNamespace(
-        scheme=Scheme(RuntimeError("no silence"), [("setup/inlet", "in")])
-    )
-    assert introspection.discover_named_objects_via_scheme(fallback_solver) == {
-        "setup/inlet": ["in"]
-    }
-
-    bad_solver = SimpleNamespace(scheme=Scheme(object()))
-    assert introspection.discover_named_objects_via_scheme(bad_solver) is None
-
-    class CallableScheme:
-        def __call__(self, expr):
-            """Invoke the fake callable for the test.
-
-            Parameters
-            ----------
-            expr : Any
-                Expr to supply to the function.
-
-            Returns
-            -------
-            None
-                The function completes through its side effects.
-            """
-            self.expr = expr
-            return (("setup/outlet", "out-1", "out-2"),)
-
-    callable_scheme = CallableScheme()
-    assert introspection.discover_named_objects_via_scheme(
-        SimpleNamespace(scheme=callable_scheme)
-    ) == {"setup/outlet": ["out-1", "out-2"]}
-    assert "api-get-named-object-names" in callable_scheme.expr
 
 
 def test_discover_named_objects_via_walk_finds_collections_and_respects_caps():

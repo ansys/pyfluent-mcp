@@ -76,6 +76,11 @@ the handler signature via ``schema_from_signature``.
 No changes to ``SolveMCP._register_tools()`` are needed. It already registers everything
 returned by ``get_solve_domain_tools()``.
 
+If the implementation is in a new file, make sure to add its path, relative to
+``ansys/fluent/mcp/`` (for example ``solve/lib/cell_count.py``), to
+``scripts/public-api-files.json``, otherwise ``scripts/check_api_distribution.py``
+will fail with an unreviewed package payload error.
+
 How registration works
 ----------------------
 

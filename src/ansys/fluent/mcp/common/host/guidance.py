@@ -58,20 +58,20 @@ _INSTALL = (
 
 _RULE_TABLE: tuple[tuple[str, bool, str], ...] = (
     (
-        r"^(risk_blocked|sequence_error|syntax_error|tui_not_allowed|validation_failed)$",
+        r"^(syntax|sequence)_error$|^(tui_not_allowed|validation_failed)$",
         False,
         _REWRITE,
     ),
     (r"^forbidden_|_blocked$|_in_read_mode$|^read_only_leaf$", False, _REWRITE),
     (
-        r"^(not_connected|no_session|no_backend|solver_disconnected|fluent_not_activated)$",
+        r"^(not_connected|no_session|no_backend|solver_disconnected)$|_not_activated$",
         True,
         _RECONNECT,
     ),
     (r"_not_connected$|_session_required$|_backend_required$", True, _RECONNECT),
     (r"^(timeout|backend_unavailable|upstream_error)$", True, _WAIT_AND_CHECK),
     (
-        r"_timeout$|_hung$|_transport_error$|^(empty_response|llm_empty_response)$",
+        r"_timeout$|_hung$|_transport_error$|empty_response$",
         True,
         _WAIT_AND_CHECK,
     ),

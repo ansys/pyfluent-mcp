@@ -40,13 +40,12 @@ Key features include:
 - **Review results and diagnostics**: Summarize setup, build a simulation
   report, inspect mesh quality, list fields, compare case files, and capture
   screenshots.
-- **Extend with pluggable backends**: Use the local PyFluent backend by default
-  and add execution backends through separately installed entry-point packages.
+- **Embed with explicit backends**: Use the local PyFluent backend by default
+  or inject execution backends through the server constructor.
 
 PyFluent-MCP itself is deterministic infrastructure. It does not own model
 runtime selection, provider orchestration, transport policy, retries, or
-agent loops. Those concerns live in higher-level host products such as
-`fluids-mcp`, which consume this package over the MCP wire.
+agent loops. Those concerns belong to applications that consume this package.
 
 ## Tool surface
 
@@ -145,7 +144,8 @@ You configure the server through `FLUIDS_MCP_*` environment variables. Common va
 | `FLUIDS_MCP_SETTINGS_JSON` | Override the bundled settings schema with an external file |
 | `FLUIDS_MCP_LOG_LEVEL` | Set the log level (default `INFO`) |
 | `FLUIDS_MCP_DISABLE_SESSION_LOGS` | Set to `1` to disable session logs |
-| `FLUIDS_MCP_MAX_STEPS` | Set a cap on MCP tool-loop iterations (default `30`) |
+| `FLUIDS_MCP_STRICT_VALIDATION` | Set to `1` to turn near-match settings-path warnings into errors |
+| `FLUIDS_MCP_MAX_STATE_BYTES` | Cap on the size of each state value returned by context tools (default `5000`) |
 
 ## Host ownership and architecture boundaries
 
@@ -160,9 +160,7 @@ It intentionally does not own:
 - agent loops
 - workflow reasoning
 
-Those capabilities belong in higher-level orchestration products such as
-`fluids-mcp`, VS Code Copilot agents, Claude Desktop workflows, or other
-external MCP hosts.
+Those capabilities belong in higher-level applications and external MCP hosts.
 
 This package focuses on:
 

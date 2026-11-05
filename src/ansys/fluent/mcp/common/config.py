@@ -47,10 +47,46 @@ _KNOWN_ENV_VARS: frozenset[str] = frozenset(
         "FLUIDS_MCP_DISABLE_SESSION_LOGS",
         "FLUIDS_MCP_SESSION_LOG_DIR",
         "FLUIDS_MCP_SESSION_LOG_LEVEL",
-        "FLUIDS_MCP_INTENT_GUARD",
         "FLUIDS_MCP_HOST_CONTRACT",
+        "FLUIDS_MCP_SETTINGS_JSON",
+        "FLUIDS_MCP_BATCH_FAMILY_LIMIT",
+        "FLUIDS_MCP_STRICT_VALIDATION",
+        "FLUIDS_MCP_MAX_STATE_BYTES",
     }
 )
+
+# Variables declared by host packages that build on this one (see ``register_known_env_vars``).
+_REGISTERED_ENV_VARS: set[str] = set()
+
+
+def register_known_env_vars(*names: str) -> None:
+    """Declare additional ``FLUIDS_MCP_*`` variables read by a host package.
+
+    Hosts that extend this package register the variables they own so the
+    unknown-variable typo warning only fires for genuinely unknown names.
+
+    Parameters
+    ----------
+    *names : str
+        Environment variable names to accept as known.
+
+    Returns
+    -------
+    None
+        The function completes through its side effects.
+    """
+    _REGISTERED_ENV_VARS.update(name for name in names if isinstance(name, str) and name)
+
+
+def known_env_vars() -> frozenset[str]:
+    """Return every recognized ``FLUIDS_MCP_*`` variable name.
+
+    Returns
+    -------
+    frozenset[str]
+        Built-in names plus names registered through ``register_known_env_vars``.
+    """
+    return _KNOWN_ENV_VARS | frozenset(_REGISTERED_ENV_VARS)
 
 
 @dataclass(frozen=True)
@@ -68,7 +104,7 @@ class ConfigError(ValueError):
     """Raised when an environment variable is set to an invalid value."""
 
 
-def _parse_bool(name: str, raw: str, *, default: bool) -> bool:
+def parse_bool(name: str, raw: str, *, default: bool) -> bool:
     """Parse a Boolean configuration value from text.
 
     Parameters
@@ -95,7 +131,7 @@ def _parse_bool(name: str, raw: str, *, default: bool) -> bool:
     )
 
 
-def _parse_float(name: str, raw: str, *, minimum: float = 0.0) -> float:
+def parse_float(name: str, raw: str, *, minimum: float = 0.0) -> float:
     """Parse a floating-point configuration value from text.
 
     Parameters
@@ -142,21 +178,24 @@ def load_config(env: Optional[dict[str, str]] = None) -> FluidsMCPConfig:
     warnings: list[str] = []
 
     # Detect typos in ``FLUIDS_MCP_*`` env vars.
+    known = known_env_vars()
     for key in src:
-        if key.startswith("FLUIDS_MCP_") and key not in _KNOWN_ENV_VARS:
-            msg = f"Unknown environment variable {key!r} (ignored). Known variables: {sorted(_KNOWN_ENV_VARS)}"  # noqa: E501
+        if key.startswith("FLUIDS_MCP_") and key not in known:
+            msg = (
+                f"Unknown environment variable {key!r} (ignored). Known variables: {sorted(known)}"
+            )
             warnings.append(msg)
             logger.warning(msg)
 
     http_timeout = 300.0
     raw = src.get("FLUIDS_MCP_HTTP_TIMEOUT")
     if raw:
-        http_timeout = _parse_float("FLUIDS_MCP_HTTP_TIMEOUT", raw, minimum=0.0)
+        http_timeout = parse_float("FLUIDS_MCP_HTTP_TIMEOUT", raw, minimum=0.0)
 
     verify_tls = True
     raw = src.get("FLUIDS_MCP_VERIFY_TLS")
     if raw is not None:
-        verify_tls = _parse_bool("FLUIDS_MCP_VERIFY_TLS", raw, default=True)
+        verify_tls = parse_bool("FLUIDS_MCP_VERIFY_TLS", raw, default=True)
     if not verify_tls:
         warnings.append(
             "FLUIDS_MCP_VERIFY_TLS is disabled; HTTP backends will not "
@@ -197,4 +236,13 @@ def validate_config(env: Optional[dict[str, str]] = None) -> FluidsMCPConfig:
     return load_config(env=env)
 
 
-__all__ = ["FluidsMCPConfig", "ConfigError", "load_config", "validate_config"]
+__all__ = [
+    "FluidsMCPConfig",
+    "ConfigError",
+    "known_env_vars",
+    "load_config",
+    "parse_bool",
+    "parse_float",
+    "register_known_env_vars",
+    "validate_config",
+]

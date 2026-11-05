@@ -19,8 +19,7 @@
 Holds a persistent ``ansys.fluent.core.Solver`` session. All live-context
 work delegates to :mod:`ansys.fluent.mcp.common.introspection` so the logic is
 *generic* and *caller-driven*. There is no hardcoded list of named-object
-collections. This matches the behavior of the legacy
-``/fluent_get_targeted_context`` endpoint in ``aali-flowkit-python``.
+collections.
 
 PyFluent is an optional dependency. Install with this command::
 
@@ -41,8 +40,9 @@ import logging
 import os
 from pathlib import Path
 import tempfile
+import threading
 import traceback
-from typing import Any, Mapping, Optional, cast
+from typing import Any, Callable, Optional, cast
 
 from ansys.fluent.mcp.common.backend import Backend
 from ansys.fluent.mcp.common.errors import (
@@ -63,11 +63,9 @@ from ansys.fluent.mcp.common.validation import (
 from ansys.fluent.mcp.solve.backends.introspection import (
     collect_global_state,
     collect_targeted_context,
-    discover_named_objects_via_scheme,
     discover_named_objects_via_walk,
     resolve_path,
 )
-from ansys.fluent.mcp.solve.lib import intent_guard as _intent_guard
 
 # ---------------------------------------------------------------------------
 # Settings-path extraction helpers (used by validate_code)
@@ -962,12 +960,41 @@ class PyFluentBackend(Backend):
         self.label = label
         self.endpoint: Optional[str] = None
         self._solver: Any = None
+        self._retired_solvers: list[Any] = []
+        self._cleanup_connections: dict[int, Any] = {}
+        # Adopted sessions by id, mapped to the owner's optional release callback.
+        self._borrowed: dict[int, Optional[Callable[[Any], None]]] = {}
         self._mode: Optional[str] = None  # "launch" | "attach"
+        self._owns_process = False
         self._session_kind = "solver_session"
         # Single-flight lock around every solver-touching coroutine. The
         # PyFluent gRPC channel is not safe under concurrent access from
         # the same process; serialize to avoid interleaved RPCs.
         self._lock = asyncio.Lock()
+        self._thread_lock = threading.RLock()
+        # Reserve the slot across the worker's completion and async publication.
+        self._connecting = False
+        self._shutdown = False
+
+    async def _run_thread(self, function, *args, **kwargs):
+        from ansys.fluent.mcp.solve.backends.session_lifecycle import run_locked
+
+        return await run_locked(self, function, *args, **kwargs)
+
+    def prepare_execution_tree(self, tree, solver, namespace):
+        """Return the validated ``run_code`` tree to execute.
+
+        Extension point: an embedding may return a rewritten tree, or a
+        :class:`RunCodeResult` to refuse execution. Runs on the solver thread.
+        """
+        return tree
+
+    def validate_write_target(self, path, value):
+        """Return an error mapping to reject a ``dry_run_write`` target, else ``None``.
+
+        Extension point: native settings checks still run when this returns ``None``.
+        """
+        return None
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -1124,7 +1151,6 @@ class PyFluentBackend(Backend):
                 The function completes through its side effects.
             """
             if server_info_file or (ip and port):
-                self._mode = "attach"
                 kwargs: dict[str, Any] = {}
                 if server_info_file:
                     kwargs["server_info_file_name"] = server_info_file
@@ -1135,7 +1161,6 @@ class PyFluentBackend(Backend):
                 if password:
                     kwargs["password"] = password
                 return connect_to_fluent(**kwargs)
-            self._mode = "launch"
             # Always start the PyFluent transcript stream. Several
             # core features depend on it:
             #
@@ -1187,15 +1212,64 @@ class PyFluentBackend(Backend):
 
         try:
             async with self._lock:
-                connect_task = asyncio.create_task(asyncio.to_thread(_do_connect))
+                with self._thread_lock:
+                    if self._retired_solvers:
+                        return ConnectResult(
+                            status="error",
+                            error_code="session_cleanup_required",
+                            backend_kind=self.kind,
+                            message=(
+                                "Disconnect to clean up the previous session before reconnecting."
+                            ),
+                        )
+                    if self._solver is not None:
+                        return ConnectResult(
+                            status="error",
+                            error_code="already_connected",
+                            backend_kind=self.kind,
+                            endpoint=self.endpoint,
+                            message=(
+                                "Disconnect the current Fluent session before connecting again."
+                            ),
+                        )
+                    self._connecting = True
                 try:
-                    self._solver = await asyncio.shield(connect_task)
-                    self._session_kind = session_kind
-                except asyncio.CancelledError:
-                    self._solver = await connect_task
-                    self._session_kind = session_kind
-                    self.close_sync()
-                    raise
+                    connect_task = asyncio.create_task(self._run_thread(_do_connect))
+                    try:
+                        solver = await asyncio.shield(connect_task)
+                        from ansys.fluent.mcp.solve.backends.session_lifecycle import (
+                            session_endpoint,
+                        )
+
+                        with self._thread_lock:
+                            self._solver = solver
+                            self._mode = "attach" if server_info_file or (ip and port) else "launch"
+                            self._owns_process = (
+                                self._mode == "launch"
+                                and effective.get("cleanup_on_exit") is not False
+                            )
+                            self.endpoint = session_endpoint(solver)
+                            if self._shutdown:
+                                self.close_sync()
+                                raise NotConnectedError(
+                                    "The backend shut down while Fluent was connecting."
+                                )
+                            self._session_kind = session_kind
+                    except asyncio.CancelledError as cancellation:
+                        from ansys.fluent.mcp.solve.backends.session_lifecycle import (
+                            wait_for_completion,
+                        )
+
+                        solver = await wait_for_completion(connect_task)
+                        with self._thread_lock:
+                            self._solver = solver
+                            self._session_kind = session_kind
+                        close_task = asyncio.create_task(asyncio.to_thread(self._close_solver_sync))
+                        await wait_for_completion(close_task)
+                        raise cancellation
+                finally:
+                    with self._thread_lock:
+                        self._connecting = False
         except Exception as exc:  # boundary
             logger.exception("PyFluent connect failed")
             return ConnectResult(
@@ -1250,31 +1324,15 @@ class PyFluentBackend(Backend):
         """
         async with self._lock:
             solver = self._solver
-            if solver is None:
+            if solver is None and not self._retired_solvers:
                 return
             prev_endpoint = self.endpoint
-            self._solver = None
-            self.endpoint = None
-            self._session_kind = "solver_session"
             self.invalidate_cache()
-
-            def _do_close() -> None:
-                """Execute the close helper.
-
-                Returns
-                -------
-                None
-                    The function completes through its side effects.
-                """
-                try:
-                    if hasattr(solver, "exit"):
-                        solver.exit()
-                    elif hasattr(solver, "close"):
-                        solver.close()
-                except Exception:
-                    logger.exception("Error closing PyFluent session")
-
-            await asyncio.to_thread(_do_close)
+            await self._run_thread(self._close_solver_sync)
+            if self._retired_solvers:
+                raise BackendUnavailableError(
+                    "Fluent cleanup failed; disconnect must succeed before reconnecting."
+                )
         try:
             from ansys.fluent.mcp.common.activity_logging import SESSION_LOGGER
 
@@ -1293,7 +1351,16 @@ class PyFluentBackend(Backend):
         bool
             Boolean result of the operation.
         """
-        return self._solver is not None
+        solver = self._solver
+        if solver is None or self._shutdown:
+            return False
+        try:
+            healthy = getattr(solver, "is_active", None)
+            if callable(healthy):
+                healthy = healthy()
+            return healthy if type(healthy) is bool else False
+        except Exception:
+            return False
 
     def close_sync(self) -> None:
         """Close backend resources from synchronous code.
@@ -1303,21 +1370,20 @@ class PyFluentBackend(Backend):
         None
             The function completes through its side effects.
         """
-        if self._solver is None:
-            return
+        self._shutdown = True
+        with self._thread_lock:
+            self._close_solver_sync()
+
+    def _close_solver_sync(self) -> None:
+        from ansys.fluent.mcp.solve.backends.session_lifecycle import cleanup_sessions
+
         solver = self._solver
         # Clear refs first so subsequent calls hit NotConnectedError even if
         # the underlying ``.exit()`` raises mid-shutdown.
         self._solver = None
         self.endpoint = None
         self._session_kind = "solver_session"
-        try:
-            if hasattr(solver, "exit"):
-                solver.exit()
-            elif hasattr(solver, "close"):
-                solver.close()
-        except Exception:  # best-effort sync close
-            logger.exception("Error closing PyFluent session in close_sync()")
+        cleanup_sessions(self, solver)
 
     # ------------------------------------------------------------------
     # Helpers
@@ -1346,6 +1412,75 @@ class PyFluentBackend(Backend):
         solver = self._require()
         return getattr(solver, "settings", solver)
 
+    @property
+    def session_kind(self) -> str:
+        """Return the PyFluent session kind backing this backend."""
+        return self._session_kind
+
+    def require_solver(self) -> Any:
+        """Return the live PyFluent session or raise :class:`NotConnectedError`."""
+        return self._require()
+
+    def settings_root(self) -> Any:
+        """Return the live settings root."""
+        return self._settings_root()
+
+    async def run_exclusive(self, function, *args, **kwargs):
+        """Run blocking ``function`` on a worker thread under the session lock.
+
+        Extensions must route every live-session call through this method because
+        the PyFluent gRPC channel is not safe under concurrent access.
+        """
+        async with self._lock:
+            return await self._run_thread(function, *args, **kwargs)
+
+    def adopt_session(
+        self,
+        solver: Any,
+        *,
+        endpoint: str,
+        release: Optional[Callable[[Any], None]] = None,
+    ) -> None:
+        """Attach a PyFluent session the caller owns.
+
+        The backend never exits an adopted session. When it lets go of the
+        session (disconnect, shutdown or a dead channel) it calls ``release``
+        with the session, if given, so the owner decides how to close it.
+
+        Raises
+        ------
+        BackendUnavailableError
+            If a connection is in progress or this backend still holds a session.
+        """
+        with self._thread_lock:
+            if self._shutdown:
+                raise NotConnectedError("The Fluent backend has been shut down.")
+            if self._connecting:
+                raise BackendUnavailableError(
+                    "A Fluent connection is in progress; wait for it to finish before adopting."
+                )
+            if self._solver is not None:
+                raise BackendUnavailableError(
+                    "This backend already holds a Fluent session; disconnect it or call "
+                    "mark_disconnected() before adopting another."
+                )
+            self._borrowed[id(solver)] = release
+            self._solver = solver
+            self._mode = "attach"
+            self.endpoint = endpoint
+        self.invalidate_live_caches()
+        self.invalidate_mesh_cache()
+
+    def mark_disconnected(self) -> None:
+        """Stop using the current session, retaining it for cleanup, and invalidate caches."""
+        self._mark_solver_disconnected()
+
+    def api_retriever(self):
+        """Return the API retriever; extension point for application augmentation."""
+        from ansys.fluent.mcp.solve.catalog.retriever import get_api_retriever_for_session
+
+        return get_api_retriever_for_session(self._session_kind)
+
     async def find_api(
         self,
         query: str,
@@ -1372,9 +1507,7 @@ class PyFluentBackend(Backend):
         list[dict[str, Any]]
             Collection containing ranked API hits.
         """
-        from ansys.fluent.mcp.solve.catalog.retriever import get_api_retriever_for_session
-
-        retriever = get_api_retriever_for_session(self._session_kind)
+        retriever = self.api_retriever()
         hits = await retriever.retrieve(query, top_k=top_k, kinds=kinds, under=under)
         if not hits:
             raise BackendUnavailableError(
@@ -1384,59 +1517,11 @@ class PyFluentBackend(Backend):
         return [h.to_tool_dict() for h in hits]
 
     # ------------------------------------------------------------------
-    # Intent-guard probes (best-effort, never raise into the guard)
+    # Session health and cleanup
     # ------------------------------------------------------------------
 
-    def _probe_live_named_for_guard(self) -> dict[str, list[str]]:
-        """Return a small subset of live NamedObject keys the guard needs.
-
-        Only ``setup.named_expressions`` is probed today (the
-        named-expression forward-reference signature). Returns an empty
-        mapping on any failure so the guard degrades to syntactic checks.
-
-        Returns
-        -------
-        dict[str, list[str]]
-            Mapping containing the operation result.
-        """
-        if getattr(self, "_solver", None) is None:
-            return {}
-        out: dict[str, list[str]] = {}
-        try:
-            ne = self._settings_root().setup.named_expressions
-            getter = getattr(ne, "get_object_names", None)
-            if callable(getter):
-                out["setup.named_expressions"] = [str(n) for n in getter()]
-        except Exception:  # guard probes are best-effort
-            return {}
-        return out
-
-    def _probe_iterating_for_guard(self) -> bool:
-        """Best-effort 'is the solver iterating?' check for the guard.
-
-        Returns ``False`` on any failure — the guard signature that
-        relies on this is opt-in and false-negative-safe (we miss a
-        warning, not allow an invalid write).
-
-        Returns
-        -------
-        bool
-            Boolean result produced by the function.
-        """
-        solver = getattr(self, "_solver", None)
-        if solver is None:
-            return False
-        try:
-            scheme = getattr(solver, "scheme", None)
-            if scheme is None:
-                return False
-            raw = scheme.eval("(%cx-is-solution-iterating)")
-            return bool(raw)
-        except Exception:
-            return False
-
     def _mark_solver_disconnected(self) -> None:
-        """Drop the cached solver handle and live caches.
+        """Retire a dead solver handle for cleanup and invalidate live caches.
 
         Called from :meth:`run_code` when the underlying gRPC channel
         is detected as dead. Subsequent ``session_status`` /
@@ -1448,6 +1533,10 @@ class PyFluentBackend(Backend):
         None
             The function completes through its side effects.
         """
+        if self._solver is not None and not any(
+            self._solver is old for old in self._retired_solvers
+        ):
+            self._retired_solvers.append(self._solver)
         self._solver = None
         self.endpoint = None
         try:
@@ -1460,14 +1549,20 @@ class PyFluentBackend(Backend):
     # Live model context (generic — no hardcoded paths)
     # ------------------------------------------------------------------
 
+    def discover_named_objects(self, solver: Any) -> Optional[dict[str, list[str]]]:
+        """Return a named-object inventory, or ``None`` to walk the settings tree.
+
+        Extension point for embeddings with a faster discovery source.
+        """
+        return None
+
     async def list_named_objects(self) -> dict[str, Any]:
         """Discover every named-object collection.
 
         Strategy:
 
-        1. Try the Scheme ``api-get-named-object-names`` (one call,
-           covers every collection Fluent knows about).
-        2. Fall back to a generic depth-limited tree walk.
+        Use an injected discovery hook when available, otherwise walk the
+        public settings tree with bounded depth and result size.
 
         No hardcoded path list.
 
@@ -1495,16 +1590,16 @@ class PyFluentBackend(Backend):
                 Mapping containing the operation result.
             """
             solver = self._require()
-            via_scheme = discover_named_objects_via_scheme(solver)
-            if via_scheme is not None:
-                return via_scheme
+            discovered = self.discover_named_objects(solver)
+            if discovered is not None:
+                return discovered
             return discover_named_objects_via_walk(self._settings_root())
 
         from ansys.fluent.mcp.common.timings import get_collector as _get_timings
 
         with _get_timings().time("backend", "list_named_objects"):
             async with self._lock:
-                result = await asyncio.to_thread(_do)
+                result = await self._run_thread(_do)
         self._cache_put("named_objects", result)
         return result
 
@@ -1564,7 +1659,7 @@ class PyFluentBackend(Backend):
 
         with _get_timings().time("backend", "get_named_object_names"):
             async with self._lock:
-                return await asyncio.to_thread(_do)
+                return await self._run_thread(_do)
 
     async def get_state(self, paths: list[str] | None = None) -> dict[str, Any]:
         """Return the state.
@@ -1600,7 +1695,7 @@ class PyFluentBackend(Backend):
 
         with _get_timings().time("backend", "get_state"):
             async with self._lock:
-                return await asyncio.to_thread(_do)
+                return await self._run_thread(_do)
 
     async def get_active_status(self, paths: list[str]) -> dict[str, bool]:
         """Return the active status.
@@ -1658,7 +1753,7 @@ class PyFluentBackend(Backend):
 
         with _timings.time("backend", "get_active_status"):
             async with self._lock:
-                return await asyncio.to_thread(_do)
+                return await self._run_thread(_do)
 
     async def get_allowed_values(self, paths: list[str]) -> dict[str, list[Any]]:
         """Return the allowed values.
@@ -1711,7 +1806,7 @@ class PyFluentBackend(Backend):
 
         with _timings.time("backend", "get_allowed_values"):
             async with self._lock:
-                return await asyncio.to_thread(_do)
+                return await self._run_thread(_do)
 
     async def get_node_attrs(
         self,
@@ -1793,7 +1888,7 @@ class PyFluentBackend(Backend):
 
         with _timings.time("backend", "get_node_attrs"):
             async with self._lock:
-                return await asyncio.to_thread(_do)
+                return await self._run_thread(_do)
 
     async def get_node_attrs_bulk(
         self,
@@ -1863,7 +1958,7 @@ class PyFluentBackend(Backend):
 
         with _timings.time("backend", "get_node_attrs_bulk"):
             async with self._lock:
-                return await asyncio.to_thread(_do)
+                return await self._run_thread(_do)
 
     async def probe_path(self, paths: list[str]) -> dict[str, dict[str, Any]]:
         """Cheap pre-flight: ``{path: {exists, is_active, is_user_creatable, kind}}``.
@@ -1951,7 +2046,7 @@ class PyFluentBackend(Backend):
 
         with _timings.time("backend", "probe_path"):
             async with self._lock:
-                return await asyncio.to_thread(_do)
+                return await self._run_thread(_do)
 
     async def mesh_adjacency_probe(
         self,
@@ -2159,7 +2254,7 @@ class PyFluentBackend(Backend):
 
         with _get_timings().time("backend", "mesh_adjacency_probe"):
             async with self._lock:
-                return await asyncio.to_thread(_do)
+                return await self._run_thread(_do)
 
     async def get_command_arguments(self, path: str) -> dict[str, Any] | None:
         """Introspect a Command's keyword-argument signature via PyFluent.
@@ -2288,7 +2383,7 @@ class PyFluentBackend(Backend):
             return {"argument_names": names, "arguments": args}
 
         async with self._lock:
-            return await asyncio.to_thread(_do)
+            return await self._run_thread(_do)
 
     async def describe_named_object_template(self, path: str) -> dict[str, Any] | None:
         """Describe the field shape of a fresh child of a NamedObject collection.
@@ -2455,7 +2550,7 @@ class PyFluentBackend(Backend):
             return out
 
         async with self._lock:
-            return await asyncio.to_thread(_do)
+            return await self._run_thread(_do)
 
     async def list_fields(self, *, scope: str = "any") -> dict[str, Any] | None:
         """Enumerate solver field/variable names available for reports & post.
@@ -2511,7 +2606,7 @@ class PyFluentBackend(Backend):
             return None
 
         async with self._lock:
-            return await asyncio.to_thread(_do)
+            return await self._run_thread(_do)
 
     async def get_targeted_context(
         self,
@@ -2555,7 +2650,7 @@ class PyFluentBackend(Backend):
             )
 
         async with self._lock:
-            return await asyncio.to_thread(_do)
+            return await self._run_thread(_do)
 
     # ------------------------------------------------------------------
     # Code execution
@@ -2859,27 +2954,7 @@ class PyFluentBackend(Backend):
                 ),
             )
 
-        # Stateless intent guard: catch a fixed set of Fluent-specific
-        # crash signatures (BC rename with whitespace, VOF count direct-
-        # assign, intra-snippet use-before-create on named expressions,
-        # phase-material assignment before phase rename, setup writes
-        # while iterating). See solve/lib/intent_guard.py. Disable with
-        # ``FLUIDS_MCP_INTENT_GUARD=0``.
-        guard_warnings: list[str] = []
-        if _intent_guard.is_enabled():
-            live_named: Mapping[str, list[str]] = self._probe_live_named_for_guard()
-            iterating = self._probe_iterating_for_guard()
-            report = _intent_guard.evaluate(
-                code,
-                live_named_objects=live_named,
-                iterating=iterating,
-            )
-            if report.has_blocking:
-                return report.to_run_code_result()
-            # Non-blocking advisories (e.g. unit-less named expressions,
-            # `.tui.*` usage) are surfaced on the successful result so the
-            # caller — and any external MCP host — still sees the hint.
-            guard_warnings = [f.message for f in report.findings if f.severity == "warn"]
+        execution_warnings: list[str] = []
 
         def _do() -> RunCodeResult:
             """Execute the nested helper for the enclosing operation.
@@ -2932,6 +3007,14 @@ class PyFluentBackend(Backend):
                     message=str(exc),
                 )
 
+            try:
+                tree = self.prepare_execution_tree(tree, solver, local_ns)
+            except InvalidArgumentsError as exc:
+                return RunCodeResult(
+                    status="error", error_code="invalid_arguments", message=str(exc)
+                )
+            if isinstance(tree, RunCodeResult):
+                return tree
             last_expr_node: ast.Expression | None = None
             body = list(tree.body)
             if body and isinstance(body[-1], ast.Expr):
@@ -2995,6 +3078,14 @@ class PyFluentBackend(Backend):
             except Exception as exc:  # surface to callers
                 logger.exception("PyFluent run_code failed")
                 tb = traceback.format_exc(limit=8)
+                if isinstance(exc, (BackendUnavailableError, InvalidArgumentsError, UpstreamError)):
+                    return RunCodeResult(
+                        status="error",
+                        error_code=exc.error_code,
+                        stdout=stdout.getvalue(),
+                        stderr=stderr.getvalue() + "\n" + tb,
+                        message=str(exc),
+                    )
                 # Dead-channel detection: classify gRPC / channel-closed
                 # failures distinctly so callers (and ``session_status``)
                 # learn the truth on the very next call instead of
@@ -3037,10 +3128,10 @@ class PyFluentBackend(Backend):
             trace_call("run_code", summary=f"chars={len(code)}")
             with _get_timings().time("backend", "run_code"):
                 async with self._lock:
-                    result = await asyncio.to_thread(_do)
+                    result = await self._run_thread(_do)
             # Attach non-blocking guard advisories to a successful run.
-            if guard_warnings and result.status == "ok":
-                result.warnings = list(result.warnings or []) + guard_warnings
+            if execution_warnings and result.status == "ok":
+                result.warnings = list(result.warnings or []) + execution_warnings
         finally:
             # Mutating call → invalidate cached named objects / state.
             self.invalidate_live_caches()
@@ -3154,7 +3245,7 @@ class PyFluentBackend(Backend):
             return result
 
         async with self._lock:
-            return await asyncio.to_thread(_do)
+            return await self._run_thread(_do)
 
     async def mesh_counts(self) -> dict[str, int | None]:
         """Probe live mesh element totals via ``mesh.size_info()``.
@@ -3303,8 +3394,10 @@ class PyFluentBackend(Backend):
             root = self._settings_root()
             out: dict[str, Any] = {}
             try:
-                init = resolve_path(root, "solution.initialization")
-                out["initialized"] = bool(getattr(init, "is_initialized", lambda: False)())
+                field_data = getattr(getattr(self._require(), "fields", None), "field_data", None)
+                probe = getattr(field_data, "is_data_valid", None)
+                value = probe() if callable(probe) else None
+                out["initialized"] = value if type(value) is bool else None
             except Exception:
                 out["initialized"] = None
             try:
@@ -3341,7 +3434,7 @@ class PyFluentBackend(Backend):
             return out
 
         async with self._lock:
-            return await asyncio.to_thread(_do)
+            return await self._run_thread(_do)
 
     async def validate_code(self, code: str) -> RunCodeResult:
         """Validate code.
@@ -3453,7 +3546,7 @@ class PyFluentBackend(Backend):
                 )
             return RunCodeResult(status="ok", message="parse_ok", warnings=warnings)
 
-        return await asyncio.to_thread(_do)
+        return await self._run_thread(_do)
 
     async def dry_run_write(
         self,
@@ -3513,6 +3606,10 @@ class PyFluentBackend(Backend):
                     "status": "ok",
                     "note": f"could not obtain settings root: {exc}",
                 }
+
+            validation = self.validate_write_target(target_path, value)
+            if validation is not None:
+                return validation
 
             # Resolve the node. Missing path is a definitive "would fail".
             try:
@@ -3586,9 +3683,8 @@ class PyFluentBackend(Backend):
                     ),
                     "inactive_path": target_path,
                     "hint": (
-                        "flip the governing model gate first, or call "
-                        "``resolve_active_path`` with the concept name "
-                        "to find the currently-active sibling"
+                        "Inspect the current settings metadata with get_help or get_state "
+                        "and select an active settings path."
                     ),
                 }
 
@@ -3638,7 +3734,7 @@ class PyFluentBackend(Backend):
 
         try:
             async with self._lock:
-                return await asyncio.to_thread(_do)
+                return await self._run_thread(_do)
         except Exception as exc:  # noqa: BLE001 — dry_run_write must never
             # raise; the whole point is a soft-fail preview.
             return {
@@ -3699,4 +3795,4 @@ class PyFluentBackend(Backend):
                 except OSError:
                     pass
 
-        return await asyncio.to_thread(_do)
+        return await self._run_thread(_do)

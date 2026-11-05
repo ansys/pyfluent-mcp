@@ -26,7 +26,7 @@ follow the same envelope:
 
 Each test exercises one of those branches against a minimal stub
 backend so the contract is locked down independently of the
-underlying PyFluent / FluidsOne backend implementations.
+underlying backend implementation.
 """
 
 from __future__ import annotations

@@ -46,7 +46,7 @@ class SessionStatus(BaseModel):
     leaf: str = Field(..., description="Leaf name: solve | geometry | mesh | post")
     connected: bool
     backend: Optional[str] = None
-    backend_kind: Optional[Literal["fluids_one", "pyfluent", "pyprime", "pydiscovery"]] = None
+    backend_kind: Optional[str] = None
     endpoint: Optional[str] = None
     capabilities: list[CapabilityInfo] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)

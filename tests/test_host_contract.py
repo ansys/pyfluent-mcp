@@ -88,7 +88,7 @@ def test_unknown_tool_has_no_annotations():
     [
         ("not_connected", "", True, "connect"),
         ("solver_disconnected", "", True, "connect"),
-        ("fluids_one_start_timeout", "", True, "still be running"),
+        ("application_start_timeout", "", True, "still be running"),
         ("fluent_activate_failed", "HTTP 401: Invalid password", False, "credentials"),
         ("invalid_arguments", "", False, "Correct the arguments"),
         ("risk_blocked", "", False, "Rewrite"),

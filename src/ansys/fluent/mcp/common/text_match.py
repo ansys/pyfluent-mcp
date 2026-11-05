@@ -34,14 +34,11 @@ Public API:
     * :func:`fuzzy_normalize`: Return the canonical spelling if and
       only if exactly one entry in ``allowed`` is within edit distance
       1 (case-insensitive), else ``None``.
-    * :func:`sanitize_named_object_key`: Collapse whitespace in a
-      Fluent NamedObject key to the idiomatic hyphen separator.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterable
-import re
 
 
 def edit_distance_le_one(a: str, b: str) -> bool:
@@ -122,76 +119,3 @@ def fuzzy_normalize(value: str, allowed: Iterable[str]) -> str | None:
     if len(matches) == 1 and matches[0] != value:
         return matches[0]
     return None
-
-
-# Whitespace inside a NamedObject key is the most common Fluent-name
-# violation we see from free-text intent (``"oil inlet"`` →
-# Fluent rejects). Other illegal characters (``/``, ``\``, ``:``,
-# brackets, ...) appear far more rarely and conflating them into the
-# same auto-fix risks corrupting names the user intentionally typed,
-# so we intentionally scope the helper to whitespace only and let
-# Fluent surface the apply-time error for the rest.
-_WHITESPACE_RE = re.compile(r"\s+")
-
-
-def sanitize_named_object_key(
-    name: str,
-    *,
-    replacement: str = "-",
-) -> tuple[str, str | None]:
-    r"""Return ``(sanitized_name, notice_or_None)`` for a Fluent NamedObject key.
-
-    Fluent rejects whitespace in NamedObject instance keys (such as boundary
-    condition names, cell-zone names, material names, and named-expression keys).
-    Internal whitespace runs are collapsed to ``replacement`` (hyphen
-    by default). The idiomatic Fluent separator, such as
-    ``pressure-outlet-1``, ``phase-1``, ``cold-inlet``) and leading
-    or trailing whitespace is stripped.
-
-    The function is conservative. It ONLY rewrites whitespace.
-    Other illegal characters (such as ``/``, ``\\``, ``:``, and brackets) are
-    rare in free-text intent and are deliberately left alone
-    so a deterministic rewrite never corrupts a name that the user
-    intentionally typed. Fluent surfaces those at apply time.
-
-    The function returns a two-tuple.
-
-    * ``sanitized_name``: Cleaned name (equal to ``name`` when
-      no rewrite was needed).
-    * ``notice``: One-line human-readable explanation of
-      the rewrite, or ``None`` when the input was already clean.
-
-    Non-string inputs are returned unchanged with ``notice=None`` so
-    callers can pipe values through this helper unconditionally.
-
-    Example::
-
-        >>> sanitize_named_object_key("oil inlet")
-        ('oil-inlet', "name 'oil inlet' contained whitespace; ...")
-        >>> sanitize_named_object_key("phase-1")
-        ('phase-1', None)
-
-    Parameters
-    ----------
-    name : str
-        Name of the object, module, or setting to process.
-    replacement : str
-        Replacement to supply to the function.
-
-    Returns
-    -------
-    tuple[str, str | None]
-        Collection containing the operation results.
-    """
-    if not isinstance(name, str):
-        return name, None
-    stripped = name.strip()
-    sanitized = _WHITESPACE_RE.sub(replacement, stripped)
-    if sanitized == name:
-        return name, None
-    notice = (
-        f"name {name!r} contained whitespace; auto-corrected to "
-        f"{sanitized!r} (Fluent rejects spaces in NamedObject keys; "
-        f"hyphens are the idiomatic separator, e.g. 'pressure-outlet-1')."
-    )
-    return sanitized, notice

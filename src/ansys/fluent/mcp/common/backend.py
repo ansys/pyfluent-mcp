@@ -18,7 +18,7 @@
 
 Every leaf has one or more backends. A backend is the thing that actually
 talks to a Fluids product (Fluent solver, Fluent meshing, Discovery, Prime,
-or the Fluids One service). Tools are MCP-client-facing; backends are
+or the managed backend service). Tools are MCP-client-facing; backends are
 implementation-facing.
 
 A backend implements only the operations its product supports. Unsupported
@@ -47,7 +47,7 @@ class Backend(ABC):
     Default implementations raise `BackendUnavailableError`.
     """
 
-    #: Short identifier surfaced to MCP clients (e.g. "fluids_one", "pyfluent").
+    #: Short identifier surfaced to MCP clients (e.g. "custom", "pyfluent").
     kind: str = "unknown"
     #: Human-readable name surfaced in `session.status`.
     label: str = "Unknown backend"
@@ -651,7 +651,7 @@ class Backend(ABC):
         kind:
             One of ``"set"``, ``"set_named"``, ``"set_list_item"``,
             ``"set_state"``, ``"multi_edit"``. Matches
-            :class:`fluids_mcp.agent.plan.models.StepKind`.
+            :class:`the caller-provided write operation`.
         key:
             NamedObject key when ``kind`` is ``"set_named"`` /
             ``"multi_edit"``.
@@ -682,7 +682,7 @@ class Backend(ABC):
         ``unknown`` — never as zero.
 
         The default raises :class:`BackendUnavailableError` so backends that
-        have no live solver (Fluids One geometry / mesh / post leaves)
+        have no live solver (managed backend geometry / mesh / post leaves)
         decline the probe; the smart-defaults wrapper catches this and
         falls back to an all-``None`` payload. Solve backends override
         this to query Fluent (e.g. via the Scheme variables
@@ -760,10 +760,9 @@ class Backend(ABC):
     # ---- component lifecycle -----------------------------------------
 
     async def activate_component(self) -> dict[str, Any]:
-        """Start or resume the managed Fluids One component.
+        """Start or resume the managed component.
 
-        Sends POST ``/api/session/components/<instance>/activate``.
-        Returns a status dict. Backends that do not talk to Fluids One
+        Returns a status dict. Backends without a managed component
         raise :class:`BackendUnavailableError`.
 
         Returns
@@ -774,10 +773,9 @@ class Backend(ABC):
         raise BackendUnavailableError(f"{self.label} does not support activate_component.")
 
     async def deactivate_component(self) -> dict[str, Any]:
-        """Stop the managed Fluids One component.
+        """Stop the managed component.
 
-        Sends POST ``/api/session/components/<instance>/deactivate``.
-        Returns a status dict. Backends that do not talk to Fluids One
+        Returns a status dict. Backends without a managed component
         raise :class:`BackendUnavailableError`.
 
         Returns
@@ -788,10 +786,9 @@ class Backend(ABC):
         raise BackendUnavailableError(f"{self.label} does not support deactivate_component.")
 
     async def update_component(self) -> dict[str, Any]:
-        """Update the managed Fluids One component.
+        """Update the managed component.
 
-        Sends POST ``/api/session/components/<instance>/update``.
-        Returns a status dict. Backends that do not talk to Fluids One
+        Returns a status dict. Backends without a managed component
         raise :class:`BackendUnavailableError`.
 
         Returns
@@ -802,10 +799,9 @@ class Backend(ABC):
         raise BackendUnavailableError(f"{self.label} does not support update_component.")
 
     async def refresh_component(self) -> dict[str, Any]:
-        """Refresh the managed Fluids One component.
+        """Refresh the managed component.
 
-        Sends POST ``/api/session/components/<instance>/refresh``.
-        Returns a status dict. Backends that do not talk to Fluids One
+        Returns a status dict. Backends without a managed component
         raise :class:`BackendUnavailableError`.
 
         Returns

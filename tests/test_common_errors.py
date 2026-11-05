@@ -43,8 +43,8 @@ def test_typed_guard_returns_successful_result():
     assert asyncio.run(handler()) == {"status": "ok"}
 
 
-def test_typed_guard_converts_fluids_mcp_error():
-    """Verify that typed guard converts fluids mcp error.
+def test_typed_guard_converts_typed_backend_error():
+    """Verify that typed guard converts typed backend error.
 
     Returns
     -------
@@ -95,5 +95,6 @@ def test_typed_guard_converts_unexpected_error():
 
     assert isinstance(result, TypedError)
     assert result.error_code == "internal_error"
-    assert result.message == "boom"
-    assert "RuntimeError" in result.details["trace"]
+    assert "boom" not in result.message
+    assert "server logs" in result.message
+    assert "trace" not in (result.details or {})

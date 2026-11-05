@@ -27,7 +27,6 @@ from fastmcp import Client
 import pytest
 
 from ansys.fluent.mcp.solve import SolveMCP
-from ansys.fluent.mcp.solve.mcp.host_resources import PROMPTS, render_prompt
 
 NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 _TYPED_KEYS = ("type", "anyOf", "oneOf", "allOf", "enum", "const")
@@ -90,27 +89,19 @@ async def test_resources_and_prompts_offline():
         prompts = {p.name for p in await client.list_prompts()}
         status = json.loads((await client.read_resource("fluent://session/status"))[0].text)
         solver = json.loads((await client.read_resource("fluent://solver/status"))[0].text)
-        prompt = await client.get_prompt("fluent_setup_change", {"goal": "enable energy"})
     assert {
         "fluent://session/status",
         "fluent://solver/status",
         "fluent://case/named-objects",
     } <= uris
-    assert set(PROMPTS) <= prompts
+    assert prompts == set()
     assert status["connected"] is False
     assert solver["error_code"] == "not_connected" and solver["retryable"] is True
-    assert "enable energy" in prompt.messages[0].content.text
 
 
-def test_prompts_only_name_published_tools(tools):
-    published = {t.name for t in tools}
-    referenced = set()
-    for name in PROMPTS:
-        referenced |= set(re.findall(r"`([a-z_]+)`", render_prompt(name, goal="g", symptom="s")))
-    assert referenced and sorted(referenced - published) == []
-
-
-async def test_stdio_round_trip(tmp_path):
+@pytest.mark.parametrize("host_contract", ["0", "1"])
+async def test_stdio_round_trip(tmp_path, monkeypatch, host_contract):
+    monkeypatch.setenv("FLUIDS_MCP_HOST_CONTRACT", host_contract)
     from fastmcp.client.transports import PythonStdioTransport
 
     script = tmp_path / "serve_solve.py"
@@ -131,3 +122,6 @@ async def test_stdio_round_trip(tmp_path):
         result = await client.call_tool("get_state", {}, raise_on_error=False)
     assert {"session_status", "run_code", "describe_path"} <= names
     assert result.structured_content["retryable"] is True
+    assert result.structured_content["next_tool"] == "connect"
+    assert result.structured_content["next_tool_args"] == {"backend_kind": "pyfluent"}
+    assert "connect" in result.structured_content["hint"]

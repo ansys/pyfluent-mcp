@@ -16,7 +16,7 @@
 
 import pytest
 
-from ansys.fluent.mcp.common.validation import sanitize_python_code, validate_python_source
+from ansys.fluent.mcp.common.validation import validate_python_source
 
 
 def test_validate_python_source_accepts_valid_code_and_caches_result():
@@ -132,38 +132,6 @@ def scale(value, *rest, factor=2, **kwargs):
     )
 
     assert result.status == "ok"
-
-
-def test_sanitize_python_code_replaces_only_name_tokens():
-    """Verify that sanitize python code replaces only name tokens.
-
-    Returns
-    -------
-    None
-        The function completes through its side effects.
-    """
-    code = "x = true\ny = false\nz = null\ns = 'true false null'  # true"
-
-    sanitized, fixes = sanitize_python_code(code)
-
-    assert sanitized == "x = True\ny = False\nz = None\ns = 'true false null'  # true"
-    assert fixes == [
-        "line 1: true -> True",
-        "line 2: false -> False",
-        "line 3: null -> None",
-    ]
-
-
-def test_sanitize_python_code_leaves_empty_and_bad_tokens_unchanged():
-    """Verify that sanitize python code leaves empty and bad tokens unchanged.
-
-    Returns
-    -------
-    None
-        The function completes through its side effects.
-    """
-    assert sanitize_python_code("  ") == ("  ", [])
-    assert sanitize_python_code("x = (true") == ("x = (true", [])
 
 
 def test_sandbox_rejections_name_the_supported_alternative():

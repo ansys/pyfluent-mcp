@@ -20,10 +20,12 @@ General settings
      - Server log level (default ``INFO``)
    * - ``FLUIDS_MCP_DISABLE_SESSION_LOGS``
      - ``1`` turns off session logs
-   * - ``FLUIDS_MCP_MAX_STEPS``
-     - Cap on deterministic tool-loop iterations (default ``30``)
-   * - ``FLUIDS_MCP_INTENT_GUARD``
-     - ``0`` turns off the ``run_code`` crash-signature guard (default on)
+   * - ``FLUIDS_MCP_STRICT_VALIDATION``
+     - ``1`` turns near-match settings-path warnings into errors
+   * - ``FLUIDS_MCP_MAX_STATE_BYTES``
+     - Cap on the size of each state value returned by context tools (default ``5000``)
+   * - ``FLUIDS_MCP_BATCH_FAMILY_LIMIT``
+     - Cap on named objects read per family in one batch (default ``5000``, ``0`` disables)
    * - ``FLUIDS_MCP_HOST_CONTRACT``
      - ``0`` turns off the host contract: trace ids, timeout-safe long
        operations, and error guidance (default on)
@@ -60,8 +62,7 @@ confirmation. Every tool call also gets:
   user for the named argument and call again.
 
 The solve leaf also publishes the ``fluent://session/status``,
-``fluent://solver/status`` and ``fluent://case/named-objects`` resources and the
-``fluent_setup_change`` and ``fluent_diagnose_divergence`` prompts.
+``fluent://solver/status`` and ``fluent://case/named-objects`` resources. Workflow prompts belong to the embedding application.
 
 Transport security
 ------------------

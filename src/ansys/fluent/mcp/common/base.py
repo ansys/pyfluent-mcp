@@ -33,12 +33,17 @@ above) so we keep the MCP surface lean per leaf.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any, Awaitable, Callable, Iterable, Optional
 
 from ansys.common.mcp.server import PyAnsysBaseMCP
 
 from ansys.fluent.mcp.common.backend import Backend
+from ansys.fluent.mcp.common.connection_guard import (
+    require_connected_result,
+    with_connection_recovery,
+)
 from ansys.fluent.mcp.common.errors import (
     BackendUnavailableError,
     InvalidArgumentsError,
@@ -47,7 +52,12 @@ from ansys.fluent.mcp.common.errors import (
     typed_guard,
 )
 from ansys.fluent.mcp.common.file_handlers import normalize_path_for_fluent
-from ansys.fluent.mcp.common.host import HostContract, annotations_for, host_contract_enabled
+from ansys.fluent.mcp.common.host import (
+    HostContract,
+    annotations_for,
+    host_contract_enabled,
+    set_resolved_annotations,
+)
 from ansys.fluent.mcp.common.models import ConnectResult, SessionStatus
 
 logger = logging.getLogger("ansys.fluent.mcp.base")
@@ -206,6 +216,7 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         super().__init__(name=name or f"ansys-fluent-mcp-{self.leaf_name}", **fastmcp_kwargs)
         self._backends = backends
         self._active_kind: Optional[str] = None
+        self._lifecycle_lock = asyncio.Lock()
         self._exposed = set(expose_tools)
         if self.default_backend_kind and self.default_backend_kind in backends:
             self._active_kind = self.default_backend_kind
@@ -270,9 +281,12 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         explicit = kwargs.get("name") or (name_or_fn if isinstance(name_or_fn, str) else None)
 
         def _prepare(fn: Callable[..., Any]) -> Callable[..., Any]:
-            tool_name = explicit or getattr(fn, "__name__", "")
+            tool_name = str(explicit or getattr(fn, "__name__", ""))
             if kwargs.get("annotations") is None:
                 kwargs["annotations"] = self.tool_annotations_for(tool_name)
+            fn = with_connection_recovery(
+                fn, lambda **recovery: self._not_connected(tool_name, **recovery)
+            )
             contract = getattr(self, "_host_contract", None)
             return contract.wrap(tool_name, fn) if contract is not None else fn
 
@@ -428,11 +442,10 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         """Register a list of :class:`DomainTool` instances on this leaf.
 
         Each leaf's ``_register_tools()`` override calls this with the
-        list returned from its ``products/<leaf>/lib/domain_tools.py``
-        module. Domain tools are the canonical per-leaf catalog and
-        register unconditionally. The per-leaf ``lib/domain_tools.py``
-        is the curated catalog. A leaf that wants to ship a smaller
-        surface returns a smaller list from ``get_<leaf>_domain_tools()``.
+        list returned from its ``get_<leaf>_domain_tools()`` catalog.
+        Domain tools register unconditionally; a leaf that wants to ship
+        a smaller surface returns a smaller list. Names must be unique
+        across every call on the same leaf.
 
         Domain tools are intentionally outside the ``ALL_TOOLS`` /
         ``expose_tools`` filter machinery, which curates the general
@@ -451,7 +464,8 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         """
         from ansys.fluent.mcp.common.domain_tools import DomainTool  # noqa: PLC0415
 
-        seen: set[str] = set()
+        # Track names across calls so a subclass adding tools cannot shadow a built-in one.
+        seen: set[str] = self.__dict__.setdefault("_domain_tool_names", set())
         for tool in domain_tools:
             if not isinstance(tool, DomainTool):
                 raise TypeError(
@@ -739,13 +753,15 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
                 return self._not_connected(spec.name)
             return await handler(backend, **kwargs)
 
+        annotations = {p.name: p.annotation for p in public_params}
+        if return_annotation is not Signature.empty:
+            annotations["return"] = return_annotation
+
         _domain_impl.__signature__ = public_sig  # type: ignore[attr-defined]
         _domain_impl.__name__ = spec.name
         _domain_impl.__qualname__ = f"{type(self).__name__}._domain.{spec.name}"
         _domain_impl.__doc__ = spec.description
-        _domain_impl.__annotations__ = {p.name: p.annotation for p in public_params}
-        if return_annotation is not Signature.empty:
-            _domain_impl.__annotations__["return"] = return_annotation
+        set_resolved_annotations(_domain_impl, annotations)
 
         guarded = typed_guard(_domain_impl)
         # ``typed_guard`` uses ``functools.wraps`` which copies
@@ -753,7 +769,7 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         # tool exposes the correct schema to FastMCP. Re-apply for
         # safety in case wraps is patched.
         guarded.__signature__ = public_sig  # type: ignore[attr-defined]
-        guarded.__annotations__ = dict(_domain_impl.__annotations__)
+        set_resolved_annotations(guarded, annotations)
         self.tool(name=spec.name, description=spec.description)(guarded)
 
     # ------------------------------------------------------------------
@@ -871,7 +887,7 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         "component-lifecycle": {
             "description": (
                 "Tools for activating, deactivating, updating, and "
-                "refreshing solver/component instances in Fluids One."
+                "refreshing solver/component instances in managed backend."
             ),
             "skill": (
                 "Use manage_component with action='activate' to start "
@@ -1008,11 +1024,18 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
                     raise InvalidArgumentsError(f"backend_kind is required; choose one of {kinds}")
             if kind not in self._backends:
                 raise InvalidArgumentsError(f"Unknown backend_kind '{kind}'; available: {kinds}")
-            backend = self._backends[kind]
-            result = await backend.connect(**(connect_kwargs or {}))
-            if result.status == "ok":
-                self._active_kind = kind
-            return result
+            async with self._lifecycle_lock:
+                if self._active_kind is not None and self._active_kind != kind:
+                    previous = self._backends[self._active_kind]
+                    if previous.is_connected():
+                        raise InvalidArgumentsError(
+                            "Disconnect the active backend before switching backends."
+                        )
+                backend = self._backends[kind]
+                result = await backend.connect(**(connect_kwargs or {}))
+                if result.status == "ok":
+                    self._active_kind = kind
+                return result
 
     def _tool_disconnect(self) -> None:
         """Register the ``disconnect`` MCP tool.
@@ -1036,11 +1059,12 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
             dict[str, Any]
                 Mapping containing the operation result.
             """
-            if self._active_kind is None:
-                return {"status": "ok", "message": "No active backend."}
-            backend = self._backends[self._active_kind]
-            await backend.disconnect()
-            self._active_kind = None
+            async with self._lifecycle_lock:
+                if self._active_kind is None:
+                    return {"status": "ok", "message": "No active backend."}
+                backend = self._backends[self._active_kind]
+                await backend.disconnect()
+                self._active_kind = None
             return {"status": "ok"}
 
     # ---- live model context -------------------------------------------
@@ -1631,7 +1655,7 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         @self.tool(
             name=f"manage_{label}",
             description=(
-                f"Manage the {label} component lifecycle in Fluids One. "
+                f"Manage the {label} component lifecycle in managed backend. "
                 "Actions:\n"
                 f"  • activate — start or resume the {label} component.\n"
                 f"  • deactivate — cleanly stop {label} and free resources.\n"
@@ -1741,7 +1765,7 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
             snippet = (
                 f"session.settings.results.report.summary(write_to_file=True, file_name={tmp!r})"
             )
-            result = await self.backend.run_code(snippet)
+            result = require_connected_result(await self.backend.run_code(snippet))
             status = getattr(result, "status", "")
             if status != "ok":
                 err = (
@@ -1829,7 +1853,7 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
                 snippet = (
                     "session.settings.results.report.simulation_reports.list_simulation_reports()"
                 )
-                result = await self.backend.run_code(snippet)
+                result = require_connected_result(await self.backend.run_code(snippet))
                 if getattr(result, "status", "") != "ok":
                     return {
                         "error": (
@@ -1884,7 +1908,7 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
                     f"file_name={out!r})"
                 )
 
-            result = await self.backend.run_code(snippet)
+            result = require_connected_result(await self.backend.run_code(snippet))
             if getattr(result, "status", "") != "ok":
                 return {
                     "error": (getattr(result, "stderr", None) or f"{action} failed"),

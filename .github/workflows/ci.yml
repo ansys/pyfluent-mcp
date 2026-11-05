@@ -215,6 +215,8 @@ jobs:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           attest-provenance: true
+      - name: "Audit the reviewed native API distribution surface"
+        run: python scripts/check_api_distribution.py dist
 
   doc-deploy-dev:
     name: "Deploy development documentation"

@@ -63,12 +63,9 @@ from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable
 
 # ``Backend`` is only referenced in docstrings / type comments below
-# (handlers take it as their first positional argument). We avoid a
-# real import here so this module stays usable in environments where
-# ``ansys.fluent.mcp.common.backend`` is intentionally not on the path
-# (e.g. the FluidsOne tenant-only deployment that ships the descriptor
-# dataclasses without the full backend stack). When a handler needs
-# the type annotation it imports ``Backend`` directly.
+# (handlers take it as their first positional argument). Avoiding a real
+# import keeps the descriptor dataclasses usable without the backend stack.
+# When a handler needs the type annotation it imports ``Backend`` directly.
 
 #: Handler signature for a domain tool. The first positional argument
 #: is the leaf's active backend (a :class:`ansys.fluent.mcp.common.backend.Backend`);

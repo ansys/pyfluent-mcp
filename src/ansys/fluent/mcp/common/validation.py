@@ -26,8 +26,6 @@ from __future__ import annotations
 import ast
 from collections import OrderedDict
 import hashlib
-import io
-import tokenize
 from typing import Iterable
 
 from ansys.fluent.mcp.common.models import RunCodeResult
@@ -696,83 +694,3 @@ def _count_nodes(tree: ast.AST) -> int:
         Configured integer limit used by the helper.
     """
     return sum(1 for _ in ast.walk(tree))
-
-
-# ---------------------------------------------------------------------------
-# Python code sanitiser — fix common non-Pythonic tokens
-# ---------------------------------------------------------------------------
-
-# JavaScript / JSON-style tokens that are valid Python *names* but not the
-# correct Python constants. Generated or caller-provided code can emit
-# ``true`` / ``false`` / ``null`` instead of ``True`` / ``False`` /
-# ``None``.  These are legal NAME tokens so ``ast.parse`` succeeds, but
-# the code crashes at runtime with ``NameError``.
-_JS_TO_PYTHON: dict[str, str] = {
-    "true": "True",
-    "false": "False",
-    "null": "None",
-}
-
-
-def sanitize_python_code(code: str) -> tuple[str, list[str]]:
-    """Replace JavaScript-style Booleans/null with Python equivalents.
-
-    Uses the ``tokenize`` module so that replacements only affect
-    ``NAME`` tokens. Occurrences inside string literals or comments
-    are left untouched.
-
-    Returns ``(sanitized_code, fixes)`` where ``fixes`` is a list of
-    human-readable descriptions of each replacement made.  If no
-    replacements are needed, the original code is returned unchanged.
-
-    Parameters
-    ----------
-    code : str
-        Python code snippet to validate or execute.
-
-    Returns
-    -------
-    tuple[str, list[str]]
-        Collection containing the operation results.
-    """
-    if not code or not code.strip():
-        return code, []
-
-    try:
-        tokens = list(
-            tokenize.generate_tokens(io.StringIO(code).readline),
-        )
-    except tokenize.TokenError:
-        return code, []
-
-    # Collect replacements as (line, col_start, col_end, replacement).
-    edits: list[tuple[int, int, int, str, str]] = []
-    for tok in tokens:
-        if tok.type == tokenize.NAME and tok.string in _JS_TO_PYTHON:
-            replacement = _JS_TO_PYTHON[tok.string]
-            edits.append(
-                (
-                    tok.start[0],
-                    tok.start[1],
-                    tok.end[1],
-                    replacement,
-                    tok.string,
-                )
-            )
-
-    if not edits:
-        return code, []
-
-    lines = code.split("\n")
-    fixes: list[str] = []
-
-    # Apply in reverse order so column offsets stay valid.
-    for line_no, col_start, col_end, replacement, original in reversed(edits):
-        idx = line_no - 1
-        line = lines[idx]
-        lines[idx] = line[:col_start] + replacement + line[col_end:]
-        fixes.append(f"line {line_no}: {original} -> {replacement}")
-
-    # Report fixes in forward order for readability.
-    fixes.reverse()
-    return "\n".join(lines), fixes

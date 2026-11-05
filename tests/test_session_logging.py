@@ -30,7 +30,7 @@ def _cleanup_session_logging():
         The function completes through its side effects.
     """
     session_logging.shutdown_session_logging()
-    session_logging._OWNED_LOGGERS[:] = ["ansys.fluent.mcp", "fluids_mcp"]
+    session_logging._OWNED_LOGGERS[:] = ["ansys.fluent.mcp", "example.application"]
 
 
 def test_session_logging_env_helpers(monkeypatch, tmp_path):
@@ -268,11 +268,11 @@ def test_register_log_root_after_init_attaches_active_handlers(monkeypatch, tmp_
         session_logging.register_log_root("external.product")
     finally:
         session_logging.shutdown_session_logging()
-        session_logging._OWNED_LOGGERS[:] = ["ansys.fluent.mcp", "fluids_mcp"]
+        session_logging._OWNED_LOGGERS[:] = ["ansys.fluent.mcp", "example.application"]
 
     text = (session_dir / "session.log").read_text(encoding="utf-8")
     assert "external debug message" in text
-    assert session_logging._OWNED_LOGGERS == ["ansys.fluent.mcp", "fluids_mcp"]
+    assert session_logging._OWNED_LOGGERS == ["ansys.fluent.mcp", "example.application"]
 
 
 def test_shutdown_removes_handlers_after_registered_roots_reset(monkeypatch, tmp_path):
@@ -301,7 +301,7 @@ def test_shutdown_removes_handlers_after_registered_roots_reset(monkeypatch, tmp
             getattr(handler, session_logging._HANDLER_TAG, False) for handler in external.handlers
         )
 
-        session_logging._OWNED_LOGGERS[:] = ["ansys.fluent.mcp", "fluids_mcp"]
+        session_logging._OWNED_LOGGERS[:] = ["ansys.fluent.mcp", "example.application"]
         session_logging.shutdown_session_logging()
 
         assert not any(
@@ -309,4 +309,4 @@ def test_shutdown_removes_handlers_after_registered_roots_reset(monkeypatch, tmp
         )
     finally:
         session_logging.shutdown_session_logging()
-        session_logging._OWNED_LOGGERS[:] = ["ansys.fluent.mcp", "fluids_mcp"]
+        session_logging._OWNED_LOGGERS[:] = ["ansys.fluent.mcp", "example.application"]
