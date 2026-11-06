@@ -9,6 +9,60 @@ This section contains the release notes for PyFluent-MCP.
 
 .. towncrier release notes start
 
+`0.8.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.8.0>`_ - November 05, 2026
+========================================================================================
+
+.. tab-set::
+
+
+  .. tab-item:: Added
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Add register_known_env_vars so host packages can declare their FLUIDS_MCP_* variables
+          - `#known-env-vars <https://github.com/ansys/pyfluent-mcp/pull/known-env-vars>`_
+
+        * - Public embedding extension points, safe session ownership, and removal of host-specific code
+          - `#105 <https://github.com/ansys/pyfluent-mcp/pull/105>`_
+
+
+  .. tab-item:: Fixed
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Prevent session adoption from overtaking an in-flight connection before its session is published. Keep the connection reserved through cancellation cleanup and release the reservation after failed launches.
+          - `#adoption-publication-race <https://github.com/ansys/pyfluent-mcp/pull/adoption-publication-race>`_
+
+        * - Dead-channel detection retains solver and native connection handles for cleanup instead of permitting another launch. Owned sessions use bounded native exit and process-finish verification; failed or unverifiable cleanup preserves the handles and blocks reconnect until cleanup succeeds. Attached sessions and explicit cleanup opt-outs retain their ownership semantics.
+          - `#dead-session-cleanup <https://github.com/ansys/pyfluent-mcp/pull/dead-session-cleanup>`_
+
+        * - Solver status uses public field-data availability to detect initialized solutions and reports unknown when the capability or observation is unavailable.
+          - `#live-observations <https://github.com/ansys/pyfluent-mcp/pull/live-observations>`_
+
+        * - Reconnect cannot replace an existing Fluent session. Server lifecycle routing is serialized, worker operations share a lock with synchronous shutdown, and canceled calls retain their lock until the worker actually finishes. Connection status checks Fluent's live is_active API and endpoint metadata describes the actual connection. Unexpected tool errors retain details in server logs instead of exposing internal exception messages and tracebacks to clients.
+          - `#session-lifecycle <https://github.com/ansys/pyfluent-mcp/pull/session-lifecycle>`_
+
+        * - Pin ansys unit to 0.15
+          - `#108 <https://github.com/ansys/pyfluent-mcp/pull/108>`_
+
+
+  .. tab-item:: Maintenance
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Update CHANGELOG for v0.7.0
+          - `#103 <https://github.com/ansys/pyfluent-mcp/pull/103>`_
+
+        * - Bump development version to 0.8.dev0
+          - `#104 <https://github.com/ansys/pyfluent-mcp/pull/104>`_
+
+
 `0.7.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.7.0>`_ - November 04, 2026
 ========================================================================================
 

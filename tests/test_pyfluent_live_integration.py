@@ -18,6 +18,7 @@
 
 import asyncio
 import os
+import time
 
 import pytest
 
@@ -469,7 +470,14 @@ def test_mesh_counts_pass(solved_backend):
     None
         The function completes through its side effects.
     """
-    counts = asyncio.run(solved_backend.mesh_counts())
+    # Fluent streams the size table asynchronously, so its data row can arrive
+    # after ``run_code`` stops capturing stdout. All-None results are not
+    # cached, so retry after letting the transcript drain.
+    for _ in range(5):
+        counts = asyncio.run(solved_backend.mesh_counts())
+        if all(value is not None for value in counts.values()):
+            break
+        time.sleep(1)
 
     assert set(counts) == {"cell_count", "face_count", "node_count"}
     assert all(counts[key] is not None for key in counts), counts
