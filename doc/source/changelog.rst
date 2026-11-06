@@ -34,27 +34,16 @@ This section contains the release notes for PyFluent-MCP.
         :header-rows: 0
         :widths: auto
 
-        * - Prevent session adoption from overtaking an in-flight connection before its
-  session is published. Keep the connection reserved through cancellation cleanup
-  and release the reservation after failed launches.
+        * - Prevent session adoption from overtaking an in-flight connection before its session is published. Keep the connection reserved through cancellation cleanup and release the reservation after failed launches.
           - `#adoption-publication-race <https://github.com/ansys/pyfluent-mcp/pull/adoption-publication-race>`_
 
-        * - Dead-channel detection retains solver and native connection handles for cleanup
-  instead of permitting another launch. Owned sessions use bounded native exit and
-  process-finish verification; failed or unverifiable cleanup preserves the handles
-  and blocks reconnect until cleanup succeeds. Attached sessions and explicit
-  cleanup opt-outs retain their ownership semantics.
+        * - Dead-channel detection retains solver and native connection handles for cleanup instead of permitting another launch. Owned sessions use bounded native exit and process-finish verification; failed or unverifiable cleanup preserves the handles and blocks reconnect until cleanup succeeds. Attached sessions and explicit cleanup opt-outs retain their ownership semantics.
           - `#dead-session-cleanup <https://github.com/ansys/pyfluent-mcp/pull/dead-session-cleanup>`_
 
         * - Solver status uses public field-data availability to detect initialized solutions and reports unknown when the capability or observation is unavailable.
           - `#live-observations <https://github.com/ansys/pyfluent-mcp/pull/live-observations>`_
 
-        * - Reconnect cannot replace an existing Fluent session. Server lifecycle routing is
-  serialized, worker operations share a lock with synchronous shutdown, and canceled
-  calls retain their lock until the worker actually finishes. Connection status
-  checks Fluent's live is_active API and endpoint metadata describes the actual
-  connection. Unexpected tool errors retain details in server logs instead of
-  exposing internal exception messages and tracebacks to clients.
+        * - Reconnect cannot replace an existing Fluent session. Server lifecycle routing is serialized, worker operations share a lock with synchronous shutdown, and canceled calls retain their lock until the worker actually finishes. Connection status checks Fluent's live is_active API and endpoint metadata describes the actual connection. Unexpected tool errors retain details in server logs instead of exposing internal exception messages and tracebacks to clients.
           - `#session-lifecycle <https://github.com/ansys/pyfluent-mcp/pull/session-lifecycle>`_
 
         * - Pin ansys unit to 0.15
