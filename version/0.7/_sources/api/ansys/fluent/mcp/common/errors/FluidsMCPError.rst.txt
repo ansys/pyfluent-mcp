@@ -1,0 +1,129 @@
+
+
+
+
+
+
+:class:`FluidsMCPError`
+=======================
+
+
+.. py:exception:: ansys.fluent.mcp.common.errors.FluidsMCPError(message: str, *, details: dict[str, Any] | None = None)
+
+   Bases: :py:obj:`Exception`
+
+
+   
+   Base class for typed errors raised by leaves and backends.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: FluidsMCPError
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~to_typed`
+            - Convert the error into a typed error payload.
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~error_code`
+            - 
+          * - :py:attr:`~message`
+            - 
+          * - :py:attr:`~details`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.errors import FluidsMCPError
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: error_code
+   :value: 'internal_error'
+
+
+.. py:attribute:: message
+
+.. py:attribute:: details
+
+
+
+Method detail
+-------------
+
+.. py:method:: to_typed() -> ansys.fluent.mcp.common.models.TypedError
+
+   
+   Convert the error into a typed error payload.
+
+
+
+
+
+   :Returns:
+
+       :obj:`TypedError`
+           TypedError produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+

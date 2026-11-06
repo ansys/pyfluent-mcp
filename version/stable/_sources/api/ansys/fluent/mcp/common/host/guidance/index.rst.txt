@@ -1,0 +1,236 @@
+
+
+
+
+
+
+The ``guidance.py`` module
+==========================
+
+.. py:module:: ansys.fluent.mcp.common.host.guidance
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: guidance
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~error_guidance`
+            - Classify an error code.
+
+
+          * - :py:obj:`~error_code_of`
+            - Return the error code of a result payload, or ``None`` for a success.
+
+
+          * - :py:obj:`~enrich_error_payload`
+            - Add ``retryable`` and ``next_action`` to an error payload in place.
+
+
+          * - :py:obj:`~enrich_result`
+            - Return a tool result with error guidance added; successes are returned unchanged.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Uniform ``retryable`` / ``next_action`` guidance on tool error results.
+
+Leaf tools report failures as ``{"status": "error", "error_code", "message"}``
+(or ``{"ok": False, "error": "<code>"}``, or a typed error model). A host LLM
+still has to guess whether to retry and what to do next. :func:`enrich_result`
+adds:
+
+* ``retryable``: ``True`` only when the same call can succeed after waiting or
+  after the named recovery step.
+* ``next_action``: one concrete recovery step, when the error class has one.
+
+Values a tool already set are never overwritten, and successful results are
+returned unchanged. Error codes are classified by ordered name patterns, so new
+codes that follow the existing naming are covered automatically.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: error_guidance(error_code: str, message: str = '') -> tuple[bool, str | None]
+
+   
+   Classify an error code.
+
+
+   :Parameters:
+
+       **error_code** : :class:`python:str`
+           Machine-readable error code reported by the tool.
+
+       **message** : :class:`python:str`, default: ""
+           Human-readable error message; authentication failures are detected here.
+
+
+
+   :Returns:
+
+       :class:`python:tuple`\[:ref:`bool <python:bltin-boolean-values>`, :class:`python:str` | :data:`python:None`]
+           ``(retryable, next_action)``. ``next_action`` is ``None`` for unknown codes.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: error_code_of(payload: Any) -> str | None
+
+   
+   Return the error code of a result payload, or ``None`` for a success.
+
+
+   :Parameters:
+
+       **payload** : :obj:`Any`
+           Tool result as a mapping.
+
+
+
+   :Returns:
+
+       :class:`python:str` | :data:`python:None`
+           The ``error_code`` (or ``error`` when ``ok`` is ``False``), else ``None``.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: enrich_error_payload(payload: dict[str, Any]) -> bool
+
+   
+   Add ``retryable`` and ``next_action`` to an error payload in place.
+
+   A payload carrying ``input_request`` (a missing user decision with an
+   ``argument`` name and optional ``options``) is told to ask the user and call
+   again.
+
+   :Parameters:
+
+       **payload** : :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Structured tool result.
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>`
+           Whether the payload was changed.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: enrich_result(result: Any, *, trace_id: str | None = None) -> Any
+
+   
+   Return a tool result with error guidance added; successes are returned unchanged.
+
+   Mappings are copied before they are changed. Pydantic error models (for
+   example ``TypedError``) are converted to a mapping so the guidance fields
+   can be added.
+
+   :Parameters:
+
+       **result** : :obj:`Any`
+           Value returned by a tool function.
+
+       **trace_id** : :class:`python:str` | :data:`python:None`, default: :data:`python:None`
+           Trace id of the call, added to error results as ``trace_id``.
+
+
+
+   :Returns:
+
+       :obj:`Any`
+           The original result, or an enriched mapping.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

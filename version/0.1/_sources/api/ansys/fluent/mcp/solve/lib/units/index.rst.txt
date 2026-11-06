@@ -1,0 +1,216 @@
+
+
+
+
+
+
+The ``units.py`` module
+=======================
+
+.. py:module:: ansys.fluent.mcp.solve.lib.units
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: units
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.lib.units.Quantity`
+            - A parsed numeric value with its unit and CFD quantity classification.
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~parse_quantities`
+            - Extract every ``<number><unit>`` pair from ``text``.
+
+
+          * - :py:obj:`~quantity_hints`
+            - LLM-friendly serialization of every quantity in ``text``.
+
+
+          * - :py:obj:`~iter_quantities`
+            - Return a generator of every ``<number><unit>`` pair from ``text``.
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> Quantity</api/ansys/fluent/mcp/solve/lib/units/Quantity>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Unit- and quantity-aware parsing for natural-language Fluent values.
+
+PyFluent settings parameters generally accept either a bare numeric in
+the Fluent active unit-system or a ``(value, unit)`` tuple. LLM-generated
+code that ignores units is the single biggest source of silently-wrong
+boundary conditions ("set inlet to 50 C" landing as 50 K because the
+solver is in SI). This module extracts ``{value, unit, quantity}``
+hints from a free-form prompt so the orchestrator can pass them to the
+LLM as structured context. The grounding pass can then rewrite plain
+numeric literals into ``(value, unit)`` tuples when the target API
+supports it.
+
+This module is intentionally lightweight with no `pint` dependency. It only handle the
+units that actually show up in CFD prompts. Anything ambiguous returns
+``None``, and the caller must fall back to asking the user.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: parse_quantities(text: str) -> list[Quantity]
+
+   
+   Extract every ``<number><unit>`` pair from ``text``.
+
+   Order is preserved. Overlapping matches are not produced. (Regex
+   consumes left to right). The returned list may be empty.
+
+   :Parameters:
+
+       **text** : :class:`python:str`
+           Text value to parse, normalize, or write.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:obj:`Quantity`]
+           Collection containing the operation results.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: quantity_hints(text: str) -> list[dict[str, object]]
+
+   
+   LLM-friendly serialization of every quantity in ``text``.
+
+   Each hint contains the original literal, canonical unit,
+   quantity classification, and value converted to Fluent's
+   default SI unit so the LLM can plug it straight into PyFluent.
+
+   :Parameters:
+
+       **text** : :class:`python:str`
+           Text value to parse, normalize, or write.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:class:`python:dict`\[:class:`python:str`, :obj:`object`]]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: iter_quantities(text: str) -> Iterator[Quantity]
+
+   
+   Return a generator of every ``<number><unit>`` pair from ``text``.
+
+   Generator equivalent of :func:`parse_quantities`.
+
+   :Parameters:
+
+       **text** : :class:`python:str`
+           Text value to parse, normalize, or write.
+
+
+
+   :Returns:
+
+       :obj:`Iterator`\[:obj:`Quantity`]
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

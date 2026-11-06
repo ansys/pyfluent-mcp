@@ -1,0 +1,339 @@
+
+
+
+
+
+
+The ``config.py`` module
+========================
+
+.. py:module:: ansys.fluent.mcp.common.config
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: config
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.config.FluidsMCPConfig`
+            - Resolved configuration values.
+
+
+
+
+    .. tab-item:: Exceptions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.config.ConfigError`
+            - Raised when an environment variable is set to an invalid value.
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~register_known_env_vars`
+            - Declare additional ``FLUIDS_MCP_*`` variables read by a host package.
+
+
+          * - :py:obj:`~known_env_vars`
+            - Return every recognized ``FLUIDS_MCP_*`` variable name.
+
+
+          * - :py:obj:`~parse_bool`
+            - Parse a Boolean configuration value from text.
+
+
+          * - :py:obj:`~parse_float`
+            - Parse a floating-point configuration value from text.
+
+
+          * - :py:obj:`~load_config`
+            - Read and validate every recognized environment variable.
+
+
+          * - :py:obj:`~validate_config`
+            - Validate configuration.
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> FluidsMCPConfig</api/ansys/fluent/mcp/common/config/FluidsMCPConfig>
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-md-lightning_bolt"></span> ConfigError</api/ansys/fluent/mcp/common/config/ConfigError>
+
+
+
+
+
+
+
+Description
+-----------
+
+Centralized environment-variable configuration for PyFluent MPP.
+
+Every ``FLUIDS_MCP_*`` variable is read once at startup and validated. ``validate_config()``
+is called from each leaf's CLI entry point so a typo or out-of-range
+value fails fast with a clear message instead of silently corrupting
+runtime behavior later.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: register_known_env_vars(*names: str) -> None
+
+   
+   Declare additional ``FLUIDS_MCP_*`` variables read by a host package.
+
+   Hosts that extend this package register the variables they own so the
+   unknown-variable typo warning only fires for genuinely unknown names.
+
+   :Parameters:
+
+       **\*names** : :class:`python:str`
+           Environment variable names to accept as known.
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: known_env_vars() -> frozenset[str]
+
+   
+   Return every recognized ``FLUIDS_MCP_*`` variable name.
+
+
+
+
+
+   :Returns:
+
+       :obj:`frozenset`\[:class:`python:str`]
+           Built-in names plus names registered through ``register_known_env_vars``.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: parse_bool(name: str, raw: str, *, default: bool) -> bool
+
+   
+   Parse a Boolean configuration value from text.
+
+
+   :Parameters:
+
+       **name** : :class:`python:str`
+           Name of the object, module, or setting being processed.
+
+       **raw** : :class:`python:str`
+           Raw string value to parse or validate.
+
+       **default** : :ref:`bool <python:bltin-boolean-values>`
+           Default value used by the caller when no explicit value is available.
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>`
+           Parsed boolean value.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: parse_float(name: str, raw: str, *, minimum: float = 0.0) -> float
+
+   
+   Parse a floating-point configuration value from text.
+
+
+   :Parameters:
+
+       **name** : :class:`python:str`
+           Name of the object, module, or setting being processed.
+
+       **raw** : :class:`python:str`
+           Raw string value to parse or validate.
+
+       **minimum** : :class:`python:float`
+           Lowest accepted numeric value.
+
+
+
+   :Returns:
+
+       :class:`python:float`
+           Parsed floating-point value.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: load_config(env: Optional[dict[str, str]] = None) -> FluidsMCPConfig
+
+   
+   Read and validate every recognized environment variable.
+
+   Pass ``env`` to inject a synthetic environment for unit tests.
+   Unknown ``FLUIDS_MCP_*`` variables produce a warning string in the
+   returned config (also logged at WARNING level), but do not abort.
+
+   :Parameters:
+
+       **env** : :obj:`Optional`\[:class:`python:dict`\[:class:`python:str`, :class:`python:str`]]
+           Environment mapping to read instead of the process environment.
+
+
+
+   :Returns:
+
+       :obj:`FluidsMCPConfig`
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: validate_config(env: Optional[dict[str, str]] = None) -> FluidsMCPConfig
+
+   
+   Validate configuration.
+
+   Alias of :func:`load_config` that raises :class:`ConfigError` on any issue.
+   Call once from each CLI entry point.
+
+   :Parameters:
+
+       **env** : :obj:`Optional`\[:class:`python:dict`\[:class:`python:str`, :class:`python:str`]]
+           Environment mapping to read instead of the process environment.
+
+
+
+   :Returns:
+
+       :obj:`FluidsMCPConfig`
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

@@ -1,0 +1,397 @@
+
+
+
+
+
+
+The ``compare_tools.py`` module
+===============================
+
+.. py:module:: ansys.fluent.mcp.solve.lib.compare_tools
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: compare_tools
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ephemeral_pyfluent_backend`
+            - Return a new ephemeral PyFluent backend for file comparison.
+
+
+          * - :py:obj:`~collect_compare_snapshot`
+            - Read a deterministic slice of session state for diffing.
+
+
+          * - :py:obj:`~diff_snapshots`
+            - Recursively diff two snapshot dictionaries.
+
+
+          * - :py:obj:`~shorten_value`
+            - Render a diff value compactly for table cells.
+
+
+          * - :py:obj:`~split_diff_path`
+            - Split a diff path into ``(section, leaf)`` for hierarchical rendering.
+
+
+          * - :py:obj:`~format_compare_summary`
+            - Render a hierarchical markdown summary of a diff list.
+
+
+          * - :py:obj:`~compare_files_impl`
+            - Compare two Fluent case/mesh files in ephemeral PyFluent sessions.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Shared, stateless implementation for the ``compare_files`` tool.
+
+This module owns the pure-domain pieces of the ``compare_files`` tool:
+
+* An ephemeral PyFluent backend factory
+* A deterministic snapshot collection over the ``Backend`` contract
+* A recursive dictionary diff with stable named-object handling
+* Compact rendering helpers used by the markdown summary
+
+The leaf-side ``DomainTool`` entry point is
+:func:`compare_files_impl`. The agent's in-process handler delegates
+to the same coroutine so both surfaces share one source of truth.
+
+There is **no** ``state`` parameter and no reference to ``LoopState``
+on purpose. By the time this module is reached, all path validation
+and same-file checks have already passed in :func:`compare_files_impl`
+itself, using only the public :mod:`ansys.fluent.mcp.common.file_handlers`
+registry. The handler spawns its own ephemeral sessions so the live
+workspace (if any) is never touched.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: ephemeral_pyfluent_backend(label: str = 'PyFluent (compare)') -> ansys.fluent.mcp.common.backend.Backend
+
+   
+   Return a new ephemeral PyFluent backend for file comparison.
+
+   Lazy-imported so the test suite (which monkey-patches this symbol)
+   does not need PyFluent installed. The ``label`` flows into
+   PyFluent log lines so each ephemeral session is identifiable per
+   file in compare output.
+
+   :Parameters:
+
+       **label** : :class:`python:str`
+           Label to supply to the function.
+
+
+
+   :Returns:
+
+       :obj:`Backend`
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: collect_compare_snapshot(backend: ansys.fluent.mcp.common.backend.Backend) -> dict[str, Any]
+   :async:
+
+
+   
+   Read a deterministic slice of session state for diffing.
+
+   Combines the global-state slice (energy, viscous, solver, methods,
+   operating conditions) with named-object name lists per family.
+   Returns a dictionary shaped like this::
+
+       {"global": {<path>: <state-or-marker>},
+        "named":  {<family>: [<names>]}}
+
+   :Parameters:
+
+       **backend** : :obj:`Backend`
+           Backend to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: diff_snapshots(a: dict[str, Any], b: dict[str, Any], *, prefix: str = '') -> list[dict[str, Any]]
+
+   
+   Recursively diff two snapshot dictionaries.
+
+   Emits one record per leaf-level difference with shape::
+
+       {"path": "global.setup/models/energy.enabled",
+        "change": "changed" | "only_in_a" | "only_in_b",
+        "a": <value or None>, "b": <value or None>}
+
+   :Parameters:
+
+       **a** : :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           A dictionary to supply to the function.
+
+       **b** : :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           B dictionary to supply to the function.
+
+       **prefix** : :class:`python:str`
+           Prefix to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: shorten_value(v: Any, *, limit: int = 80) -> str
+
+   
+   Render a diff value compactly for table cells.
+
+   Lists are rendered as comma-separated values rather than ``repr``
+   so a list of named-object names reads naturally in the summary.
+
+   :Parameters:
+
+       **v** : :obj:`Any`
+           Value to supply to the function.
+
+       **limit** : :class:`python:int`
+           Maximum number of items or characters to include.
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           String result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: split_diff_path(path: str) -> tuple[str, str]
+
+   
+   Split a diff path into ``(section, leaf)`` for hierarchical rendering.
+
+   Strips the leading ``global.``/``named.`` scope and splits
+   trailing ``[name]`` brackets or ``.field`` suffixes off as the
+   leaf. The section is shown as a heading. The leaf is the table
+   row name.
+
+   :Parameters:
+
+       **path** : :class:`python:str`
+           Fluent object path or file-system path to inspect.
+
+
+
+   :Returns:
+
+       :class:`python:tuple`\[:class:`python:str`, :class:`python:str`]
+           Collection containing the operation results.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: format_compare_summary(diffs: list[dict[str, Any]], *, name_a: str, name_b: str) -> str
+
+   
+   Render a hierarchical markdown summary of a diff list.
+
+   Groups rows by their parent path (rendered as a section heading
+   with ``/`` separators) and emits one table per section with
+   columns: ``Setting | <name_a> | <name_b>``. The change kind is
+   implicit: ``—`` in either column means "not present in that file".
+
+   :Parameters:
+
+       **diffs** : :class:`python:list`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Diffs to supply to the function.
+
+       **name_a** : :class:`python:str`
+           Name a to supply to the function.
+
+       **name_b** : :class:`python:str`
+           Name b to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           String result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: compare_files_impl(backend: ansys.fluent.mcp.common.backend.Backend, *, path_a: str, path_b: str) -> dict[str, Any]
+   :async:
+
+
+   
+   Compare two Fluent case/mesh files in ephemeral PyFluent sessions.
+
+   Open two Fluent case/mesh files in two SEPARATE ephemeral
+   PyFluent sessions and summarize the differences between them.
+
+   Both sessions are launched headless (no GUI) and the cases are
+   read with ``lightweight_setup=True`` for speed. The live workspace
+   session, if any, is NOT touched. Returns a structured diff of
+   global model state and per-family named-object name lists plus a
+   pre-rendered markdown summary in the ``summary`` field.
+
+   The ``backend`` argument from the leaf framework is intentionally
+   unused. The tool spawns its own ephemeral backends per file so
+   that the diff is reproducible regardless of whether a live session is
+   attached.
+
+   :Parameters:
+
+       **backend** : :obj:`Backend`
+           Backend to supply to the function.
+
+       **path_a** : :class:`python:str`
+           Path a to supply to the function.
+
+       **path_b** : :class:`python:str`
+           Path b to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

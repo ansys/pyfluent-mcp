@@ -1,0 +1,81 @@
+
+
+
+
+
+
+:class:`NotConnectedError`
+==========================
+
+
+.. py:exception:: ansys.fluent.mcp.common.errors.NotConnectedError(message: str, *, details: dict[str, Any] | None = None)
+
+   Bases: :py:obj:`FluidsMCPError`
+
+
+   
+   Raised when a backend call fails because the backend is not connected.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: NotConnectedError
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~error_code`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.errors import NotConnectedError
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: error_code
+   :value: 'not_connected'
+
+
+
+
+
+
