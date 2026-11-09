@@ -22,6 +22,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+import pytest
+
 from ansys.fluent.mcp.common.backend import Backend, BackendUnavailableError
 from ansys.fluent.mcp.common.models import ConnectResult
 from ansys.fluent.mcp.common.path_descriptor import (
@@ -471,6 +473,66 @@ def test_describe_path_folds_template_and_arguments_for_snake_case_kinds():
     results = _run(describe_path_impl(backend, paths=[collection, command]))["results"]
     assert set(results[collection]["child_fields"]) == {"definition"}
     assert results[command]["command_arguments"][0]["name"] == "iter_count"
+
+
+def _contour_backend() -> _StubBackend:
+    return _StubBackend(
+        probes={"results.graphics.contour": {"exists": True, "kind": "named_object"}},
+        templates={
+            "results.graphics.contour": {
+                "fields": {
+                    "field": {"type_hint": "String", "allowed_values": ["pressure", "velocity"]},
+                    "name": {"type_hint": "String", "is_read_only": True},
+                }
+            }
+        },
+    )
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        'results.graphics.contour["<name>"].field',
+        "results.graphics.contour['<name>'].field",
+        "results.graphics.contour['*'].field",
+        "results.graphics.contour.<name>.field",
+    ],
+)
+def test_describe_path_describes_placeholder_member_fields_from_the_template(path):
+    backend = _contour_backend()
+    out = _run(describe_path_impl(backend, paths=[path], include_template=False))
+    result = out["results"][path]
+    assert backend.probe_calls == [["results.graphics.contour"]]
+    assert result["exists"] is True
+    assert result["kind"] == "String"
+    assert result["allowed_values"] == ["pressure", "velocity"]
+    assert "member template" in result["notes"][0]
+
+
+def test_describe_path_placeholder_member_and_unknown_field():
+    backend = _contour_backend()
+    member, unknown = "results.graphics.contour['*']", "results.graphics.contour['<name>'].colour"
+    results = _run(describe_path_impl(backend, paths=[member, unknown]))["results"]
+    assert set(results[member]["child_fields"]) == {"field", "name"}
+    assert results[unknown]["exists"] is False
+    assert "fields: field, name" in results[unknown]["notes"][0]
+
+
+def test_describe_path_says_why_an_empty_collection_has_no_field_types():
+    backend = _StubBackend(
+        probes={"setup.named_expressions": {"exists": True, "kind": "named_object"}},
+        templates={"setup.named_expressions": {"fields": {"definition": {"type_hint": "unknown"}}}},
+    )
+    path = "setup.named_expressions['<name>'].definition"
+    result = _run(describe_path_impl(backend, paths=[path]))["results"][path]
+    assert result["exists"] is True and result["kind"] is None
+    assert "no member yet" in result["notes"][-1]
+
+
+def test_describe_path_names_read_only_member_fields():
+    path = "results.graphics.contour"
+    results = _run(describe_path_impl(_contour_backend(), paths=[path]))["results"]
+    assert results[path]["notes"] == ["Read-only member fields: name."]
 
 
 def test_describe_path_rejects_empty_paths():
