@@ -232,6 +232,8 @@ def test_backend_default_methods_and_validation(monkeypatch):
     ]
 
     class EmptyRetriever:
+        available = True
+
         async def retrieve(self, *_args, **_kwargs):
             """Retrieve API hits that match the query and filters.
 
@@ -253,6 +255,9 @@ def test_backend_default_methods_and_validation(monkeypatch):
         "ansys.fluent.mcp.solve.catalog.retriever.get_default_api_retriever",
         lambda: EmptyRetriever(),
     )
+    assert asyncio.run(backend.find_api("none")) == []
+
+    EmptyRetriever.available = False
     with pytest.raises(BackendUnavailableError):
         asyncio.run(backend.find_api("none"))
 

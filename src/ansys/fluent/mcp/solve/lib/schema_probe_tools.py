@@ -45,10 +45,82 @@ introspective — they never mutate the live session.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from ansys.fluent.mcp.common.backend import Backend, BackendUnavailableError
 from ansys.fluent.mcp.common.path_descriptor import PathDescriptor
+
+#: A member placeholder as ``find_api`` prints it: ``["<name>"]``, ``['*']`` or ``.<name>``.
+_PLACEHOLDER = re.compile(r"""\[(['"]?)(?:<[^>\]]*>|\*)\1\]|\.<[^>.]*>(?=\.|$)""")
+
+
+def _split_placeholder(path: str) -> tuple[str, str] | None:
+    """Return ``(collection, rest)`` when ``path`` names a placeholder member."""
+    match = _PLACEHOLDER.search(path)
+    if match is None:
+        return None
+    return path[: match.start()], path[match.end() :].lstrip(".")
+
+
+def _template_fields(template: dict[str, Any] | None) -> dict[str, Any]:
+    """Return a template's ``{field: info}`` map; list-form templates get empty infos."""
+    fields = (template or {}).get("fields")
+    if isinstance(fields, dict):
+        return fields
+    if isinstance(fields, (list, tuple)):
+        return {str(name): {} for name in fields}
+    return {}
+
+
+def _read_only_note(template: dict[str, Any] | None) -> list[str]:
+    """Name the member fields a write cannot change."""
+    fields = _template_fields(template)
+    names = [n for n, info in fields.items() if isinstance(info, dict) and info.get("is_read_only")]
+    return [f"Read-only member fields: {', '.join(names)}."] if names else []
+
+
+def _member_descriptor(
+    path: str,
+    collection: str,
+    rest: str,
+    probe: dict[str, Any] | None,
+    template: dict[str, Any] | None,
+) -> PathDescriptor:
+    """Describe a placeholder member, or one of its fields, from the collection's template."""
+    if not template:
+        note = f"{collection!r} has no member template; use a real member name."
+        return PathDescriptor(path=path, kind="missing", exists=False, notes=(note,))
+    note = f"Placeholder member of {collection!r}; described from its member template."
+    if not rest:
+        notes = [note, *_read_only_note(template)]
+        return PathDescriptor.from_probe(path, probe, template=template, notes=notes)
+    fields = _template_fields(template)
+    name = re.split(r"[.\[]", rest, maxsplit=1)[0]
+    if name not in fields:
+        known = ", ".join(fields) or "unknown"
+        note = f"Members of {collection!r} have no field {name!r}; fields: {known}."
+        return PathDescriptor(path=path, kind="missing", exists=False, notes=(note,))
+    info = fields[name] if isinstance(fields[name], dict) else {}
+    notes = [note]
+    if name != rest:
+        notes.append("Only the first field level is described; use a real member name below it.")
+    kind = info.get("type_hint")
+    if kind in (None, "unknown"):
+        kind = None
+        notes.append("The collection has no member yet, so the field type and values are unknown.")
+    allowed = info.get("allowed_values")
+    return PathDescriptor(
+        path=path,
+        kind=kind,
+        exists=True,
+        is_active=info.get("is_active"),
+        is_read_only=info.get("is_read_only"),
+        allowed_values=tuple(allowed) if isinstance(allowed, (list, tuple)) else None,
+        min_value=info.get("min"),
+        max_value=info.get("max"),
+        notes=tuple(notes),
+    )
 
 
 async def probe_path_impl(
@@ -343,7 +415,9 @@ async def describe_path_impl(
         One or more Fluent settings paths to describe.
     include_template
         When True (default) and a path is a NamedObject collection,
-        fold in :meth:`Backend.describe_named_object_template`.
+        fold in :meth:`Backend.describe_named_object_template`. A path
+        naming a placeholder member (``coll["<name>"].field``,
+        ``coll['*']``) is always described from that template.
     include_command_arguments
         When True (default) and a path is a Command, fold in
         :meth:`Backend.get_command_arguments`.
@@ -368,7 +442,10 @@ async def describe_path_impl(
             "message": "no live session; connect Fluent first.",
         }
 
-    string_paths = [str(p) for p in paths]
+    requested = [str(p) for p in paths]
+    placeholders = {p: split for p in requested if (split := _split_placeholder(p)) is not None}
+    members = {collection for collection, _ in placeholders.values()}
+    string_paths = list(dict.fromkeys([*(p for p in requested if p not in placeholders), *members]))
 
     try:
         probes = await backend.probe_path(string_paths)
@@ -403,26 +480,24 @@ async def describe_path_impl(
         # docstring.
         allowed_by_path = {p: None for p in string_paths}
 
+    # Backends spell kinds differently (``NamedObject`` / ``named_object``).
+    probed = {p: PathDescriptor.from_probe(p, (probes or {}).get(p)) for p in string_paths}
+
     # Templates (soft — only invoked for NamedObject-kind paths)
     templates_by_path: dict[str, dict[str, Any] | None] = {}
-    if include_template:
-        for p in string_paths:
-            info = (probes or {}).get(p) or {}
-            kind = info.get("kind")
-            if kind in ("NamedObject", "NamedObjectContainer", "ListObject"):
-                try:
-                    tmpl = await backend.describe_named_object_template(p)
-                    templates_by_path[p] = tmpl if isinstance(tmpl, dict) else None
-                except Exception:  # noqa: BLE001
-                    templates_by_path[p] = None
+    for p in string_paths:
+        if probed[p].is_named_object and (include_template or p in members):
+            try:
+                tmpl = await backend.describe_named_object_template(p)
+                templates_by_path[p] = tmpl if isinstance(tmpl, dict) else None
+            except Exception:  # noqa: BLE001
+                templates_by_path[p] = None
 
     # Command arguments (soft — only invoked for Command-kind paths)
     commands_by_path: dict[str, dict[str, Any] | None] = {}
     if include_command_arguments:
         for p in string_paths:
-            info = (probes or {}).get(p) or {}
-            kind = info.get("kind")
-            if kind in ("Command", "Action"):
+            if probed[p].is_command:
                 try:
                     args = await backend.get_command_arguments(p)
                     commands_by_path[p] = args if isinstance(args, dict) else None
@@ -430,14 +505,21 @@ async def describe_path_impl(
                     commands_by_path[p] = None
 
     results: dict[str, Any] = {}
-    for p in string_paths:
-        desc = PathDescriptor.from_probe(
-            p,
-            (probes or {}).get(p),
-            allowed_values=allowed_by_path.get(p),
-            template=templates_by_path.get(p),
-            command_arguments=commands_by_path.get(p),
-        )
+    for p in requested:
+        if p in placeholders:
+            collection, rest = placeholders[p]
+            probe = (probes or {}).get(collection)
+            template = templates_by_path.get(collection)
+            desc = _member_descriptor(p, collection, rest, probe, template)
+        else:
+            desc = PathDescriptor.from_probe(
+                p,
+                (probes or {}).get(p),
+                allowed_values=allowed_by_path.get(p),
+                template=templates_by_path.get(p),
+                command_arguments=commands_by_path.get(p),
+                notes=_read_only_note(templates_by_path.get(p)),
+            )
         results[p] = desc.to_dict()
 
     return {"connected": True, "status": "ok", "results": results}
