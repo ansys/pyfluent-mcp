@@ -556,7 +556,7 @@ class Backend(ABC):
 
         retriever = get_default_api_retriever()
         hits = await retriever.retrieve(query, top_k=top_k, kinds=kinds, under=under)
-        if not hits:
+        if not hits and not getattr(retriever, "available", True):
             raise BackendUnavailableError(
                 "No API retriever returned results. "
                 "Install pyfluent and ensure the lexical API index is available."

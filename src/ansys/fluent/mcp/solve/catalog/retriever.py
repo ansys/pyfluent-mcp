@@ -84,6 +84,11 @@ class ApiRetriever(ABC):
 
     name: str = "abstract"
 
+    @property
+    def available(self) -> bool:
+        """Whether the retriever has an index to search; ``False`` makes no-hit results an error."""
+        return True
+
     @abstractmethod
     async def retrieve(
         self,
@@ -153,6 +158,11 @@ class LexicalApiRetriever(ApiRetriever):
             The function completes through its side effects.
         """
         self._index = index or get_default_api_index()
+
+    @property
+    def available(self) -> bool:
+        """Whether the API index loaded."""
+        return bool(self._index.available)
 
     async def retrieve(
         self,

@@ -403,13 +403,14 @@ async def describe_path_impl(
         # docstring.
         allowed_by_path = {p: None for p in string_paths}
 
+    # Backends spell kinds differently (``NamedObject`` / ``named_object``).
+    probed = {p: PathDescriptor.from_probe(p, (probes or {}).get(p)) for p in string_paths}
+
     # Templates (soft — only invoked for NamedObject-kind paths)
     templates_by_path: dict[str, dict[str, Any] | None] = {}
     if include_template:
         for p in string_paths:
-            info = (probes or {}).get(p) or {}
-            kind = info.get("kind")
-            if kind in ("NamedObject", "NamedObjectContainer", "ListObject"):
+            if probed[p].is_named_object:
                 try:
                     tmpl = await backend.describe_named_object_template(p)
                     templates_by_path[p] = tmpl if isinstance(tmpl, dict) else None
@@ -420,9 +421,7 @@ async def describe_path_impl(
     commands_by_path: dict[str, dict[str, Any] | None] = {}
     if include_command_arguments:
         for p in string_paths:
-            info = (probes or {}).get(p) or {}
-            kind = info.get("kind")
-            if kind in ("Command", "Action"):
+            if probed[p].is_command:
                 try:
                     args = await backend.get_command_arguments(p)
                     commands_by_path[p] = args if isinstance(args, dict) else None

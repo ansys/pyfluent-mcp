@@ -452,6 +452,27 @@ def test_describe_path_composes_batch():
     assert cmd["command_arguments"][0]["name"] == "iter_count"
 
 
+def test_describe_path_folds_template_and_arguments_for_snake_case_kinds():
+    """The PyFluent backend's ``probe_path`` reports ``named_object`` / ``command``."""
+    collection, command = "setup.named_expressions", "solution.run_calculation.iterate"
+    backend = _StubBackend(
+        probes={
+            collection: {"exists": True, "is_active": True, "kind": "named_object"},
+            command: {"exists": True, "is_active": True, "kind": "command"},
+        },
+        templates={collection: {"child_class": "ExprChild", "fields": {"definition": {}}}},
+        command_args={
+            command: {
+                "argument_names": ["iter_count"],
+                "arguments": {"iter_count": {"kind": "Integer"}},
+            }
+        },
+    )
+    results = _run(describe_path_impl(backend, paths=[collection, command]))["results"]
+    assert set(results[collection]["child_fields"]) == {"definition"}
+    assert results[command]["command_arguments"][0]["name"] == "iter_count"
+
+
 def test_describe_path_rejects_empty_paths():
     backend = _StubBackend()
     out = _run(describe_path_impl(backend, paths=[]))
