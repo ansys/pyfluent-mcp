@@ -1,0 +1,122 @@
+
+
+
+
+
+
+:class:`SessionStatus`
+======================
+
+
+.. py:class:: ansys.fluent.mcp.common.models.SessionStatus(/, **data: Any)
+
+   Bases: :py:obj:`pydantic.BaseModel`
+
+
+   
+   Result of ``session.status``. It is safe to call before ``connect``.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: SessionStatus
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~leaf`
+            - 
+          * - :py:attr:`~connected`
+            - 
+          * - :py:attr:`~backend`
+            - 
+          * - :py:attr:`~backend_kind`
+            - 
+          * - :py:attr:`~endpoint`
+            - 
+          * - :py:attr:`~capabilities`
+            - 
+          * - :py:attr:`~notes`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.models import SessionStatus
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: leaf
+   :type:  str
+   :value: None
+
+
+.. py:attribute:: connected
+   :type:  bool
+
+.. py:attribute:: backend
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: backend_kind
+   :type:  Optional[Literal['fluids_one', 'pyfluent', 'pyprime', 'pydiscovery']]
+   :value: None
+
+
+.. py:attribute:: endpoint
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: capabilities
+   :type:  list[CapabilityInfo]
+   :value: None
+
+
+.. py:attribute:: notes
+   :type:  list[str]
+   :value: None
+
+
+
+
+
+

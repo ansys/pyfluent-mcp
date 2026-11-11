@@ -1,0 +1,261 @@
+
+
+
+
+
+
+The ``annotations.py`` module
+=============================
+
+.. py:module:: ansys.fluent.mcp.common.host.annotations
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: annotations
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~annotations_for`
+            - Return the behavior hints for a tool.
+
+
+
+
+    .. tab-item:: Constants
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~READ_ONLY`
+            - Reads state or builds code without changing anything.
+
+
+          * - :py:obj:`~ADDITIVE`
+            - Adds or attaches state without overwriting anything; safe to repeat.
+
+
+          * - :py:obj:`~OVERWRITE`
+            - Overwrites values or lifecycle state; repeating with the same arguments is harmless.
+
+
+          * - :py:obj:`~DESTRUCTIVE`
+            - Arbitrary or irreversible mutation; confirm first and never retry blindly.
+
+
+          * - :py:obj:`~LEAF_TOOL_ANNOTATIONS`
+            - Hints for every tool the shared leaf base and the solve leaf register.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+MCP tool annotations (behavior hints) for the leaf tool surface.
+
+MCP hosts (VS Code Copilot, Claude Desktop, Cursor) read ``readOnlyHint``,
+``destructiveHint`` and ``idempotentHint`` to decide which calls can run
+without confirmation and which ones must not be retried blindly. Each tool is
+classified by its worst-case action. Lifecycle tools named ``manage_<label>``
+can deactivate a component, so they are destructive. Unclassified tools get
+no annotations and the host falls back to the protocol default (not
+read-only, possibly destructive).
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: annotations_for(tool_name: str | None) -> dict[str, bool] | None
+
+   
+   Return the behavior hints for a tool.
+
+
+   :Parameters:
+
+       **tool_name** : :class:`python:str` | :data:`python:None`
+           Registered tool name.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :ref:`bool <python:bltin-boolean-values>`] | :data:`python:None`
+           A copy of the hint profile, or ``None`` when the tool is unclassified.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: READ_ONLY
+   :type:  dict[str, bool]
+
+   
+   Reads state or builds code without changing anything.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: ADDITIVE
+   :type:  dict[str, bool]
+
+   
+   Adds or attaches state without overwriting anything; safe to repeat.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: OVERWRITE
+   :type:  dict[str, bool]
+
+   
+   Overwrites values or lifecycle state; repeating with the same arguments is harmless.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: DESTRUCTIVE
+   :type:  dict[str, bool]
+
+   
+   Arbitrary or irreversible mutation; confirm first and never retry blindly.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: LEAF_TOOL_ANNOTATIONS
+   :type:  dict[str, dict[str, bool]]
+
+   
+   Hints for every tool the shared leaf base and the solve leaf register.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

@@ -1,0 +1,196 @@
+
+
+
+
+
+
+The ``session_lifecycle.py`` module
+===================================
+
+.. py:module:: ansys.fluent.mcp.solve.backends.session_lifecycle
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: session_lifecycle
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~run_locked`
+            - Serialize solver work with shutdown and wait for canceled workers.
+
+
+          * - :py:obj:`~wait_for_completion`
+            - Wait through repeated caller cancellation without canceling a worker.
+
+
+          * - :py:obj:`~session_endpoint`
+            - Describe the actual connection without including its credentials.
+
+
+          * - :py:obj:`~cleanup_sessions`
+            - Retain failed cleanup handles so a new launch cannot orphan them.
+
+
+
+    .. tab-item:: Attributes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~logger`
+            - 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Thread coordination for solver operations and synchronous shutdown.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: run_locked(backend, function, *args, **kwargs)
+   :async:
+
+
+   
+   Serialize solver work with shutdown and wait for canceled workers.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: wait_for_completion(task)
+   :async:
+
+
+   
+   Wait through repeated caller cancellation without canceling a worker.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: session_endpoint(solver)
+
+   
+   Describe the actual connection without including its credentials.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: cleanup_sessions(backend, active)
+
+   
+   Retain failed cleanup handles so a new launch cannot orphan them.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: logger
+
+
+

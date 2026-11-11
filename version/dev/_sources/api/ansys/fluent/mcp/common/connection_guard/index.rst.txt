@@ -1,0 +1,128 @@
+
+
+
+
+
+
+The ``connection_guard.py`` module
+==================================
+
+.. py:module:: ansys.fluent.mcp.common.connection_guard
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: connection_guard
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~require_connected_result`
+            - Surface missing-session errors before an aggregator discards their code.
+
+
+          * - :py:obj:`~with_connection_recovery`
+            - Normalize missing-session errors without forbidding offline operations.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Server-owned recovery for every registered tool's no-session outcome.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: require_connected_result(result)
+
+   
+   Surface missing-session errors before an aggregator discards their code.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: with_connection_recovery(function, recover)
+
+   
+   Normalize missing-session errors without forbidding offline operations.
+
+   ``recover`` belongs to the registering server, which knows its actual
+   connect arguments and owning product. This applies independently of the
+   optional host contract and preserves already complete recovery responses.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

@@ -1,0 +1,210 @@
+
+
+
+
+
+
+The ``host_resources.py`` module
+================================
+
+.. py:module:: ansys.fluent.mcp.solve.mcp.host_resources
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: host_resources
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~render_prompt`
+            - Render one of :data:`PROMPTS`.
+
+
+          * - :py:obj:`~register_solve_resources`
+            - Register the solve leaf's live-context resources.
+
+
+          * - :py:obj:`~register_solve_prompts`
+            - Register the solve leaf's workflow prompts.
+
+
+
+
+    .. tab-item:: Constants
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~PROMPTS`
+            - Prompt name -> description and template.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+MCP resources and prompts for the solve leaf.
+
+Resources are read-only live-context snapshots a user or host can attach to a
+chat without a tool call. Prompts are workflow playbooks that hosts surface as
+slash commands. Prompts only name tools the solve leaf publishes.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: render_prompt(name: str, **arguments: str) -> str
+
+   
+   Render one of :data:`PROMPTS`.
+
+
+   :Parameters:
+
+       **name** : :class:`python:str`
+           Prompt name.
+
+       **arguments** : :class:`python:str`
+           Values for the template placeholders.
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           The rendered prompt text.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: register_solve_resources(server: Any) -> None
+
+   
+   Register the solve leaf's live-context resources.
+
+
+   :Parameters:
+
+       **server** : :obj:`Any`
+           Solve leaf server.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: register_solve_prompts(server: Any) -> None
+
+   
+   Register the solve leaf's workflow prompts.
+
+
+   :Parameters:
+
+       **server** : :obj:`Any`
+           Solve leaf server.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: PROMPTS
+   :type:  dict[str, dict[str, str]]
+
+   
+   Prompt name -> description and template.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

@@ -1,0 +1,119 @@
+
+
+
+
+
+
+The ``server.py`` module
+========================
+
+.. py:module:: ansys.fluent.mcp.server
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: server
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~launcher`
+            - Launch the Fluent Solve MCP server (console entry point).
+
+
+
+    .. tab-item:: Attributes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~run_solve`
+            - 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Lifespan and CLI entry for the MCP server with startup options.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: launcher(argv: Optional[list[str]] = None) -> None
+
+   
+   Launch the Fluent Solve MCP server (console entry point).
+
+
+   :Parameters:
+
+       **argv** : :obj:`Optional`\[:class:`python:list`\[:class:`python:str`]]
+           Argv to supply to the function.
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: run_solve
+
+
+

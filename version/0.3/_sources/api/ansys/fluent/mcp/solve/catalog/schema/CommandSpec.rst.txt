@@ -1,0 +1,139 @@
+
+
+
+
+
+
+:class:`CommandSpec`
+====================
+
+
+.. py:class:: ansys.fluent.mcp.solve.catalog.schema.CommandSpec
+
+   
+   Static signature for a command or query.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: CommandSpec
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~arg_names`
+            - Return both canonical and snake_case names of every arg.
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~name`
+            - 
+          * - :py:attr:`~py_name`
+            - 
+          * - :py:attr:`~help`
+            - 
+          * - :py:attr:`~arguments`
+            - 
+          * - :py:attr:`~is_query`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.catalog.schema import CommandSpec
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: name
+   :type:  str
+
+.. py:attribute:: py_name
+   :type:  str
+
+.. py:attribute:: help
+   :type:  str
+
+.. py:attribute:: arguments
+   :type:  tuple[CommandArg, Ellipsis]
+
+.. py:attribute:: is_query
+   :type:  bool
+   :value: False
+
+
+
+
+Method detail
+-------------
+
+.. py:method:: arg_names() -> list[str]
+
+   
+   Return both canonical and snake_case names of every arg.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:class:`python:str`]
+           Collection containing the operation results.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+

@@ -1,0 +1,129 @@
+
+
+
+
+
+
+:class:`CodegenResult`
+======================
+
+
+.. py:class:: ansys.fluent.mcp.common.models.CodegenResult(/, **data: Any)
+
+   Bases: :py:obj:`pydantic.BaseModel`
+
+
+   
+   Result of a code generation call. It mirrors ``FluentCodegenResult`` from the legacy API.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: CodegenResult
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~status`
+            - 
+          * - :py:attr:`~code`
+            - 
+          * - :py:attr:`~language`
+            - 
+          * - :py:attr:`~clarifications`
+            - 
+          * - :py:attr:`~warnings`
+            - 
+          * - :py:attr:`~session_id`
+            - 
+          * - :py:attr:`~message`
+            - 
+          * - :py:attr:`~error_code`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.models import CodegenResult
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: status
+   :type:  Literal['ok', 'needs_clarification', 'error']
+
+.. py:attribute:: code
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: language
+   :type:  str
+   :value: 'python'
+
+
+.. py:attribute:: clarifications
+   :type:  list[Clarification]
+   :value: None
+
+
+.. py:attribute:: warnings
+   :type:  list[str]
+   :value: None
+
+
+.. py:attribute:: session_id
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: message
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: error_code
+   :type:  Optional[str]
+   :value: None
+
+
+
+
+
+
