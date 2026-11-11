@@ -61,10 +61,10 @@ from ansys.fluent.mcp.common.validation import (
     validate_python_source,
 )
 from ansys.fluent.mcp.solve.backends.introspection import (
-    collect_global_state,
-    collect_targeted_context,
     discover_named_objects_via_walk,
     resolve_path,
+    shared_active_checks,
+    subtree_attrs,
 )
 
 # ---------------------------------------------------------------------------
@@ -1434,6 +1434,66 @@ class PyFluentBackend(Backend):
         async with self._lock:
             return await self._run_thread(function, *args, **kwargs)
 
+    async def solver_scratch_path(self, suffix: str = "") -> str:
+        """Return a new, empty file path that the connected solver can write to.
+
+        The file lives where Fluent runs. A session object that runs Fluent on
+        another machine provides ``solver_scratch_path(suffix)`` itself;
+        otherwise this machine's temporary directory is used.
+        """
+        make = getattr(self._solver, "solver_scratch_path", None)
+        if callable(make):
+            return str(await self.run_exclusive(make, suffix))
+        handle, path = tempfile.mkstemp(suffix=suffix)
+        os.close(handle)
+        return path
+
+    async def read_solver_file(self, path: str) -> bytes:
+        """Return the bytes of a solver-written scratch file and delete it.
+
+        Pair with :meth:`solver_scratch_path`. A missing file reads as empty.
+        """
+        read = getattr(self._solver, "read_solver_file", None)
+        if callable(read):
+            return bytes(await self.run_exclusive(read, path))
+        target = Path(path)
+        try:
+            return target.read_bytes() if target.exists() else b""
+        finally:
+            target.unlink(missing_ok=True)
+
+    async def _read_locked(self, function):
+        """Run a read-only ``function`` under the session lock, sharing ``active?`` checks.
+
+        See :func:`introspection.shared_active_checks`; never use for code that
+        changes settings.
+        """
+
+        def read():
+            with shared_active_checks():
+                return function()
+
+        async with self._lock:
+            return await self._run_thread(read)
+
+    def _introspect(self, name: str, *args: Any, **kwargs: Any) -> Any:
+        """Call introspection helper ``name`` on the live settings root.
+
+        A session object for a solver on another machine may provide
+        ``introspect(name, *args, **kwargs)`` to run the read-only helper next
+        to the solver in one round trip; it raises ``NotImplementedError`` when
+        it cannot, and the helper then runs here. Runs on the solver thread.
+        """
+        from ansys.fluent.mcp.solve.backends import introspection
+
+        remote = getattr(self._require(), "introspect", None)
+        if callable(remote):
+            try:
+                return remote(name, *args, **kwargs)
+            except NotImplementedError:
+                pass
+        return getattr(introspection, name)(self._settings_root(), *args, **kwargs)
+
     def adopt_session(
         self,
         solver: Any,
@@ -1598,8 +1658,7 @@ class PyFluentBackend(Backend):
         from ansys.fluent.mcp.common.timings import get_collector as _get_timings
 
         with _get_timings().time("backend", "list_named_objects"):
-            async with self._lock:
-                result = await self._run_thread(_do)
+            result = await self._read_locked(_do)
         self._cache_put("named_objects", result)
         return result
 
@@ -1658,8 +1717,7 @@ class PyFluentBackend(Backend):
         from ansys.fluent.mcp.common.timings import get_collector as _get_timings
 
         with _get_timings().time("backend", "get_named_object_names"):
-            async with self._lock:
-                return await self._run_thread(_do)
+            return await self._read_locked(_do)
 
     async def get_state(self, paths: list[str] | None = None) -> dict[str, Any]:
         """Return the state.
@@ -1689,13 +1747,12 @@ class PyFluentBackend(Backend):
             dict[str, Any]
                 Mapping containing the operation result.
             """
-            return collect_global_state(self._settings_root(), paths=paths)
+            return self._introspect("collect_global_state", paths=paths)
 
         from ansys.fluent.mcp.common.timings import get_collector as _get_timings
 
         with _get_timings().time("backend", "get_state"):
-            async with self._lock:
-                return await self._run_thread(_do)
+            return await self._read_locked(_do)
 
     async def get_active_status(self, paths: list[str]) -> dict[str, bool]:
         """Return the active status.
@@ -1720,40 +1777,11 @@ class PyFluentBackend(Backend):
         _timings = _get_timings()
 
         def _do() -> dict[str, bool]:
-            """Execute the nested helper for the enclosing operation.
-
-            Returns
-            -------
-            dict[str, bool]
-                Mapping containing the operation result.
-            """
-            root = self._settings_root()
-            out: dict[str, bool] = {}
-            for path in paths:
-                try:
-                    node = resolve_path(root, path)
-                except Exception:  # broaden: bracket-subscript paths
-                    # ``solution.controls.under_relaxation["pressure"]``
-                    # can raise non-(AttributeError/KeyError/TypeError)
-                    # after a case reload (settings tree rebuilt with a
-                    # different schema for the new pv-coupling). Treat
-                    # every resolve failure as "not active" so the
-                    # caller still gets a complete status map.
-                    out[path] = False
-                    continue
-                fn = getattr(node, "is_active", None)
-                if callable(fn):
-                    try:
-                        out[path] = bool(fn())
-                    except Exception:
-                        out[path] = False
-                else:
-                    out[path] = True
-            return out
+            """Return the active status of each path."""
+            return self._introspect("collect_active_status", list(paths))
 
         with _timings.time("backend", "get_active_status"):
-            async with self._lock:
-                return await self._run_thread(_do)
+            return await self._read_locked(_do)
 
     async def get_allowed_values(self, paths: list[str]) -> dict[str, list[Any]]:
         """Return the allowed values.
@@ -1775,38 +1803,11 @@ class PyFluentBackend(Backend):
         _timings = _get_timings()
 
         def _do() -> dict[str, list[Any]]:
-            """Execute the nested helper for the enclosing operation.
-
-            Returns
-            -------
-            dict[str, list[Any]]
-                Mapping containing the operation result.
-            """
-            root = self._settings_root()
-            out: dict[str, list[Any]] = {}
-            for path in paths:
-                try:
-                    node = resolve_path(root, path)
-                except (AttributeError, KeyError, TypeError):
-                    out[path] = []
-                    continue
-                values: list[Any] = []
-                for accessor in ("allowed_values", "get_allowed_values"):
-                    fn = getattr(node, accessor, None)
-                    if callable(fn):
-                        try:
-                            values = list(fn())
-                            break
-                        except Exception as exc:
-                            logger.debug(
-                                "allowed_values() failed for %s: %s", path, exc, exc_info=True
-                            )
-                out[path] = values
-            return out
+            """Return the allowed values of each path."""
+            return self._introspect("collect_allowed_values", list(paths))
 
         with _timings.time("backend", "get_allowed_values"):
-            async with self._lock:
-                return await self._run_thread(_do)
+            return await self._read_locked(_do)
 
     async def get_node_attrs(
         self,
@@ -1887,8 +1888,7 @@ class PyFluentBackend(Backend):
             return out
 
         with _timings.time("backend", "get_node_attrs"):
-            async with self._lock:
-                return await self._run_thread(_do)
+            return await self._read_locked(_do)
 
     async def get_node_attrs_bulk(
         self,
@@ -1957,8 +1957,7 @@ class PyFluentBackend(Backend):
             return out
 
         with _timings.time("backend", "get_node_attrs_bulk"):
-            async with self._lock:
-                return await self._run_thread(_do)
+            return await self._read_locked(_do)
 
     async def probe_path(self, paths: list[str]) -> dict[str, dict[str, Any]]:
         """Cheap pre-flight: ``{path: {exists, is_active, is_user_creatable, kind}}``.
@@ -1991,62 +1990,11 @@ class PyFluentBackend(Backend):
         _timings = _get_timings()
 
         def _do() -> dict[str, dict[str, Any]]:
-            """Execute the nested helper for the enclosing operation.
-
-            Returns
-            -------
-            dict[str, dict[str, Any]]
-                Mapping containing the operation result.
-            """
-            root = self._settings_root()
-            out: dict[str, dict[str, Any]] = {}
-            for path in paths:
-                try:
-                    node = resolve_path(root, path)
-                except (AttributeError, KeyError, TypeError):
-                    out[path] = {"exists": False, "kind": "missing"}
-                    continue
-                # Default conservative facts.
-                rec: dict[str, Any] = {
-                    "exists": True,
-                    "is_active": True,
-                    "is_user_creatable": False,
-                    "kind": "leaf",
-                }
-                # Kind sniff — cheap class/attr probes only.
-                arg_names = getattr(node, "argument_names", None)
-                if arg_names is not None and callable(node):
-                    rec["kind"] = "query" if "query" in type(node).__name__.lower() else "command"
-                elif getattr(node, "child_object_type", None) is not None:
-                    rec["kind"] = "named_object"
-                elif hasattr(node, "child_names") and getattr(node, "child_names", None):
-                    rec["kind"] = "group"
-                # Single batched attr fetch.
-                fn = getattr(node, "get_attrs", None)
-                if callable(fn):
-                    try:
-                        raw = fn(["active?", "user-creatable?"]) or {}
-                    except Exception:
-                        raw = {}
-                    if isinstance(raw, dict):
-                        if "active?" in raw:
-                            rec["is_active"] = bool(raw["active?"])
-                        if "user-creatable?" in raw:
-                            rec["is_user_creatable"] = bool(raw["user-creatable?"])
-                else:
-                    # Fallback to the legacy is_active() accessor.
-                    is_active = getattr(node, "is_active", None)
-                    if callable(is_active):
-                        try:
-                            rec["is_active"] = bool(is_active())
-                        except Exception as exc:
-                            logger.debug("is_active() failed for %s: %s", path, exc, exc_info=True)
-                out[path] = rec
-            return out
+            """Return existence, activity, creatability and kind of each path."""
+            return self._introspect("probe_paths", list(paths))
 
         with _timings.time("backend", "probe_path"):
-            async with self._lock:
-                return await self._run_thread(_do)
+            return await self._read_locked(_do)
 
     async def mesh_adjacency_probe(
         self,
@@ -2253,8 +2201,7 @@ class PyFluentBackend(Backend):
         from ansys.fluent.mcp.common.timings import get_collector as _get_timings
 
         with _get_timings().time("backend", "mesh_adjacency_probe"):
-            async with self._lock:
-                return await self._run_thread(_do)
+            return await self._read_locked(_do)
 
     async def get_command_arguments(self, path: str) -> dict[str, Any] | None:
         """Introspect a Command's keyword-argument signature via PyFluent.
@@ -2382,8 +2329,7 @@ class PyFluentBackend(Backend):
                 args[n] = info
             return {"argument_names": names, "arguments": args}
 
-        async with self._lock:
-            return await self._run_thread(_do)
+        return await self._read_locked(_do)
 
     async def describe_named_object_template(self, path: str) -> dict[str, Any] | None:
         """Describe the field shape of a fresh child of a NamedObject collection.
@@ -2475,9 +2421,18 @@ class PyFluentBackend(Backend):
                 "units-quantity",
             ]
             fields: dict[str, Any] = {}
+            # One recursive query covers every leaf; Fluent omits inactive leaves.
+            batched = subtree_attrs(sample_inst, _leaf_attrs) if sample_inst is not None else None
             for name in child_names[:60]:  # cap to keep payload small
                 bases: list[str] = []
-                leaf = getattr(sample_inst, name, None) if sample_inst is not None else None
+                try:
+                    leaf = (
+                        object.__getattribute__(sample_inst, name)
+                        if sample_inst is not None
+                        else None
+                    )
+                except AttributeError:
+                    leaf = getattr(sample_inst, name, None)
                 # Preferred: read the live leaf's class mro.
                 if leaf is not None:
                     bases = [b.__name__ for b in type(leaf).__mro__[:6]]
@@ -2492,34 +2447,37 @@ class PyFluentBackend(Backend):
                     bases[0] if bases else "unknown",
                 )
                 info: dict[str, Any] = {"type_hint": type_hint}
-                # Single batched get_attrs() per leaf — replaces the
-                # legacy sequential allowed_values()/min()/max() chain.
+                # Attributes come from the batched query; otherwise one
+                # get_attrs() per leaf instead of allowed_values()/min()/max().
                 if leaf is not None:
+                    raw: Any = None
+                    if batched is not None:
+                        raw = batched.get(name, {"active?": False})
                     fn = getattr(leaf, "get_attrs", None)
-                    if callable(fn):
+                    if raw is None and callable(fn):
                         try:
                             raw = fn(_leaf_attrs) or {}
                         except Exception:
                             raw = {}
-                        if isinstance(raw, dict):
-                            allowed = raw.get("allowed-values")
-                            if isinstance(allowed, list) and allowed:
-                                info["allowed_values"] = list(allowed)[:25]
-                            if "active?" in raw:
-                                info["is_active"] = bool(raw["active?"])
-                            if "read-only?" in raw:
-                                info["is_read_only"] = bool(raw["read-only?"])
-                            if "user-creatable?" in raw:
-                                info["is_user_creatable"] = bool(raw["user-creatable?"])
-                            if "min" in raw and raw["min"] is not None:
-                                info["min"] = raw["min"]
-                            if "max" in raw and raw["max"] is not None:
-                                info["max"] = raw["max"]
-                            if "default" in raw and raw["default"] is not None:
-                                info["default"] = raw["default"]
-                            units = raw.get("units-quantity")
-                            if units:
-                                info["units"] = units
+                    if isinstance(raw, dict):
+                        allowed = raw.get("allowed-values")
+                        if isinstance(allowed, list) and allowed:
+                            info["allowed_values"] = list(allowed)[:25]
+                        if "active?" in raw:
+                            info["is_active"] = bool(raw["active?"])
+                        if "read-only?" in raw:
+                            info["is_read_only"] = bool(raw["read-only?"])
+                        if "user-creatable?" in raw:
+                            info["is_user_creatable"] = bool(raw["user-creatable?"])
+                        if "min" in raw and raw["min"] is not None:
+                            info["min"] = raw["min"]
+                        if "max" in raw and raw["max"] is not None:
+                            info["max"] = raw["max"]
+                        if "default" in raw and raw["default"] is not None:
+                            info["default"] = raw["default"]
+                        units = raw.get("units-quantity")
+                        if units:
+                            info["units"] = units
                 fields[name] = info
             out: dict[str, Any] = {
                 "child_class": getattr(child_cls, "__name__", "unknown"),
@@ -2549,8 +2507,7 @@ class PyFluentBackend(Backend):
                 }
             return out
 
-        async with self._lock:
-            return await self._run_thread(_do)
+        return await self._read_locked(_do)
 
     async def list_fields(self, *, scope: str = "any") -> dict[str, Any] | None:
         """Enumerate solver field/variable names available for reports & post.
@@ -2605,8 +2562,7 @@ class PyFluentBackend(Backend):
                         return {"fields": names[:200], "scope": scope, "source": fn_name}
             return None
 
-        async with self._lock:
-            return await self._run_thread(_do)
+        return await self._read_locked(_do)
 
     async def get_targeted_context(
         self,
@@ -2642,15 +2598,14 @@ class PyFluentBackend(Backend):
             dict[str, Any]
                 Mapping containing the operation result.
             """
-            return collect_targeted_context(
-                self._settings_root(),
+            return self._introspect(
+                "collect_targeted_context",
                 paths_to_check=paths_to_check,
                 named_object_types=named_object_types or [],
                 instance_state_fetch=instance_state_fetch or [],
             )
 
-        async with self._lock:
-            return await self._run_thread(_do)
+        return await self._read_locked(_do)
 
     # ------------------------------------------------------------------
     # Code execution
@@ -3244,8 +3199,7 @@ class PyFluentBackend(Backend):
                 )
             return result
 
-        async with self._lock:
-            return await self._run_thread(_do)
+        return await self._read_locked(_do)
 
     async def mesh_counts(self) -> dict[str, int | None]:
         """Probe live mesh element totals via ``mesh.size_info()``.
@@ -3433,8 +3387,7 @@ class PyFluentBackend(Backend):
                 out["utl_enabled"] = False
             return out
 
-        async with self._lock:
-            return await self._run_thread(_do)
+        return await self._read_locked(_do)
 
     async def validate_code(self, code: str) -> RunCodeResult:
         """Validate code.
@@ -3733,8 +3686,7 @@ class PyFluentBackend(Backend):
             return {"status": "ok"}
 
         try:
-            async with self._lock:
-                return await self._run_thread(_do)
+            return await self._read_locked(_do)
         except Exception as exc:  # noqa: BLE001 — dry_run_write must never
             # raise; the whole point is a soft-fail preview.
             return {
@@ -3761,38 +3713,26 @@ class PyFluentBackend(Backend):
         """
         if self._solver is None:
             raise NotConnectedError("PyFluent backend is not connected.")
+        path = await self.solver_scratch_path(".png")
 
-        def _do() -> dict[str, Any]:
-            """Execute the nested helper for the enclosing operation.
-
-            Returns
-            -------
-            dict[str, Any]
-                Mapping containing the operation result.
-            """
+        def _do() -> None:
+            """Save the active graphics window to ``path`` where Fluent runs."""
             solver = self._require()
-            tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
-            tmp.close()
+            save = None
             try:
-                save = None
-                try:
-                    save = solver.settings.results.graphics.picture.save_picture
-                except AttributeError:
-                    pass
-                if save is None:
-                    raise UpstreamError("Screenshot API not available on this PyFluent version.")
-                save(file_name=tmp.name)
-                with Path(tmp.name).open("rb") as f:
-                    data = f.read()
-                return {
-                    "format": "png",
-                    "data": base64.b64encode(data).decode("ascii"),
-                    "view": view,
-                }
-            finally:
-                try:
-                    Path(tmp.name).unlink()
-                except OSError:
-                    pass
+                save = solver.settings.results.graphics.picture.save_picture
+            except AttributeError:
+                pass
+            if save is None:
+                raise UpstreamError("Screenshot API not available on this PyFluent version.")
+            save(file_name=path)
 
-        return await self._run_thread(_do)
+        try:
+            await self._run_thread(_do)
+        finally:
+            data = await self.read_solver_file(path)
+        return {
+            "format": "png",
+            "data": base64.b64encode(data).decode("ascii"),
+            "view": view,
+        }

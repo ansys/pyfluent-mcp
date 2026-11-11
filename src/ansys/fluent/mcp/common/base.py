@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import sys
 from typing import Any, Awaitable, Callable, Iterable, Optional
 
 from ansys.common.mcp.server import PyAnsysBaseMCP
@@ -132,6 +133,53 @@ ALL_TOOLS = (
 _PRODUCT_LEAVES = frozenset({"solve", "geometry", "mesh", "post"})
 
 
+def _solver_files(backend: Any) -> Any:
+    """Return the backend that creates and reads solver-side files, or ``None``."""
+    files = getattr(backend, "pyfluent_backend", backend)
+    if callable(getattr(files, "solver_scratch_path", None)) and callable(
+        getattr(files, "read_solver_file", None)
+    ):
+        return files
+    return None
+
+
+async def _default_report_path(backend: Any, suffix: str) -> str:
+    """Default report output file, created where the solver runs."""
+    files = _solver_files(backend)
+    if files is not None:
+        return await files.solver_scratch_path(suffix)
+    import tempfile as _tf
+
+    handle = _tf.NamedTemporaryFile(suffix=suffix, delete=False)
+    handle.close()
+    return handle.name
+
+
+def _host_parent(path: str) -> str:
+    """Parent directory of ``path`` in the syntax of the host that owns it."""
+    from pathlib import PurePosixPath, PureWindowsPath
+
+    windows = "\\" in path or (len(path) > 1 and path[1] == ":")
+    return str((PureWindowsPath if windows else PurePosixPath)(path).parent)
+
+
+def _preload_native_extensions() -> None:
+    """Import PyFluent and its native modules before the stdio transport reads stdin.
+
+    On Windows the stdio transport keeps a thread blocked in the C runtime's
+    ``read()`` on stdin between requests. Loading NumPy's OpenBLAS DLL (which
+    PyFluent imports) needs a C runtime lock that read holds, so a first import
+    while serving (for example when a session connects) would hang until the
+    client sends its next message.
+    """
+    if sys.platform != "win32":
+        return
+    try:
+        import ansys.fluent.core  # noqa: F401
+    except ImportError:
+        pass
+
+
 class FluidsLeafMCP(PyAnsysBaseMCP):
     """Base server class for a single Fluids MCP leaf."""
 
@@ -161,6 +209,7 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
                 "Install `ansys-common-mcp` (or equivalent runtime dependency) to launch this server."  # noqa: E501
             )
         if transport == "stdio":
+            _preload_native_extensions()
             parent_run(transport="stdio")
             return
         parent_run(transport="http", host=host or "127.0.0.1", port=port or 8000)
@@ -1759,21 +1808,31 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
             """
             import tempfile as _tf
 
-            tmp_file = _tf.NamedTemporaryFile(suffix=".txt", delete=False)
-            tmp_file.close()
-            tmp = normalize_path_for_fluent(tmp_file.name)
+            files = _solver_files(self.backend)
+            if files is not None:
+                scratch = await files.solver_scratch_path(".txt")
+            else:
+                tmp_file = _tf.NamedTemporaryFile(suffix=".txt", delete=False)
+                tmp_file.close()
+                scratch = tmp_file.name
+            tmp = normalize_path_for_fluent(scratch)
             snippet = (
                 f"session.settings.results.report.summary(write_to_file=True, file_name={tmp!r})"
             )
             result = require_connected_result(await self.backend.run_code(snippet))
             status = getattr(result, "status", "")
             if status != "ok":
+                if files is not None:
+                    await files.read_solver_file(scratch)
                 err = (
                     getattr(result, "stderr", None)
                     or getattr(result, "message", None)
                     or "summary command failed"
                 )
                 return {"error": err}
+            if files is not None:
+                content = (await files.read_solver_file(scratch)).decode("utf-8", errors="replace")
+                return {"summary": content or "(no output)"}
             import pathlib as _pl
 
             fp = _pl.Path(tmp)
@@ -1873,7 +1932,15 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
                     f"report_name={report_name!r})"
                 )
             elif action == "export_html":
-                out = normalize_path_for_fluent(output_path or _tf.mkdtemp(prefix="fluent_report_"))
+                if output_path is None:
+                    files = _solver_files(self.backend)
+                    scratch = None
+                    if files is not None:
+                        scratch = await files.solver_scratch_path(".html")
+                    output_path = (
+                        _host_parent(scratch) if scratch else _tf.mkdtemp(prefix="fluent_report_")
+                    )
+                out = normalize_path_for_fluent(output_path)
                 snippet = (
                     "session.settings.results.report"
                     ".simulation_reports"
@@ -1883,9 +1950,7 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
                 )
             elif action == "export_pdf":
                 if output_path is None:
-                    out_file = _tf.NamedTemporaryFile(suffix=".pdf", delete=False)
-                    out_file.close()
-                    output_path = out_file.name
+                    output_path = await _default_report_path(self.backend, ".pdf")
                 out = normalize_path_for_fluent(output_path)
                 snippet = (
                     "session.settings.results.report"
@@ -1896,9 +1961,7 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
                 )
             else:  # export_pptx
                 if output_path is None:
-                    out_file = _tf.NamedTemporaryFile(suffix=".pptx", delete=False)
-                    out_file.close()
-                    output_path = out_file.name
+                    output_path = await _default_report_path(self.backend, ".pptx")
                 out = normalize_path_for_fluent(output_path)
                 snippet = (
                     "session.settings.results.report"
