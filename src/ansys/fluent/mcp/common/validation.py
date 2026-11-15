@@ -169,6 +169,203 @@ _FORBIDDEN_ATTRIBUTES: frozenset[str] = frozenset(
         "subprocess",
     }
 )
+# Modules that hand back host access (processes, files, sockets, the import
+# system, raw memory). Allowed packages such as ``ansys.fluent.core`` import
+# several of them at module scope, so ``from <allowed> import subprocess``
+# would otherwise smuggle the live module past the module-root allow-list.
+_FORBIDDEN_MODULES: frozenset[str] = frozenset(
+    {
+        "os",
+        "posix",
+        "nt",
+        "sys",
+        "subprocess",
+        "shutil",
+        "pathlib",
+        "socket",
+        "ctypes",
+        "importlib",
+        "builtins",
+        "io",
+        "signal",
+        "multiprocessing",
+        "threading",
+        "asyncio",
+        "pickle",
+        "marshal",
+        "runpy",
+        "tempfile",
+        "glob",
+        "inspect",
+        "gc",
+        "pty",
+        "urllib",
+        "http",
+        "ftplib",
+        "webbrowser",
+        "zipfile",
+        "tarfile",
+        # File writes (``codecs.open``, ``logging.FileHandler``), frame access
+        # (``traceback.walk_stack``) and code-object construction (``types``).
+        "codecs",
+        "logging",
+        "traceback",
+        "types",
+    }
+)
+_PATH_CLASS_NAMES: frozenset[str] = frozenset(
+    {
+        "Path",
+        "PurePath",
+        "PosixPath",
+        "WindowsPath",
+        "PurePosixPath",
+        "PureWindowsPath",
+    }
+)
+# Names that may never be bound by ``from X import <name>``, whatever ``X`` is:
+# re-exported host modules, ``pathlib`` classes, and the process / file
+# functions those modules expose.
+_FORBIDDEN_IMPORT_NAMES: frozenset[str] = (
+    _FORBIDDEN_MODULES
+    | _FORBIDDEN_ATTRIBUTES
+    | _PATH_CLASS_NAMES
+    | frozenset(
+        {
+            "Popen",
+            "system",
+            "popen",
+            "spawn",
+            "execv",
+            "execve",
+            "execl",
+            "fork",
+            "kill",
+            "getoutput",
+            "getstatusoutput",
+            "check_call",
+            "check_output",
+            "rmtree",
+            "copytree",
+            "copyfile",
+            "remove",
+            "unlink",
+            "rmdir",
+            "removedirs",
+            "open",
+            "eval",
+            "exec",
+            "compile",
+            "__import__",
+            "globals",
+            "locals",
+            "vars",
+        }
+    )
+)
+# Frame, traceback, code and generator / coroutine introspection attributes.
+# None is a dunder, yet ``gen.gi_frame.f_back.f_globals`` climbs out of the
+# sandboxed snippet into the executor's module globals (and from there to
+# ``os`` / ``sys``), and frames handed out by host helpers such as
+# ``inspect.currentframe()`` lead to the same place.
+_INTROSPECTION_ATTRIBUTES: frozenset[str] = frozenset(
+    {
+        "gi_frame",
+        "gi_code",
+        "gi_yieldfrom",
+        "cr_frame",
+        "cr_code",
+        "cr_await",
+        "cr_origin",
+        "ag_frame",
+        "ag_code",
+        "ag_await",
+        "f_back",
+        "f_globals",
+        "f_locals",
+        "f_builtins",
+        "f_code",
+        "f_trace",
+        "tb_frame",
+        "tb_next",
+        "co_code",
+        "co_consts",
+        "co_names",
+    }
+)
+# Attribute names that only ever reach host modules, path objects or
+# interpreter frames. Allowed packages hold host modules at module scope
+# (``ansys.fluent.core.module_config.inspect``, ``....fluent_container.tempfile``),
+# so every ``_FORBIDDEN_MODULES`` name is blocked as an attribute too. Kept
+# separate from ``_FORBIDDEN_ATTRIBUTES`` because that set is also matched
+# against subscript keys, which may legitimately be user-chosen object names.
+_FORBIDDEN_MODULE_ATTRIBUTES: frozenset[str] = (
+    _PATH_CLASS_NAMES | _FORBIDDEN_MODULES | _INTROSPECTION_ATTRIBUTES | frozenset({"Popen"})
+)
+# Under ``strict=True`` an ``ansys.*`` import must sit under one of these
+# public package prefixes. ``ansys`` is a namespace package shared by every
+# Ansys product, so the bare root would admit arbitrary installed code.
+_ALLOWED_ANSYS_PREFIXES: tuple[str, ...] = ("ansys.fluent.core", "ansys.units")
+
+
+def _has_private_component(module: str) -> bool:
+    """Return ``True`` when any dotted component of ``module`` is private."""
+    return any(part.startswith("_") for part in module.split(".") if part)
+
+
+def is_allowed_sandbox_import(name: str) -> bool:
+    """Return whether module ``name`` may be imported by strict sandboxed code.
+
+    Parameters
+    ----------
+    name : str
+        Fully dotted module name.
+
+    Returns
+    -------
+    bool
+        ``True`` when the module is on the allow-list, is public, and (for
+        ``ansys``) lives under one of the allowed public package prefixes.
+    """
+    if not name or _has_private_component(name):
+        return False
+    root = name.split(".", 1)[0]
+    if root in _FORBIDDEN_MODULES:
+        return False
+    if root == "ansys":
+        return any(
+            name == prefix or name.startswith(prefix + ".") for prefix in _ALLOWED_ANSYS_PREFIXES
+        )
+    return name in _ALLOWED_IMPORTS or root in _ALLOWED_IMPORTS
+
+
+def _import_violations(tree: ast.AST) -> list[str]:
+    """Return import statements that bind host modules or private names.
+
+    Applied in both strict and relaxed modes: these patterns are never a
+    legitimate way to drive Fluent, and the module-root allow-list alone
+    cannot see the *names* a ``from ... import`` binds.
+    """
+    bad: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if _has_private_component(alias.name):
+                    bad.append(alias.name)
+        elif isinstance(node, ast.ImportFrom):
+            mod = node.module or ""
+            if mod != "__future__" and _has_private_component(mod):
+                bad.append(mod)
+            for alias in node.names:
+                if alias.name == "*":
+                    bad.append(f"{mod}.*")
+                elif alias.name.startswith("_") and mod != "__future__":
+                    bad.append(f"{mod}.{alias.name}")
+                elif alias.name in _FORBIDDEN_IMPORT_NAMES:
+                    bad.append(f"{mod}.{alias.name}")
+    return bad
+
+
 _ALLOWED_BUILTINS: frozenset[str] = frozenset(
     {
         # value constructors
@@ -441,6 +638,7 @@ def _validate_python_source_uncached(
                         and node.args[1].value not in _SAFE_DUNDER_READS
                     )
                     or node.args[1].value in _FORBIDDEN_ATTRIBUTES
+                    or node.args[1].value in _FORBIDDEN_MODULE_ATTRIBUTES
                 )
             ):
                 flagged.append(f"{node.func.id}(..., {node.args[1].value!r})")
@@ -468,14 +666,19 @@ def _validate_python_source_uncached(
                 flagged.append(node.attr)
         # Block live-module escape hatches (``dataclasses.sys``,
         # ``typing.sys.modules['os']``, ...). See ``_FORBIDDEN_ATTRIBUTES``.
-        if isinstance(node, ast.Attribute) and node.attr in _FORBIDDEN_ATTRIBUTES:
+        if isinstance(node, ast.Attribute) and (
+            node.attr in _FORBIDDEN_ATTRIBUTES or node.attr in _FORBIDDEN_MODULE_ATTRIBUTES
+        ):
             flagged.append(node.attr)
         # Same check for the literal-string-subscript form (``mod.modules['os']``).
         if (
             isinstance(node, ast.Subscript)
             and isinstance(node.slice, ast.Constant)
             and isinstance(node.slice.value, str)
-            and node.slice.value in _FORBIDDEN_ATTRIBUTES
+            and (
+                node.slice.value in _FORBIDDEN_ATTRIBUTES
+                or node.slice.value in _INTROSPECTION_ATTRIBUTES
+            )
         ):
             flagged.append(node.slice.value)
         # Block PyFluent TUI escape hatch: ``solver.tui.<anything>`` is a
@@ -531,6 +734,18 @@ def _validate_python_source_uncached(
             message=(
                 f"Forbidden call(s) detected: {sorted(set(flagged))}"
                 + sandbox_alternatives_hint(code, extra=tuple(flagged))
+            ),
+        )
+
+    import_flagged = _import_violations(tree)
+    if import_flagged:
+        return RunCodeResult(
+            status="error",
+            error_code="forbidden_import",
+            message=(
+                "Import of host modules, path classes, private names or '*' is not "
+                f"permitted: {sorted(set(import_flagged))}"
+                + sandbox_alternatives_hint(code, extra=tuple(import_flagged))
             ),
         )
 
@@ -608,17 +823,24 @@ def _validate_python_source_uncached(
                 bound.add(node.name)
         bad_names: list[str] = []
         bad_imports: list[str] = []
+        root_bindings: list[str] = []
         for node in ast.walk(tree):
             if isinstance(node, (ast.Import,)):
                 for alias in node.names:
-                    root_mod = alias.name.split(".", 1)[0]
-                    if alias.name not in _ALLOWED_IMPORTS and root_mod not in _ALLOWED_IMPORTS:
+                    root = alias.name.split(".", 1)[0]
+                    if not is_allowed_sandbox_import(alias.name):
                         bad_imports.append(alias.name)
+                    elif alias.asname is None and not is_allowed_sandbox_import(root):
+                        # ``import a.b.c`` binds ``a``; for the ``ansys`` namespace
+                        # package that root reaches every installed Ansys module.
+                        root_bindings.append(alias.name)
                     bound.add((alias.asname or alias.name).split(".", 1)[0])
             elif isinstance(node, ast.ImportFrom):
                 mod = node.module or ""
-                root_mod = mod.split(".", 1)[0]
-                if mod not in _ALLOWED_IMPORTS and root_mod not in _ALLOWED_IMPORTS:
+                if node.level or not (
+                    is_allowed_sandbox_import(mod)
+                    or all(is_allowed_sandbox_import(f"{mod}.{alias.name}") for alias in node.names)
+                ):
                     bad_imports.append(mod)
                 for alias in node.names:
                     bound.add(alias.asname or alias.name)
@@ -632,6 +854,18 @@ def _validate_python_source_uncached(
                 message=(
                     f"Imports outside allow-list: {sorted(set(bad_imports))}"
                     + sandbox_alternatives_hint(code, extra=tuple(bad_imports))
+                ),
+            )
+        if root_bindings:
+            first = sorted(set(root_bindings))[0]
+            return RunCodeResult(
+                status="error",
+                error_code="forbidden_import",
+                message=(
+                    f"Imports that bind a bare package root are not permitted: "
+                    f"{sorted(set(root_bindings))}. Use 'import {first} as <alias>' "
+                    f"(for example 'import ansys.fluent.core as pf') or "
+                    f"'from {first} import <name>'."
                 ),
             )
         if bad_names:
