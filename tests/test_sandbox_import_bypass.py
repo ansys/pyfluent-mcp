@@ -229,7 +229,8 @@ def test_unaliased_ansys_import_names_the_accepted_form(code: str) -> None:
     "code",
     [
         "def gen():\n    yield 1\ng = gen()\n__return__ = getattr(g, 'gi_' + 'frame')\n",
-        "import ansys.fluent.core as pf\n__return__ = getattr(pf.module_config, 'insp' + 'ect')\n",
+        "import ansys.fluent.core as pf\n"
+        "__return__ = getattr(pf.module_config, ''.join(['inspect']))\n",
         "import ansys.fluent.core as pf\n"
         "__return__ = getattr(pf.execution.launcher.fluent_container, 'temp' + 'file')\n",
     ],
