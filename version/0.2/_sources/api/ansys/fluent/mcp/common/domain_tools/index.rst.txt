@@ -1,0 +1,194 @@
+
+
+
+
+
+
+The ``domain_tools.py`` module
+==============================
+
+.. py:module:: ansys.fluent.mcp.common.domain_tools
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: domain_tools
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.domain_tools.DomainToolSpec`
+            - Metadata describing a domain tool to a MCP leaf.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.domain_tools.DomainTool`
+            - A registered domain tool — spec plus typed async handler.
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~schema_from_signature`
+            - Derive a minimal JSON schema from a typed handler signature.
+
+
+
+    .. tab-item:: Attributes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~DomainToolHandler`
+            - 
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> DomainToolSpec</api/ansys/fluent/mcp/common/domain_tools/DomainToolSpec>
+    <span class="nf nf-cod-symbol_class"></span> DomainTool</api/ansys/fluent/mcp/common/domain_tools/DomainTool>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Domain-tool registration framework.
+
+A *domain tool* is one that does pure backend/catalog/Fluent
+introspection work with no dependency on a plan builder, journal,
+learned constraints, or recipe registry. Every domain tool lives on an
+MCP leaf. When an optional higher-level agent layer is installed, it
+reaches these tools over the MCP wire (an MCP client pool), not by
+direct Python import. This package never imports that agent layer. The
+dependency direction is strictly one-way (agent → this package).
+
+The contract is intentionally small so that migrating a handler from
+the agent layer is a mechanical rewrite. A domain tool is a
+**typed** async function with the signature::
+
+    async def my_tool_impl(
+        backend: Backend,
+        *,
+        arg1: int,
+        arg2: str | None = None,
+    ) -> dict[str, Any]: ...
+
+It is paired with a name, description, and (optional) live-session flag::
+
+    DomainTool(
+        spec=DomainToolSpec(name="my_tool", description="..."),
+        handler=my_tool_impl,
+    )
+
+The leaf calls :func:`FluidsLeafMCP._register_domain_tools` with a
+list of these. The helper synthesizes a wrapper whose
+``inspect.Signature`` mirrors the handler minus the ``backend``
+parameter so FastMCP can extract the JSON input schema from the
+wrapper. There is no parallel JSON-schema-on-the-spec to keep in
+sync with the handler signature.
+
+The handler receives the leaf's active
+:class:`ansys.fluent.mcp.common.backend.Backend` plus the validated
+keyword arguments. There is no loop state, no journal, no plan
+builder. A tool that needs the plan builder, journal, or recipe
+registry is **agent-only** by definition and lives in the optional
+agent layer instead, not in this package.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: schema_from_signature(handler: DomainToolHandler) -> dict[str, Any]
+
+   
+   Derive a minimal JSON schema from a typed handler signature.
+
+   Drops the leading ``backend`` parameter and emits one
+   ``properties`` entry per keyword-only argument. The mapping is
+   intentionally small: ``str -> "string"``, ``int -> "integer"``,
+   ``float -> "number"``, ``bool -> "boolean"``, ``dict -> "object"``,
+   ``list -> "array"`` plus ``None`` for ``Optional[...]`` arms.
+   Anything else falls back to a parameter without a ``type``
+   constraint. The handler is still callable. The schema just
+   documents fewer expectations.
+
+   :Parameters:
+
+       **handler** : :obj:`DomainToolHandler`
+           Callable inspected or registered by the helper.
+
+
+
+   :Returns:
+
+       :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: DomainToolHandler
+
+
+

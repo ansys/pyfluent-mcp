@@ -1,0 +1,121 @@
+
+
+
+
+
+
+The ``catalog`` package
+===========================
+
+.. py:module:: ansys.fluent.mcp.solve.catalog
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: catalog
+.. tab-set::
+
+
+    .. tab-item:: Submodules
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.catalog.help`
+            - Docstring extractor for PyFluent's generated ``settings_<version>.py``.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.catalog.index`
+            - Lexical fallback over the PyFluent API catalog (the default in practice).
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.catalog.retriever`
+            - API retrieval (RAG over the Fluent API catalog).
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.catalog.schema`
+            - Static index over PyFluent's canonical ``settings.json`` schema.
+
+
+
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-fa-file"></span> help</api/ansys/fluent/mcp/solve/catalog/help/index>
+    <span class="nf nf-fa-file"></span> index</api/ansys/fluent/mcp/solve/catalog/index/index>
+    <span class="nf nf-fa-file"></span> retriever</api/ansys/fluent/mcp/solve/catalog/retriever/index>
+    <span class="nf nf-fa-file"></span> schema</api/ansys/fluent/mcp/solve/catalog/schema/index>
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+
+Solve settings catalog (discovery, indexing, retrieval).
+
+* :mod:`ansys.fluent.mcp.solve.catalog.schema`: Offline-cached
+  PyFluent settings tree (~62k paths) used by the plan validator and
+  the indexer.
+* :mod:`ansys.fluent.mcp.solve.catalog.index`: Keyword inverted
+  index built on top of the schema. Drives ``find_setting_path``.
+* :mod:`ansys.fluent.mcp.solve.catalog.help`: Help/description
+  dataclasses attached to catalog entries.
+* :mod:`ansys.fluent.mcp.solve.catalog.retriever`: Semantic plus
+  lexical retriever that returns ranked candidates for
+  ``find_api``/RAG flows.
+
+The catalog is consumed by BOTH backends (path validation,
+``find_setting_path``) and the agent intelligence layer (RAG
+grounding). Keeping it separate makes that dual ownership explicit.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+

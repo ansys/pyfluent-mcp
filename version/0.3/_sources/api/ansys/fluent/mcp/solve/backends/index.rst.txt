@@ -1,0 +1,121 @@
+
+
+
+
+
+
+The ``backends`` package
+============================
+
+.. py:module:: ansys.fluent.mcp.solve.backends
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: backends
+.. tab-set::
+
+
+    .. tab-item:: Submodules
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.backends.composite`
+            - Composite backend: deterministic PyFluent solver operations.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.backends.introspection`
+            - Live introspection helpers shared by backends.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.backends.mesh_report_parsers`
+            - Pure-functional parsers for Fluent's ``mesh.check`` and ``mesh.quality`` reports.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.backends.pyfluent`
+            - PyFluent backend for the Solve leaf.
+
+
+
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-fa-file"></span> composite</api/ansys/fluent/mcp/solve/backends/composite/index>
+    <span class="nf nf-fa-file"></span> introspection</api/ansys/fluent/mcp/solve/backends/introspection/index>
+    <span class="nf nf-fa-file"></span> mesh_report_parsers</api/ansys/fluent/mcp/solve/backends/mesh_report_parsers/index>
+    <span class="nf nf-fa-file"></span> pyfluent</api/ansys/fluent/mcp/solve/backends/pyfluent/index>
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+
+Solve connection/data-plane backends.
+
+* :mod:`ansys.fluent.mcp.solve.backends.composite`: The
+  :class:`SolveCompositeBackend`; PyFluent for execution and live
+  context.
+* :mod:`ansys.fluent.mcp.solve.backends.pyfluent`: local in-process
+  :class:`PyFluentBackend` over gRPC.
+* :mod:`ansys.fluent.mcp.solve.backends.introspection`: Fluent
+  state probes used exclusively by ``PyFluentBackend``.
+* :mod:`ansys.fluent.mcp.solve.backends.mesh_report_parsers`:
+  Transcript scrapers that lift mesh-quality numbers out of Fluent
+  console output.
+
+Backends are the data plane shared by every higher layer (MCP leaf,
+agent, gateway). They never know anything about LLMs, prompts, or
+recipes.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+

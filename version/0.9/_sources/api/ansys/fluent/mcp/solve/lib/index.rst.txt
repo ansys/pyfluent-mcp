@@ -1,0 +1,117 @@
+
+
+
+
+
+
+The ``lib`` package
+=======================
+
+.. py:module:: ansys.fluent.mcp.solve.lib
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: lib
+.. tab-set::
+
+
+    .. tab-item:: Submodules
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.lib.compare_tools`
+            - Shared, stateless implementation for the ``compare_files`` tool.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.lib.discovery_tools`
+            - Solve-leaf live-introspection domain tools (shared implementation).
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.lib.domain_tools`
+            - Solve-leaf domain tools (canonical catalog).
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.lib.mesh_tools`
+            - Solve-leaf mesh-introspection domain tools (shared implementation).
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.lib.pattern`
+            - Wildcard/pattern helpers for named-object selection.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.solve.lib.schema_probe_tools`
+            - Live-schema probe tools.
+
+
+
+
+
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-fa-file"></span> compare_tools</api/ansys/fluent/mcp/solve/lib/compare_tools/index>
+    <span class="nf nf-fa-file"></span> discovery_tools</api/ansys/fluent/mcp/solve/lib/discovery_tools/index>
+    <span class="nf nf-fa-file"></span> domain_tools</api/ansys/fluent/mcp/solve/lib/domain_tools/index>
+    <span class="nf nf-fa-file"></span> mesh_tools</api/ansys/fluent/mcp/solve/lib/mesh_tools/index>
+    <span class="nf nf-fa-file"></span> pattern</api/ansys/fluent/mcp/solve/lib/pattern/index>
+    <span class="nf nf-fa-file"></span> schema_probe_tools</api/ansys/fluent/mcp/solve/lib/schema_probe_tools/index>
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+
+Generic API discovery, matching, and native solver report tools.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+

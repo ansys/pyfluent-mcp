@@ -1,0 +1,199 @@
+Tools and capabilities
+======================
+
+Tool surface
+------------
+
+PyFluent-MCP exposes **22 tools** organized into 6 groups:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Group
+     - Tools
+   * - Connection & session
+     - ``connect``, ``disconnect``, ``session_status``, ``solver_status``
+   * - Schema discovery
+     - ``find_api``, ``get_help``, ``get_state``, ``get_targeted_context``
+   * - Named objects
+     - ``list_named_objects``, ``find_named_object``, ``select_named_objects``
+   * - Codegen & execution
+     - ``codegen``, ``clarify``, ``run_code``, ``validate_code``
+   * - Reporting & inspection
+     - ``summarize_setup``, ``simulation_report``, ``screenshot``, ``manage_component``
+   * - Domain tools
+     - ``mesh_quality``, ``list_fields``, ``compare_files``
+
+Live versus offline tools
+-------------------------
+
+**Offline-capable tools** work without a live Fluent session:
+
+- ``find_api`` and ``get_help`` search the bundled settings schema.
+- ``codegen`` and ``clarify`` generate PyFluent Python and require an LLM.
+- ``validate_code`` performs an AST pre-check only.
+
+**Live-session tools** require PyFluent and a connected Fluent solver:
+
+- ``connect``, ``disconnect``, ``session_status``, ``solver_status``
+- ``get_state``, ``get_targeted_context``, named-object tools
+- ``run_code``, ``summarize_setup``, ``simulation_report``, ``screenshot``
+- ``mesh_quality``, ``list_fields``, ``compare_files``
+
+Using the tools
+---------------
+
+Discover-generate-validate-execute loop
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For most setup tasks, follow this pattern:
+
+#. **Discover**: ``find_api("turbulence model")`` or ``get_state(["setup.general"])``.
+#. **Generate**: ``codegen("enable k-epsilon turbulence model")``.
+#. **Validate**: ``validate_code(generated_python)``.
+#. **Execute**: ``run_code(generated_python)``.
+#. **Verify**: ``summarize_setup()`` or ``simulation_report()``.
+
+Connection management
+~~~~~~~~~~~~~~~~~~~~~
+
+Use ``connect`` to launch a new Fluent session or attach to an existing one:
+
+*"Connect to Fluent and launch a new solver session."*
+
+*"Connect to Fluent on 192.168.1.100 port 18500."*
+
+Use ``session_status`` to check whether a session is active and ``disconnect`` to release
+it.
+
+Schema discovery
+~~~~~~~~~~~~~~~~
+
+Use ``find_api`` for ranked path search over the settings tree:
+
+*"Find API paths related to boundary condition velocity inlet."*
+
+Use ``get_state`` to read live values and ``list_named_objects`` to enumerate named
+collections (boundary conditions, cell zones, materials, and so on).
+
+Code execution
+~~~~~~~~~~~~~~
+
+``run_code`` executes sandboxed PyFluent Python in a persistent REPL namespace.
+**This tool mutates the live solver**. Always prefer ``validate_code`` first for
+untrusted or generated code.
+
+``validate_code`` performs an AST and signature pre-check without execution.
+
+Domain tools
+~~~~~~~~~~~~
+
+``mesh_quality`` returns live skewness, orthogonal quality, and aspect-ratio
+metrics. Route all "show mesh quality / skewness / check mesh" intents here.
+
+``list_fields`` enumerates scalar/vector fields available in the loaded case.
+
+``compare_files`` diffs two case/mesh files in separate ephemeral headless sessions
+without touching the live workspace session. Requires the ``file-probe`` extra for
+``.h5``/``.cas.h5`` files.
+
+Workflow examples
+-----------------
+
+Load a case and inspect setup
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#. ``connect`` launches or attaches to Fluent.
+#. ``run_code`` loads a case file.
+#. ``summarize_setup`` gets a compact digest of models, BCs, and materials.
+#. ``mesh_quality`` checks mesh quality metrics.
+
+Generate and apply a settings change
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#. ``find_api("under-relaxation pressure")`` discovers the active path family.
+#. ``get_state(["solution.controls"])`` reads the live URF configuration.
+#. ``codegen("set pressure URF to 0.3")`` generates PyFluent code.
+#. ``validate_code`` then ``run_code`` applies the change.
+
+Compare two case files
+~~~~~~~~~~~~~~~~~~~~~~
+
+``compare_files(path_a="old.cas.h5", path_b="new.cas.h5")`` returns a structured diff in
+separate headless sessions.
+
+Result models and errors
+------------------------
+
+Tool return types
+~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Model
+     - Returned by
+   * - ``ConnectResult``
+     - ``connect``
+   * - ``RunCodeResult``
+     - ``run_code``
+   * - ``CodegenResult``
+     - ``codegen``, ``clarify``
+   * - ``Clarification`` / ``ClarificationOption``
+     - ``codegen`` or ``clarify`` when ambiguity must be resolved
+
+Configuration is loaded from ``FLUIDS_MCP_*`` environment variables via
+:func:`~ansys.fluent.mcp.load_config`. Use :func:`~ansys.fluent.mcp.validate_config`
+to check the configuration at startup.
+
+Error types
+~~~~~~~~~~~
+
+All errors inherit from ``FluidsMCPError``:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Error
+     - When raised
+   * - ``NotConnectedError``
+     - A live-session tool is called with no active Fluent connection.
+   * - ``BackendUnavailableError``
+     - The requested backend kind is not registered.
+   * - ``InvalidArgumentsError``
+     - Tool arguments fail validation.
+   * - ``DiscoveryError``
+     - Schema or API discovery fails
+   * - ``UpstreamError``
+     - PyFluent or the solver returns an error.
+   * - ``ConfigError``
+     - Configuration is invalid.
+
+Python API
+~~~~~~~~~~
+
+The package re-exports the server class and shared models from its top-level namespace:
+
+.. code-block:: python
+
+   from ansys.fluent.mcp import (
+       SolveMCP,
+       ConnectResult,
+       RunCodeResult,
+       CodegenResult,
+       FluidsMCPConfig,
+       load_config,
+   )
+
+Feature reference
+-----------------
+
+For full API details, including all parameters and return values, see :doc:`../api/index`.
+
+Best practices
+--------------
+
+For recommendations on using PyFluent-MCP effectively, see :doc:`best_practices`.

@@ -1,0 +1,266 @@
+
+
+
+
+
+
+The ``activity_logging.py`` module
+==================================
+
+.. py:module:: ansys.fluent.mcp.common.activity_logging
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: activity_logging
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~sanitize_args`
+            - Return a logging-safe copy of ``args``.
+
+
+          * - :py:obj:`~summarise_result`
+            - Compact rendering of a tool's return payload.
+
+
+          * - :py:obj:`~format_iterable_inline`
+            - Render an iterable as a compact comma-separated string.
+
+
+          * - :py:obj:`~truncate_text`
+            - Use the public truncation helper for one-line stdout/stderr summaries.
+
+
+
+
+    .. tab-item:: Constants
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~TOOL_LOGGER`
+            - 
+
+
+          * - :py:obj:`~SESSION_LOGGER`
+            - 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Helpers for compact, redaction-safe logging of tool calls and live session interactions.
+
+Used by:
+
+* :func:`ansys.fluent.mcp.solve.backends.pyfluent.PyFluentBackend.run_code`
+  to log the snippet that was sent to the live solver and the response
+  it produced.
+* An optional higher-level agent layer (when installed) to log every
+  tool invocation (name, sanitized arguments, latency, brief result). This
+  package exposes the helpers. It does not import that layer.
+
+All records flow through Python's ``logging`` module on dedicated child
+loggers under the ``ansys.fluent.mcp`` namespace so they are captured by
+the session log file installed by
+:mod:`ansys.fluent.mcp.common.session_logging` without callers needing
+to know that file exists.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: sanitize_args(args: Any, *, limit: int = _DEFAULT_VALUE_LIMIT) -> Any
+
+   
+   Return a logging-safe copy of ``args``.
+
+   * Redacts secret-looking keys.
+   * Truncates string values longer than ``limit``.
+   * Recursively descends into dictionaries, lists, and tuples.
+
+   Other scalar types (int, float, bool, None) are returned as-is.
+
+   :Parameters:
+
+       **args** : :obj:`Any`
+           Positional arguments forwarded to the wrapped call.
+
+       **limit** : :class:`python:int`
+           Maximum number of items or characters to include.
+
+
+
+   :Returns:
+
+       :obj:`Any`
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: summarise_result(result: Any, *, limit: int = _DEFAULT_VALUE_LIMIT) -> Any
+
+   
+   Compact rendering of a tool's return payload.
+
+   Tool handlers return a wide variety of dictionaries (some with large
+   nested ``state``, ``snapshot``, or ``preview`` blobs). This handler keeps the
+   top-level keys but truncates values aggressively so the log line
+   stays under a few KB. For non-dictionary returns, the handler truncates.
+
+   :Parameters:
+
+       **result** : :obj:`Any`
+           Result object to summarize for logging.
+
+       **limit** : :class:`python:int`
+           Maximum number of items or characters to include.
+
+
+
+   :Returns:
+
+       :obj:`Any`
+           Result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: format_iterable_inline(items: Iterable[Any], *, limit: int = 200) -> str
+
+   
+   Render an iterable as a compact comma-separated string.
+
+
+   :Parameters:
+
+       **items** : :obj:`Iterable`\[:obj:`Any`]
+           Items to format or summarize.
+
+       **limit** : :class:`python:int`
+           Maximum number of items or characters to include.
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           String result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: truncate_text(text: str, *, limit: int = _DEFAULT_TEXT_LIMIT) -> str
+
+   
+   Use the public truncation helper for one-line stdout/stderr summaries.
+
+
+   :Parameters:
+
+       **text** : :class:`python:str`
+           Text value to parse, normalize, or write.
+
+       **limit** : :class:`python:int`
+           Maximum number of items or characters to include.
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           String result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: TOOL_LOGGER
+
+.. py:data:: SESSION_LOGGER
+
+
+

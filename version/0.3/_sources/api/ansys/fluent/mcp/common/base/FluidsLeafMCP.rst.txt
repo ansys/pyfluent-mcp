@@ -1,0 +1,323 @@
+
+
+
+
+
+
+:class:`FluidsLeafMCP`
+======================
+
+
+.. py:class:: ansys.fluent.mcp.common.base.FluidsLeafMCP(*, backends: dict[str, ansys.fluent.mcp.common.backend.Backend], expose_tools: Iterable[str] = ALL_TOOLS, name: Optional[str] = None, **fastmcp_kwargs: Any)
+
+   Bases: :py:obj:`ansys.common.mcp.server.PyAnsysBaseMCP`
+
+
+   
+   Base server class for a single Fluids MCP leaf.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: FluidsLeafMCP
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~run`
+            - Start the MCP server via the parent implementation when available.
+          * - :py:attr:`~product_startup`
+            - No persistent product session at startup. Backends connect lazily.
+          * - :py:attr:`~product_cleanup`
+            - Disconnect any active backend at shutdown.
+          * - :py:attr:`~build_toolsets`
+            - Build toolset definitions filtered to the tools this leaf exposes.
+          * - :py:attr:`~register_run_code_observer`
+            - Register a callable invoked after every ``run_code`` tool call.
+
+
+   .. tab-item:: Properties
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~backend`
+            - Return the active backend instance.
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~leaf_name`
+            - 
+          * - :py:attr:`~default_backend_kind`
+            - 
+          * - :py:attr:`~cache_ttl_seconds`
+            - 
+          * - :py:attr:`~component_label`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.base import FluidsLeafMCP
+
+Property detail
+---------------
+
+.. py:property:: backend
+   :type: ansys.fluent.mcp.common.backend.Backend
+
+
+   
+   Return the active backend instance.
+
+
+
+
+
+   :Returns:
+
+       :obj:`Backend`
+           Backend produced by the operation.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: leaf_name
+   :type:  str
+   :value: 'fluids'
+
+
+.. py:attribute:: default_backend_kind
+   :type:  Optional[str]
+   :value: None
+
+
+.. py:attribute:: cache_ttl_seconds
+   :type:  float
+   :value: 30.0
+
+
+.. py:attribute:: component_label
+   :type:  str
+   :value: ''
+
+
+
+
+Method detail
+-------------
+
+.. py:method:: run(transport: str = 'stdio', host: str | None = None, port: int | None = None) -> None
+
+   
+   Start the MCP server via the parent implementation when available.
+
+
+   :Parameters:
+
+       **transport** : :class:`python:str`
+           Transport name used to run the MCP server.
+
+       **host** : :class:`python:str` | :data:`python:None`
+           Host interface used by the server transport.
+
+       **port** : :class:`python:int` | :data:`python:None`
+           Port used by the selected server transport.
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: product_startup() -> None
+
+   
+   No persistent product session at startup. Backends connect lazily.
+
+
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: product_cleanup() -> None
+
+   
+   Disconnect any active backend at shutdown.
+
+
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: build_toolsets() -> list[dict[str, Any]]
+
+   
+   Build toolset definitions filtered to the tools this leaf exposes.
+
+   Returns a list of toolset dicts conforming to the
+   PyAnsysMCPService conductor contract.
+
+
+
+
+   :Returns:
+
+       :class:`python:list`\[:class:`python:dict`\[:class:`python:str`, :obj:`Any`]]
+           Mapping containing the operation result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:method:: register_run_code_observer(observer: Callable[Ellipsis, Awaitable[None] | None]) -> None
+
+   
+   Register a callable invoked after every ``run_code`` tool call.
+
+   The observer is called as ``observer(code=..., result=...,
+   error=...)``. ``result`` is the backend's :class:`RunCodeResult`
+   on success (and ``None`` on exception); ``error`` is the raised
+   exception on failure (and ``None`` on success). Observers may be
+   sync or async. Exceptions raised by an observer are logged and
+   swallowed so the original tool result is preserved.
+
+   :Parameters:
+
+       **observer** : :obj:`Callable`\[..., :obj:`Awaitable`\[:data:`python:None`] | :data:`python:None`]
+           Observer callback invoked after run-code execution.
+
+
+
+   :Returns:
+
+       :data:`python:None`
+           The function completes through its side effects.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+

@@ -1,0 +1,172 @@
+
+
+
+
+
+
+:class:`GuardReport`
+====================
+
+
+.. py:class:: ansys.fluent.mcp.solve.lib.intent_guard.GuardReport
+
+   
+   Collection of findings for a snippet.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: GuardReport
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~to_run_code_result`
+            - Render the report as the ``RunCodeResult`` callers expect.
+
+
+   .. tab-item:: Properties
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~has_blocking`
+            - Whether the report contains any blocking finding.
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~findings`
+            - 
+          * - :py:attr:`~rewritten_code`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.solve.lib.intent_guard import GuardReport
+
+Property detail
+---------------
+
+.. py:property:: has_blocking
+   :type: bool
+
+
+   
+   Whether the report contains any blocking finding.
+
+
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>`
+           ``True`` when at least one finding has ``severity="block"``.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: findings
+   :type:  list[GuardFinding]
+   :value: []
+
+
+.. py:attribute:: rewritten_code
+   :type:  Optional[str]
+   :value: None
+
+
+
+
+Method detail
+-------------
+
+.. py:method:: to_run_code_result() -> ansys.fluent.mcp.common.models.RunCodeResult
+
+   
+   Render the report as the ``RunCodeResult`` callers expect.
+
+   Only invoked when at least one BLOCK-level finding is present.
+   Sequence-error findings produce ``error_code="sequence_error"``;
+   every other block produces ``error_code="risk_blocked"``.
+
+
+
+
+   :Returns:
+
+       :obj:`RunCodeResult`
+           Error result containing the blocking findings and guard-specific
+           ``error_code`` value.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+

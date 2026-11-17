@@ -1,0 +1,235 @@
+
+
+
+
+
+
+The ``host`` package
+========================
+
+.. py:module:: ansys.fluent.mcp.common.host
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: host
+.. tab-set::
+
+
+    .. tab-item:: Submodules
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.host.annotations`
+            - MCP tool annotations (behavior hints) for the leaf tool surface.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.host.guidance`
+            - Uniform ``retryable`` / ``next_action`` guidance on tool error results.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.host.operations`
+            - Make long-running mutating tool calls survive host timeouts.
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.host.trace`
+            - Per-call trace ids so host-side and server-side logs line up.
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.host.HostContract`
+            - Wrap tool functions with trace ids, timeout-safe execution and error guidance.
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~annotations_for`
+            - Return the behavior hints for a tool.
+
+
+          * - :py:obj:`~error_guidance`
+            - Classify an error code.
+
+
+          * - :py:obj:`~current_trace_id`
+            - Return the trace id of the tool call running in this context.
+
+
+          * - :py:obj:`~host_contract_enabled`
+            - Return whether the host contract should wrap tools.
+
+
+
+
+    .. tab-item:: Constants
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~HOST_CONTRACT_ENV`
+            - Environment variable that turns the host contract off when set to ``0``.
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-fa-file"></span> annotations</api/ansys/fluent/mcp/common/host/annotations/index>
+    <span class="nf nf-fa-file"></span> guidance</api/ansys/fluent/mcp/common/host/guidance/index>
+    <span class="nf nf-fa-file"></span> operations</api/ansys/fluent/mcp/common/host/operations/index>
+    <span class="nf nf-fa-file"></span> trace</api/ansys/fluent/mcp/common/host/trace/index>
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> HostContract</api/ansys/fluent/mcp/common/host/HostContract>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+
+Host-facing contract for generic MCP hosts.
+
+Generic MCP hosts (VS Code Copilot, Claude Desktop, Cursor) rely on:
+
+* behavior hints on every tool (:mod:`ansys.fluent.mcp.common.host.annotations`);
+* ``retryable`` / ``next_action`` guidance on error results
+  (:mod:`ansys.fluent.mcp.common.host.guidance`);
+* long-running mutating calls that survive host timeouts
+  (:mod:`ansys.fluent.mcp.common.host.operations`);
+* per-call trace ids in the server log (:mod:`ansys.fluent.mcp.common.host.trace`).
+
+:class:`HostContract` applies all of this by wrapping each tool function at
+registration time. It uses only the standard library, so this package does not
+depend on the internals of the MCP server framework. Set
+``FLUIDS_MCP_HOST_CONTRACT=0`` to turn it off.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+
+
+
+.. py:function:: host_contract_enabled() -> bool
+
+   
+   Return whether the host contract should wrap tools.
+
+
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>`
+           ``False`` only when ``FLUIDS_MCP_HOST_CONTRACT`` is a falsy value.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: HOST_CONTRACT_ENV
+   :value: 'FLUIDS_MCP_HOST_CONTRACT'
+
+
+   
+   Environment variable that turns the host contract off when set to ``0``.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

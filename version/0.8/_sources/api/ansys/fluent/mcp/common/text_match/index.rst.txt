@@ -1,0 +1,175 @@
+
+
+
+
+
+
+The ``text_match.py`` module
+============================
+
+.. py:module:: ansys.fluent.mcp.common.text_match
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: text_match
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~edit_distance_le_one`
+            - Return True iff Levenshtein distance between ``a`` and ``b`` is at most 1.
+
+
+          * - :py:obj:`~fuzzy_normalize`
+            - Normalize ``value`` to a canonical spelling from ``allowed``.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Shared string-matching utilities for fuzzy/typo-tolerant lookup.
+
+These helpers are used everywhere a caller has to reconcile a
+user-supplied identifier against a finite, authoritative set of known
+strings ( such as material names from the shipped Fluent database, allowed
+values of an enum-typed setting, NamedObject keys, dict-key schemas,
+and command kwargs).
+
+Keeping the implementation in one place avoids the trap hit
+historically: ``_check_value`` learned to tolerate a host-provided
+``"least-squares-cell-based"`` → ``"least-square-cell-based"`` typo
+while ``copy_material`` could not even resolve ``"water-vapour"`` →
+``"water-vapor"``. Both are the same single-edit problem. Both should
+share the same solution.
+
+Public API:
+    * :func:`edit_distance_le_one`: Fast ``≤ 1`` Levenshtein verdict.
+    * :func:`fuzzy_normalize`: Return the canonical spelling if and
+      only if exactly one entry in ``allowed`` is within edit distance
+      1 (case-insensitive), else ``None``.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: edit_distance_le_one(a: str, b: str) -> bool
+
+   
+   Return True iff Levenshtein distance between ``a`` and ``b`` is at most 1.
+
+   Faster than computing the full distance because only the
+   ``≤ 1`` verdict is needed.
+
+   :Parameters:
+
+       **a** : :class:`python:str`
+           A to supply to the function.
+
+       **b** : :class:`python:str`
+           B to supply to the function.
+
+
+
+   :Returns:
+
+       :ref:`bool <python:bltin-boolean-values>`
+           Boolean result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: fuzzy_normalize(value: str, allowed: collections.abc.Iterable[str]) -> str | None
+
+   
+   Normalize ``value`` to a canonical spelling from ``allowed``.
+
+   It returns the canonical spelling for ``value`` if exactly one entry
+   in ``allowed`` is within edit distance 1 (case-insensitive), else
+   ``None``.
+
+   Uniqueness is required so a near-spelling never silently overwrites
+   a value when two candidates are equally plausible. The
+   ambiguity is surfaced to the caller instead.
+
+   :Parameters:
+
+       **value** : :class:`python:str`
+           Value to supply to the function.
+
+       **allowed** : :obj:`Iterable`\[:class:`python:str`]
+           Allowed values to supply to the function.
+
+
+
+   :Returns:
+
+       :class:`python:str` | :data:`python:None`
+           String result produced by the function.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
