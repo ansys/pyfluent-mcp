@@ -42,6 +42,7 @@ from pathlib import Path
 import tempfile
 import threading
 import traceback
+import types
 from typing import Any, Callable, Optional, cast
 
 from ansys.fluent.mcp.common.backend import Backend
@@ -54,9 +55,13 @@ from ansys.fluent.mcp.common.errors import (
 from ansys.fluent.mcp.common.models import ConnectResult, RunCodeResult
 from ansys.fluent.mcp.common.validation import (
     _ALLOWED_BUILTINS,
-    _ALLOWED_IMPORTS,
+    _ALLOWED_IMPORTS,  # noqa: F401  # re-exported; consumers assert validator/runtime parity
     _FORBIDDEN_ATTRIBUTES,
+    _FORBIDDEN_IMPORT_NAMES,
+    _FORBIDDEN_MODULE_ATTRIBUTES,
+    _FORBIDDEN_MODULES,
     _SAFE_DUNDER_READS,
+    is_allowed_sandbox_import,
     sandbox_alternatives_hint,
     validate_python_source,
 )
@@ -328,7 +333,7 @@ def _read_family_state(family_node: Any) -> dict[str, Any]:
 
 
 def _make_safe_import() -> Any:
-    """Return a guarded ``__import__`` that honors :data:`_ALLOWED_IMPORTS`.
+    """Return a guarded ``__import__`` that honors :func:`is_allowed_sandbox_import`.
 
     Without this, snippets validated under ``strict=True`` that contain
     ``import math`` or ``import json`` would fail at runtime because
@@ -336,6 +341,10 @@ def _make_safe_import() -> Any:
     The guard delegates to the real ``__import__`` for whitelisted
     modules and raises ``ImportError`` for anything else, keeping the
     sandbox tight while letting the validator's allowed imports work.
+
+    ``import a.b.c`` and ``import a.b.c as d`` reach this hook identically
+    (both must return the root package ``a``), so rejecting the unaliased form
+    that binds a bare ``ansys`` root is left to the strict AST validator.
 
     Returns
     -------
@@ -375,12 +384,69 @@ def _make_safe_import() -> Any:
         """
         if level != 0:
             raise ImportError(f"relative imports are not permitted: {name!r}")
-        root_mod = name.split(".", 1)[0]
-        if name not in _ALLOWED_IMPORTS and root_mod not in _ALLOWED_IMPORTS:
+        fromlist = tuple(fromlist or ())
+        if not is_allowed_sandbox_import(name) and not (
+            fromlist and all(is_allowed_sandbox_import(f"{name}.{item}") for item in fromlist)
+        ):
             raise ImportError(f"import of {name!r} is not permitted in sandboxed run_code")
-        return real_import(name, globals, locals, fromlist, level)
+        module = real_import(name, globals, locals, fromlist, level)
+        for item in fromlist:
+            if item == "*" or item.startswith("_") or item in _FORBIDDEN_IMPORT_NAMES:
+                raise ImportError(
+                    f"'from {name} import {item}' is not permitted in sandboxed run_code"
+                )
+            try:
+                value = getattr(module, item)
+            except AttributeError:
+                continue
+            if _is_forbidden_import_value(value):
+                raise ImportError(
+                    f"'from {name} import {item}' is not permitted in sandboxed run_code"
+                )
+        return module
 
     return _safe_import
+
+
+_FORBIDDEN_VALUE_MODULE_ROOTS = frozenset(
+    {
+        *_FORBIDDEN_MODULES,
+        "_io",
+        "_os",
+        "_socket",
+        "_ctypes",
+        "_signal",
+        "_thread",
+        "_pickle",
+        "_posixsubprocess",
+        "_winapi",
+        "_frozen_importlib",
+        "_frozen_importlib_external",
+        "_imp",
+    }
+)
+
+
+def _is_forbidden_import_value(value: Any) -> bool:
+    """Return ``True`` when a ``from X import name`` result reaches the host.
+
+    ``from X import Y`` resolves ``Y`` by C-level ``getattr`` on the imported
+    module, so an allowed package that merely *imports* ``subprocess`` or
+    ``pathlib.Path`` at module scope would re-export it. Module objects must
+    themselves be importable, and functions / classes defined in host modules
+    are rejected by their ``__module__``.
+    """
+    if isinstance(value, types.ModuleType):
+        return not is_allowed_sandbox_import(getattr(value, "__name__", "") or "")
+    if not (callable(value) or isinstance(value, type)):
+        return False
+    try:
+        owner = getattr(value, "__module__", None)
+    except Exception:
+        return True
+    if not isinstance(owner, str):
+        return False
+    return owner.split(".", 1)[0] in _FORBIDDEN_VALUE_MODULE_ROOTS
 
 
 def _strict_validation_enabled() -> bool:
@@ -431,8 +497,10 @@ def _scan_reflection_writes(code: str) -> list[str]:
 def _is_forbidden_attribute_name(name: Any) -> bool:
     """Return ``True`` when ``name`` is a dunder or live-module escape name.
 
-    Mirrors the AST validator's dunder/``_FORBIDDEN_ATTRIBUTES`` blocklist,
-    but operates on a concrete string at call time. Unlike the AST check
+    Mirrors the AST validator's dunder / ``_FORBIDDEN_ATTRIBUTES`` /
+    ``_FORBIDDEN_MODULE_ATTRIBUTES`` blocklists (host modules, path classes,
+    frame / traceback / generator introspection), but operates on a concrete
+    string at call time. Unlike the AST check
     (which only sees string *literals*), this catches names assembled at
     runtime via concatenation, slicing, ``chr()`` joins, etc. -- e.g.
     ``getattr(dataclasses, "s" + "ys")`` or ``getattr(type(1), "__" +
@@ -440,7 +508,7 @@ def _is_forbidden_attribute_name(name: Any) -> bool:
     """
     if not isinstance(name, str):
         return False
-    if name in _FORBIDDEN_ATTRIBUTES:
+    if name in _FORBIDDEN_ATTRIBUTES or name in _FORBIDDEN_MODULE_ATTRIBUTES:
         return True
     return name.startswith("__") and name.endswith("__") and name not in _SAFE_DUNDER_READS
 

@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import asyncio
+import os
 from pathlib import Path
 
 import pytest
@@ -797,6 +798,43 @@ def test_summary_and_report_failure_results():
         ) == {"error": "report failed"}
 
     asyncio.run(scenario())
+
+
+def test_export_html_default_dir_is_unique_and_leaves_no_placeholder(tmp_path):
+    """Default HTML exports get distinct solver-side directories, not the temp root."""
+    import tempfile
+
+    class SolverFilesBackend(BaseFakeBackend):
+        async def solver_scratch_path(self, suffix=""):
+            handle, path = tempfile.mkstemp(suffix=suffix, dir=tmp_path)
+            os.close(handle)
+            return path
+
+        async def read_solver_file(self, path):
+            target = Path(path)
+            try:
+                return target.read_bytes()
+            finally:
+                target.unlink(missing_ok=True)
+
+    async def scenario():
+        server = _server(SolverFilesBackend(), expose_tools=("simulation_report",))
+        return [
+            _structured(
+                await server.call_tool(
+                    "simulation_report", {"action": "export_html", "report_name": name}
+                )
+            )["output_path"]
+            for name in ("r1", "r2")
+        ]
+
+    first, second = asyncio.run(scenario())
+    assert first != second
+    for out in (first, second):
+        out_path = Path(out)
+        assert out_path.parent == tmp_path
+        assert out_path.suffix != ".html"
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_backend_selection_and_run_helpers(monkeypatch):

@@ -155,12 +155,20 @@ async def _default_report_path(backend: Any, suffix: str) -> str:
     return handle.name
 
 
-def _host_parent(path: str) -> str:
-    """Parent directory of ``path`` in the syntax of the host that owns it."""
-    from pathlib import PurePosixPath, PureWindowsPath
+async def _default_report_dir(backend: Any) -> str:
+    """Default HTML report directory: a new, unique path where the solver runs.
 
-    windows = "\\" in path or (len(path) > 1 and path[1] == ":")
-    return str((PureWindowsPath if windows else PurePosixPath)(path).parent)
+    The solver-side scratch file only reserves a unique name on the solver
+    host; it is removed before export and Fluent creates the directory.
+    """
+    files = _solver_files(backend)
+    if files is None:
+        import tempfile as _tf
+
+        return _tf.mkdtemp(prefix="fluent_report_")
+    scratch = await files.solver_scratch_path(".html")
+    await files.read_solver_file(scratch)
+    return scratch.removesuffix(".html")
 
 
 def _preload_native_extensions() -> None:
@@ -1892,8 +1900,6 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
             dict[str, Any]
                 Mapping containing the operation result.
             """
-            import tempfile as _tf
-
             action = (action or "list").strip().lower()
             valid = {
                 "generate",
@@ -1933,13 +1939,7 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
                 )
             elif action == "export_html":
                 if output_path is None:
-                    files = _solver_files(self.backend)
-                    scratch = None
-                    if files is not None:
-                        scratch = await files.solver_scratch_path(".html")
-                    output_path = (
-                        _host_parent(scratch) if scratch else _tf.mkdtemp(prefix="fluent_report_")
-                    )
+                    output_path = await _default_report_dir(self.backend)
                 out = normalize_path_for_fluent(output_path)
                 snippet = (
                     "session.settings.results.report"
