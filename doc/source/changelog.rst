@@ -9,6 +9,48 @@ This section contains the release notes for PyFluent-MCP.
 
 .. towncrier release notes start
 
+`0.9.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.9.0>`_ - November 17, 2026
+========================================================================================
+
+.. tab-set::
+
+
+  .. tab-item:: Added
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Batch settings introspection and add solver file hooks for remote sessions
+          - `#114 <https://github.com/ansys/pyfluent-mcp/pull/114>`_
+
+
+  .. tab-item:: Fixed
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Return named-object templates
+          - `#111 <https://github.com/ansys/pyfluent-mcp/pull/111>`_
+
+        * - Harden sandbox validation and isolate HTML reports
+          - `#115 <https://github.com/ansys/pyfluent-mcp/pull/115>`_
+
+
+  .. tab-item:: Maintenance
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Bump development version to 0.9.dev0
+          - `#107 <https://github.com/ansys/pyfluent-mcp/pull/107>`_
+
+        * - Update CHANGELOG for v0.8.0
+          - `#109 <https://github.com/ansys/pyfluent-mcp/pull/109>`_
+
+
 `0.8.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.8.0>`_ - November 05, 2026
 ========================================================================================
 
