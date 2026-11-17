@@ -5,7 +5,7 @@
 repos:
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.17.3
+    rev: v0.17.4
     hooks:
       # Run the linter.
       - id: ruff-check
@@ -14,7 +14,7 @@ repos:
 
   # Add copyright statement to files
   - repo: https://github.com/ansys/pre-commit-hooks
-    rev: v0.8.0
+    rev: v0.8.1
     hooks:
     - id: add-license-headers
       args:
@@ -57,7 +57,7 @@ repos:
 
   # Spell checking with typos
   - repo: https://github.com/crate-ci/typos
-    rev: v1.52.0
+    rev: v1.52.1
     hooks:
       - id: typos
         args: ["--config", "doc/styles/typos.toml"]
