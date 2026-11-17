@@ -22,10 +22,12 @@ and operate on **caller-provided paths**. There are no hardcoded collection list
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 import json
 import logging
 import os
-from typing import Any, Iterable, Optional
+import threading
+from typing import Any, Iterable, Iterator, Optional
 
 logger = logging.getLogger("ansys.fluent.mcp.introspection")
 
@@ -157,6 +159,188 @@ def _split_outside_brackets(text: str, separators: str) -> list[str]:
     return out
 
 
+_SHARED_ACTIVE = threading.local()
+
+
+@contextmanager
+def shared_active_checks() -> Iterator[None]:
+    """Reuse each settings object's ``active?`` answer for the rest of one read-only call.
+
+    PyFluent asks Fluent for a group's ``active?`` (one network round trip)
+    every time one of its children is accessed, so reads whose paths share
+    prefixes ask the same question many times, which is expensive when Fluent
+    runs on another machine. The backend lock is held for the whole call, so
+    the answer cannot change and the first one is reused. Behaviour is
+    otherwise unchanged: a child of an inactive group still raises
+    ``InactiveObjectError``. Must not wrap code that changes settings.
+    """
+    outer = getattr(_SHARED_ACTIVE, "answers", None)
+    if outer is None:
+        _SHARED_ACTIVE.answers = {}
+    try:
+        yield
+    finally:
+        if outer is None:
+            _SHARED_ACTIVE.answers = None
+
+
+def _shared_is_active(answers: dict[int, tuple[Any, Any]], node: Any) -> Any:
+    # The node is kept in the entry so its id cannot be reused by another
+    # object while the call runs.
+    entry = answers.get(id(node))
+    if entry is None or entry[0] is not node:
+        entry = (node, node.is_active())
+        answers[id(node)] = entry
+    return entry[1]
+
+
+def _settings_group_type() -> Any:
+    try:
+        from ansys.fluent.core.solver import flobject
+    except ImportError:
+        return None
+    return getattr(flobject, "Group", None)
+
+
+def child_of(node: Any, name: str) -> Any:
+    """Return ``getattr(node, name)``, sharing group ``active?`` checks.
+
+    Inside :func:`shared_active_checks` this mirrors PyFluent's
+    ``Group.__getattribute__`` for child access (inactive
+    check, then exposure-level check), with the inactive check answered once
+    per group for the call. Anything else uses plain ``getattr``.
+
+    Parameters
+    ----------
+    node : Any
+        Settings object whose attribute is read.
+    name : str
+        Attribute (child) name.
+
+    Returns
+    -------
+    Any
+        The child object.
+    """
+    answers = getattr(_SHARED_ACTIVE, "answers", None)
+    group = _settings_group_type()
+    if answers is None or group is None or not isinstance(node, group):
+        return getattr(node, name)
+    if name not in object.__getattribute__(node, "child_names"):
+        return getattr(node, name)
+    if _shared_is_active(answers, node) is False:
+        from ansys.fluent.core.solver.flobject import InactiveObjectError
+
+        raise InactiveObjectError(node.python_path)
+    from ansys.fluent.core.solver import flobject
+
+    hidden = getattr(flobject, "_raise_if_exposure_hidden", None)
+    if hidden is not None:
+        hidden(name, object.__getattribute__(node, "_child_classes"), node)
+    try:
+        return object.__getattribute__(node, name)
+    except AttributeError:
+        return getattr(node, name)
+
+
+def _fluent_child_names(node: Any) -> dict[str, str]:
+    """Map each child's Fluent name (as ``get_attrs`` reports it) to its Python name."""
+    try:
+        classes = object.__getattribute__(node, "_child_classes")
+    except AttributeError:
+        return {}
+    return {getattr(cls, "fluent_name", name) or name: name for name, cls in classes.items()}
+
+
+def subtree_attrs(node: Any, attrs: Iterable[str]) -> Optional[dict[str, dict[str, Any]]]:
+    """Return ``attrs`` of every active child of ``node`` in one solver round trip.
+
+    Fluent answers a recursive ``get_attrs`` with only the active children,
+    so a child missing from the result is inactive. Keys are Python child
+    names. Returns ``None`` when the query is not supported, so callers can
+    fall back to per-child queries. Inside :func:`shared_active_checks` the
+    answers are also recorded for the rest of the call.
+    """
+    fn = getattr(node, "get_attrs", None)
+    if not callable(fn):
+        return None
+    wanted = list(dict.fromkeys(["active?", *attrs]))
+    try:
+        raw = fn(wanted, recursive=True)
+    except Exception as exc:
+        logger.debug("Recursive get_attrs failed for %r: %s", node, exc)
+        return None
+    if not isinstance(raw, dict) or not isinstance(raw.get("children", {}), dict):
+        return None
+    _remember_subtree(node, raw)
+    names = _fluent_child_names(node)
+    return {
+        names.get(fluent, fluent): dict(entry.get("attrs") or {})
+        for fluent, entry in (raw.get("children") or {}).items()
+        if isinstance(entry, dict)
+    }
+
+
+def _remember_subtree(node: Any, raw: dict[str, Any]) -> None:
+    """Record ``active?`` answers from a recursive ``get_attrs`` reply for this call."""
+    answers = getattr(_SHARED_ACTIVE, "answers", None)
+    group = _settings_group_type()
+    if answers is None or group is None or not isinstance(node, group):
+        return
+    attrs = raw.get("attrs") or {}
+    if "active?" in attrs:
+        answers[id(node)] = (node, bool(attrs["active?"]))
+    present = raw.get("children") or {}
+    for fluent, name in _fluent_child_names(node).items():
+        try:
+            child = object.__getattribute__(node, name)
+        except AttributeError:
+            continue
+        entry = present.get(fluent)
+        if not isinstance(entry, dict):
+            answers[id(child)] = (child, False)
+        elif isinstance(child, group):
+            _remember_subtree(child, entry)
+        else:
+            answers[id(child)] = (child, bool((entry.get("attrs") or {}).get("active?", True)))
+
+
+def active_child_names(node: Any) -> Optional[list[str]]:
+    """Python names of ``node``'s active, visible, non-deprecated children (one round trip).
+
+    Same result as PyFluent's ``get_active_child_names`` without one query per
+    child. Returns ``None`` when the batched query is unavailable, and for
+    named-object collections, whose subtree can be large.
+    """
+    group = _settings_group_type()
+    if group is None or not isinstance(node, group):
+        return None
+    active = subtree_attrs(node, ["active?"])
+    if active is None:
+        return None
+    try:
+        from ansys.fluent.core.solver import flobject
+    except ImportError:
+        flobject = None
+    hidden = getattr(flobject, "_is_hidden_by_exposure_level", None)
+    deprecated = getattr(flobject, "_is_deprecated", None)
+    classes = object.__getattribute__(node, "_child_classes")
+    names = []
+    for name in object.__getattribute__(node, "child_names"):
+        if name not in active or active[name].get("active?") is False:
+            continue
+        if hidden is not None and name in classes and hidden(classes[name], node):
+            continue
+        if deprecated is not None:
+            try:
+                if deprecated(object.__getattribute__(node, name)):
+                    continue
+            except AttributeError:
+                pass
+        names.append(name)
+    return names
+
+
 def resolve_path(root: Any, path: str) -> Any:
     """Resolve a Fluent settings ``path`` against ``root`` (== solver.settings).
 
@@ -169,6 +353,9 @@ def resolve_path(root: Any, path: str) -> Any:
     are transparently re-tried as ``__getitem__`` lookups. This lets
     callers write the same dotted form for attribute children and
     NamedObject keys, matching how the agent expresses query predicates.
+
+    Inside :func:`shared_active_checks` each group's ``active?`` check is
+    made once for the whole call instead of once per path.
 
     Parameters
     ----------
@@ -187,14 +374,14 @@ def resolve_path(root: Any, path: str) -> Any:
     for part in parts:
         if "[" in part and part.endswith("]"):
             attr, _, key = part[:-1].partition("[")
-            node = getattr(node, attr)
+            node = child_of(node, attr)
             if key.isdecimal():
                 node = node[int(key)]
             else:
                 node = node[key.strip("\"'")]
             continue
         try:
-            node = getattr(node, part)
+            node = child_of(node, part)
         except AttributeError:
             # The part may be a NamedObject KEY rather than an
             # attribute. PyFluent only exposes children whose names
@@ -317,7 +504,7 @@ def discover_named_objects_via_walk(
             return
         for child in cn:
             try:
-                child_obj = getattr(node, child)
+                child_obj = child_of(node, child)
             except Exception as exc:
                 logger.debug("Failed to get child '%s' of '%s': %s", child, slash_path, exc)
                 continue
@@ -636,6 +823,9 @@ def _is_command_or_query(node: Any) -> bool:
 def _is_active(node: Any) -> bool:
     """Return whether active.
 
+    Inside :func:`shared_active_checks` the answer is reused for the rest
+    of the call.
+
     Parameters
     ----------
     node : Any
@@ -647,13 +837,16 @@ def _is_active(node: Any) -> bool:
         Boolean result of the operation.
     """
     fn = getattr(node, "is_active", None)
-    if callable(fn):
-        try:
-            return bool(fn())
-        except Exception:
-            return False
-    # No is_active method → implicitly active when the node resolves.
-    return True
+    if not callable(fn):
+        # No is_active method → implicitly active when the node resolves.
+        return True
+    try:
+        answers = getattr(_SHARED_ACTIVE, "answers", None)
+        if answers is not None:
+            return bool(_shared_is_active(answers, node))
+        return bool(fn())
+    except Exception:
+        return False
 
 
 def _is_command_argument(node: Any) -> bool:
@@ -717,7 +910,7 @@ def _looks_like_collection_container(node: Any, child_names: Any) -> bool:
         return False
     for child in list(child_names)[:3]:
         try:
-            if hasattr(getattr(node, child, None), "get_object_names"):
+            if hasattr(child_of(node, child), "get_object_names"):
                 return True
         except Exception as exc:
             logger.debug(
@@ -779,13 +972,15 @@ def _prune_inactive_children(node: Any, state: Any) -> Any:
     """
     if not isinstance(state, dict):
         return state
-    fn = getattr(node, "get_active_child_names", None)
-    if not callable(fn):
-        return state
-    try:
-        active = fn()
-    except (RuntimeError, AttributeError, TypeError):
-        return state
+    active = active_child_names(node)
+    if active is None:
+        fn = getattr(node, "get_active_child_names", None)
+        if not callable(fn):
+            return state
+        try:
+            active = fn()
+        except (RuntimeError, AttributeError, TypeError):
+            return state
     if not active:
         return state
     active_set = {str(a) for a in active}
@@ -832,7 +1027,7 @@ def _collect_allowed_values(
         if len(out) >= _MAX_AV_ENTRIES:
             return
         try:
-            child = getattr(node, child_name)
+            child = child_of(node, child_name)
         except Exception as exc:
             logger.debug("Failed to get child '%s' of '%s': %s", child_name, prefix, exc)
             continue
@@ -943,6 +1138,135 @@ def _probe_phase_properties(
     return out
 
 
+def collect_active_status(root: Any, paths: Iterable[str]) -> dict[str, bool]:
+    """Return ``{path: is_active}``; a path that does not resolve is inactive.
+
+    Parameters
+    ----------
+    root : Any
+        Settings root.
+    paths : Iterable[str]
+        Fluent object paths.
+
+    Returns
+    -------
+    dict[str, bool]
+        Active status per path.
+    """
+    out: dict[str, bool] = {}
+    for path in paths:
+        try:
+            node = resolve_path(root, path)
+        except Exception:  # broaden: bracket-subscript paths
+            # ``solution.controls.under_relaxation["pressure"]`` can raise
+            # non-(AttributeError/KeyError/TypeError) after a case reload
+            # (settings tree rebuilt with a different schema for the new
+            # pv-coupling). Treat every resolve failure as "not active" so the
+            # caller still gets a complete status map.
+            out[path] = False
+            continue
+        fn = getattr(node, "is_active", None)
+        out[path] = _is_active(node) if callable(fn) else True
+    return out
+
+
+def collect_allowed_values(root: Any, paths: Iterable[str]) -> dict[str, list[Any]]:
+    """Return ``{path: allowed values}``; unresolved paths map to ``[]``.
+
+    Parameters
+    ----------
+    root : Any
+        Settings root.
+    paths : Iterable[str]
+        Fluent object paths.
+
+    Returns
+    -------
+    dict[str, list[Any]]
+        Allowed values per path.
+    """
+    out: dict[str, list[Any]] = {}
+    for path in paths:
+        try:
+            node = resolve_path(root, path)
+        except (AttributeError, KeyError, TypeError):
+            out[path] = []
+            continue
+        values: list[Any] = []
+        for accessor in ("allowed_values", "get_allowed_values"):
+            fn = getattr(node, accessor, None)
+            if callable(fn):
+                try:
+                    values = list(fn())
+                    break
+                except Exception as exc:
+                    logger.debug("allowed_values() failed for %s: %s", path, exc, exc_info=True)
+        out[path] = values
+    return out
+
+
+def probe_paths(root: Any, paths: Iterable[str]) -> dict[str, dict[str, Any]]:
+    """Return ``{path: {exists, is_active, is_user_creatable, kind}}`` for each path.
+
+    ``kind`` is one of ``"missing"``, ``"command"``, ``"query"``,
+    ``"named_object"``, ``"group"``, ``"leaf"``; unusual nodes default to
+    ``"leaf"``. Each path costs one batched ``get_attrs`` call.
+
+    Parameters
+    ----------
+    root : Any
+        Settings root.
+    paths : Iterable[str]
+        Fluent object paths.
+
+    Returns
+    -------
+    dict[str, dict[str, Any]]
+        Facts per path.
+    """
+    out: dict[str, dict[str, Any]] = {}
+    for path in paths:
+        try:
+            node = resolve_path(root, path)
+        except (AttributeError, KeyError, TypeError):
+            out[path] = {"exists": False, "kind": "missing"}
+            continue
+        rec: dict[str, Any] = {
+            "exists": True,
+            "is_active": True,
+            "is_user_creatable": False,
+            "kind": "leaf",
+        }
+        # Kind sniff — cheap class/attr probes only.
+        arg_names = getattr(node, "argument_names", None)
+        if arg_names is not None and callable(node):
+            rec["kind"] = "query" if "query" in type(node).__name__.lower() else "command"
+        elif getattr(node, "child_object_type", None) is not None:
+            rec["kind"] = "named_object"
+        elif hasattr(node, "child_names") and getattr(node, "child_names", None):
+            rec["kind"] = "group"
+        fn = getattr(node, "get_attrs", None)
+        if callable(fn):
+            try:
+                raw = fn(["active?", "user-creatable?"]) or {}
+            except Exception:
+                raw = {}
+            if isinstance(raw, dict):
+                if "active?" in raw:
+                    rec["is_active"] = bool(raw["active?"])
+                if "user-creatable?" in raw:
+                    rec["is_user_creatable"] = bool(raw["user-creatable?"])
+        else:
+            is_active = getattr(node, "is_active", None)
+            if callable(is_active):
+                try:
+                    rec["is_active"] = bool(is_active())
+                except Exception as exc:
+                    logger.debug("is_active() failed for %s: %s", path, exc, exc_info=True)
+        out[path] = rec
+    return out
+
+
 __all__ = [
     "FLUENT_GLOBAL_STATE_PATHS",
     "normalise_attr_path",
@@ -950,4 +1274,7 @@ __all__ = [
     "discover_named_objects_via_walk",
     "collect_targeted_context",
     "collect_global_state",
+    "collect_active_status",
+    "collect_allowed_values",
+    "probe_paths",
 ]
