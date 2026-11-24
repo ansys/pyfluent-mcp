@@ -40,7 +40,7 @@ repos:
 
   # Type checking with mypy (official mirror)
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.4.0
+    rev: v2.4.1
     hooks:
       - id: mypy
         args: [--config-file=pyproject.toml]
@@ -57,7 +57,7 @@ repos:
 
   # Spell checking with typos
   - repo: https://github.com/crate-ci/typos
-    rev: v1.51.1
+    rev: v1.52.0
     hooks:
       - id: typos
         args: ["--config", "doc/styles/typos.toml"]
