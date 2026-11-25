@@ -96,6 +96,33 @@ def test_api_index_loads_filters_and_searches_with_help_tokens(tmp_path):
     assert index.lookup("tui.file.read_case") is None
 
 
+def test_api_index_matches_plurals_and_picture_synonyms(tmp_path):
+    """Natural phrasings reach paths whose words differ in number or wording."""
+    path = tmp_path / "api_objects.json"
+    path.write_text(
+        json.dumps(
+            {
+                "api_objects": [
+                    "<solver_session>.solution.monitor.report_plots (Object)",
+                    "<solver_session>.solution.report_definitions.drag (Object)",
+                    "<solver_session>.results.graphics.picture (Object)",
+                    "<solver_session>.results.graphics.picture.save_picture (Command)",
+                    "<solver_session>.results.graphics.contour (Object)",
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    index = ApiIndex(custom_path=str(path), help_map={})
+
+    assert index.search("report plot", top_k=1)[0].entry.path == "solution.monitor.report_plots"
+    assert index.search("save png image", top_k=1)[0].entry.path == (
+        "results.graphics.picture.save_picture"
+    )
+    assert index.search("contours", top_k=1)[0].entry.path == "results.graphics.contour"
+    assert index.lookup("solution.monitor.report_plots").tokens[-1] == "plots"
+
+
 def test_api_index_handles_bad_or_missing_files(tmp_path):
     """Verify that api index handles bad or missing files.
 
