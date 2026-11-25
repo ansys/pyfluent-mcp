@@ -36,9 +36,13 @@ by orchestration:
 
 The scoring formula follows. Also see :func:`_score_entry`)::
 
-    bm25(query_tokens, entry_tokens)
-      + 0.25 * (#query_token substring matches in path)
+    bm25(query_terms, entry_terms)
+      + 0.25 * (#query_term substring matches in path)
       - 0.05 * (path depth in dots)
+
+Terms are tokens folded to their singular form (``plots`` → ``plot``) so a
+query matches either number. Query terms also gain a few synonyms for words
+that never appear in settings paths (``image`` / ``png`` → ``picture``).
 
 The substring bonus preserves the historic behavior where exact
 segment matches (``energy`` → ``setup.models.energy``) outrank deeper
@@ -83,6 +87,8 @@ class ApiEntry:
     session: str  # solver_session | meshing_session | ...
     tokens: list[str] = field(default_factory=list)
     doc: str = ""
+    # Singular-folded ``tokens`` used for matching; filled when the index loads.
+    terms: list[str] = field(default_factory=list, repr=False)
 
 
 @dataclass
@@ -209,11 +215,12 @@ class ApiIndex:
             for _extra in self._extra_entries:
                 self._entries.append(_extra)
                 self._by_path.setdefault(_extra.path, _extra)
-            # Build BM25 stats over the (path + doc) token bag.
+            # Build BM25 stats over the folded (path + doc) term bag.
             total_len = 0
             for entry in self._entries:
-                total_len += len(entry.tokens)
-                for term in set(entry.tokens):
+                entry.terms = _match_terms(entry.tokens)
+                total_len += len(entry.terms)
+                for term in set(entry.terms):
                     self._doc_freq[term] = self._doc_freq.get(term, 0) + 1
             self._n_docs = len(self._entries)
             self._avgdl = (total_len / self._n_docs) if self._n_docs else 0.0
@@ -372,7 +379,7 @@ class ApiIndex:
         self._ensure_loaded()
         if not query or not self._entries:
             return []
-        q_tokens = _tokenise(query)
+        q_tokens = _query_terms(query)
         if not q_tokens:
             return []
         kinds_set = {k for k in kinds} if kinds else None
@@ -420,13 +427,13 @@ class ApiIndex:
         float
             Floating-point result produced by the function.
         """
-        if not entry.tokens or self._n_docs == 0:
+        if not entry.terms or self._n_docs == 0:
             return 0.0
-        # Frequency lookup over the entry token bag (with duplicates).
+        # Frequency lookup over the entry term bag (with duplicates).
         tf: dict[str, int] = {}
-        for tok in entry.tokens:
+        for tok in entry.terms:
             tf[tok] = tf.get(tok, 0) + 1
-        doc_len = len(entry.tokens)
+        doc_len = len(entry.terms)
         score = 0.0
         any_match = False
         k1 = self._BM25_K1
@@ -565,6 +572,41 @@ def _tokenise(text: str) -> list[str]:
         List of results produced by the operation.
     """
     return _TOKEN_RE.findall(text.lower())
+
+
+# Query words that never appear in settings paths, mapped to the path word that does.
+_QUERY_SYNONYMS: dict[str, tuple[str, ...]] = {
+    "image": ("picture",),
+    "png": ("picture",),
+    "jpg": ("picture",),
+    "jpeg": ("picture",),
+    "screenshot": ("picture",),
+    "snapshot": ("picture",),
+}
+
+
+def _fold(token: str) -> str:
+    """Fold a plural token to its singular form so ``plots`` matches ``plot``."""
+    if len(token) > 4 and token.endswith("ies"):
+        return token[:-3] + "y"
+    if len(token) > 3 and token.endswith("s") and not token.endswith(("ss", "us", "is")):
+        return token[:-1]
+    return token
+
+
+def _match_terms(tokens: Iterable[str]) -> list[str]:
+    """Return the singular-folded terms used for matching."""
+    return [_fold(token) for token in tokens]
+
+
+def _query_terms(query: str) -> list[str]:
+    """Tokenise and fold ``query``, then append synonyms of its words."""
+    terms = _match_terms(_tokenise(query))
+    for term in list(terms):
+        for synonym in _QUERY_SYNONYMS.get(term, ()):
+            if synonym not in terms:
+                terms.append(synonym)
+    return terms
 
 
 # ---------------------------------------------------------------------------
