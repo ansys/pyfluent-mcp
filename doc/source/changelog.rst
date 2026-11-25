@@ -9,6 +9,51 @@ This section contains the release notes for PyFluent-MCP.
 
 .. towncrier release notes start
 
+`0.10.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.10.0>`_ - November 25, 2026
+==========================================================================================
+
+.. tab-set::
+
+
+  .. tab-item:: Fixed
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Match plural and image phrasings in find_api
+          - `#124 <https://github.com/ansys/pyfluent-mcp/pull/124>`_
+
+
+  .. tab-item:: Dependencies
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Bump the pre-commit group with 2 updates
+          - `#112 <https://github.com/ansys/pyfluent-mcp/pull/112>`_
+
+        * - Bump the pip-deps group with 4 updates
+          - `#113 <https://github.com/ansys/pyfluent-mcp/pull/113>`_
+
+        * - Bump the pip-deps group across 1 directory with 5 updates
+          - `#121 <https://github.com/ansys/pyfluent-mcp/pull/121>`_
+
+
+  .. tab-item:: Maintenance
+
+    .. list-table::
+        :header-rows: 0
+        :widths: auto
+
+        * - Update CHANGELOG for v0.9.0
+          - `#116 <https://github.com/ansys/pyfluent-mcp/pull/116>`_
+
+        * - Bump development version to 0.10.dev0
+          - `#123 <https://github.com/ansys/pyfluent-mcp/pull/123>`_
+
+
 `0.9.0 <https://github.com/ansys/pyfluent-mcp/releases/tag/v0.9.0>`_ - November 17, 2026
 ========================================================================================
 
