@@ -1,0 +1,179 @@
+
+
+
+
+
+
+The ``operations.py`` module
+============================
+
+.. py:module:: ansys.fluent.mcp.common.host.operations
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+.. py:currentmodule:: operations
+.. tab-set::
+
+
+
+
+    .. tab-item:: Classes
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~ansys.fluent.mcp.common.host.operations.CallCoordinator`
+            - Join, shield and replay mutating tool calls for one server.
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~call_key`
+            - Return the identity of a call: tool name plus its JSON-serializable arguments.
+
+
+
+
+    .. tab-item:: Constants
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~REPLAY_TTL_S`
+            - Seconds a finished idempotent result stays available to an identical retry.
+
+
+
+
+
+
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+   :hidden:
+
+    <span class="nf nf-cod-symbol_class"></span> CallCoordinator</api/ansys/fluent/mcp/common/host/operations/CallCoordinator>
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Make long-running mutating tool calls survive host timeouts.
+
+Component activation, case loading and solver runs often outlast an MCP host's
+request timeout. The host then cancels the call and usually retries, which
+interrupts the work and starts it a second time. :class:`CallCoordinator`:
+
+* shields the running work from client cancellation so it completes;
+* lets a retry with identical arguments join the call that is still running;
+* replays, once and within ``replay_ttl_s``, the result of an idempotent call
+  that finished after the host gave up. Any other mutating call clears the
+  replay cache, so a replay never hides a state change made in between.
+
+Nothing is ever undone.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: call_key(tool: str, kwargs: dict[str, Any]) -> tuple[str, str]
+
+   
+   Return the identity of a call: tool name plus its JSON-serializable arguments.
+
+   Arguments that cannot be serialized (for example an injected request
+   context) are left out, so they never make identical calls look different.
+
+   :Parameters:
+
+       **tool** : :class:`python:str`
+           Tool name.
+
+       **kwargs** : :class:`python:dict`\[:class:`python:str`, :obj:`Any`]
+           Keyword arguments of the call.
+
+
+
+   :Returns:
+
+       :class:`python:tuple`\[:class:`python:str`, :class:`python:str`]
+           Hashable call identity.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:data:: REPLAY_TTL_S
+   :value: 300.0
+
+
+   
+   Seconds a finished idempotent result stays available to an identical retry.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

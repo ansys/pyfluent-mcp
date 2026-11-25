@@ -1,0 +1,135 @@
+
+
+
+
+
+
+:class:`FileHandler`
+====================
+
+
+.. py:class:: ansys.fluent.mcp.common.file_handlers.FileHandler
+
+   
+   Describes one file type the agent can route to a backend.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: FileHandler
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+
+
+   .. tab-item:: Attributes
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~name`
+            - 
+          * - :py:attr:`~suffixes`
+            - 
+          * - :py:attr:`~file_type`
+            - 
+          * - :py:attr:`~candidate_products`
+            - 
+          * - :py:attr:`~needs_mode_choice`
+            - 
+          * - :py:attr:`~probe`
+            - 
+          * - :py:attr:`~build_launch_args`
+            - 
+          * - :py:attr:`~component`
+            - 
+          * - :py:attr:`~description`
+            - 
+          * - :py:attr:`~load_command`
+            - 
+          * - :py:attr:`~build_load_snippet`
+            - 
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.file_handlers import FileHandler
+
+
+Attribute detail
+----------------
+
+.. py:attribute:: name
+   :type:  str
+
+.. py:attribute:: suffixes
+   :type:  tuple[str, Ellipsis]
+
+.. py:attribute:: file_type
+   :type:  str
+
+.. py:attribute:: candidate_products
+   :type:  tuple[str, Ellipsis]
+
+.. py:attribute:: needs_mode_choice
+   :type:  bool
+
+.. py:attribute:: probe
+   :type:  Callable[[pathlib.Path], FileProbe]
+
+.. py:attribute:: build_launch_args
+   :type:  Callable[[str, FileProbe, dict[str, Any]], dict[str, Any]]
+
+.. py:attribute:: component
+   :type:  str
+   :value: 'solve'
+
+
+.. py:attribute:: description
+   :type:  str
+   :value: ''
+
+
+.. py:attribute:: load_command
+   :type:  str
+   :value: 'read_case'
+
+
+.. py:attribute:: build_load_snippet
+   :type:  Callable[[str, str | None], str] | None
+   :value: None
+
+
+
+
+
+

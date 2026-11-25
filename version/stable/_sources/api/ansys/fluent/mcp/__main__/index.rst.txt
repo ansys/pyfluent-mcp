@@ -1,0 +1,46 @@
+
+
+
+
+
+
+The ``__main__.py`` module
+==========================
+
+.. py:module:: ansys.fluent.mcp.__main__
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Entry point for running the MCP server as a module.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+

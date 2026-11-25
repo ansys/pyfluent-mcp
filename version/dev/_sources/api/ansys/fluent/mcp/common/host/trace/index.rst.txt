@@ -1,0 +1,243 @@
+
+
+
+
+
+
+The ``trace.py`` module
+=======================
+
+.. py:module:: ansys.fluent.mcp.common.host.trace
+
+
+Summary
+-------
+
+
+
+
+
+
+
+
+.. py:currentmodule:: trace
+.. tab-set::
+
+
+
+
+
+
+
+    .. tab-item:: Functions
+
+        .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+
+          * - :py:obj:`~new_trace_id`
+            - Return a new 12-character trace id.
+
+
+          * - :py:obj:`~current_trace_id`
+            - Return the trace id of the tool call running in this context.
+
+
+          * - :py:obj:`~bind_trace_id`
+            - Make ``trace_id`` the current trace id.
+
+
+          * - :py:obj:`~reset_trace_id`
+            - Restore the trace id that was current before :func:`bind_trace_id`.
+
+
+          * - :py:obj:`~log_call`
+            - Log one line for a finished tool call.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description
+-----------
+
+Per-call trace ids so host-side and server-side logs line up.
+
+Every wrapped tool call gets a short trace id. The server logs one line per
+call (tool, trace id, duration, outcome); error results carry the id as
+``trace_id``; code running inside the call can read :func:`current_trace_id`.
+
+..
+    !! processed by numpydoc !!
+
+
+
+
+
+
+Module detail
+-------------
+
+.. py:function:: new_trace_id() -> str
+
+   
+   Return a new 12-character trace id.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:str`
+           Random hexadecimal id.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: current_trace_id() -> str | None
+
+   
+   Return the trace id of the tool call running in this context.
+
+
+
+
+
+   :Returns:
+
+       :class:`python:str` | :data:`python:None`
+           The trace id, or ``None`` outside a tool call.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: bind_trace_id(trace_id: str) -> contextvars.Token[str | None]
+
+   
+   Make ``trace_id`` the current trace id.
+
+
+   :Parameters:
+
+       **trace_id** : :class:`python:str`
+           Trace id of the call that is starting.
+
+
+
+   :Returns:
+
+       :obj:`contextvars.Token`\[:class:`python:str` | :data:`python:None`]
+           Token to pass to :func:`reset_trace_id` when the call ends.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: reset_trace_id(token: contextvars.Token[str | None]) -> None
+
+   
+   Restore the trace id that was current before :func:`bind_trace_id`.
+
+
+   :Parameters:
+
+       **token** : :obj:`contextvars.Token`\[:class:`python:str` | :data:`python:None`]
+           Token returned by :func:`bind_trace_id`.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: log_call(tool: str, trace_id: str, duration_ms: int, outcome: str) -> None
+
+   
+   Log one line for a finished tool call.
+
+
+   :Parameters:
+
+       **tool** : :class:`python:str`
+           Tool name.
+
+       **trace_id** : :class:`python:str`
+           Trace id of the call.
+
+       **duration_ms** : :class:`python:int`
+           Wall time in milliseconds.
+
+       **outcome** : :class:`python:str`
+           ``ok``, ``error:<code>``, or ``raised``.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+

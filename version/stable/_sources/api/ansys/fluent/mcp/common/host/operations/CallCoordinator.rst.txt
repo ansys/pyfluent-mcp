@@ -1,0 +1,120 @@
+
+
+
+
+
+
+:class:`CallCoordinator`
+========================
+
+
+.. py:class:: ansys.fluent.mcp.common.host.operations.CallCoordinator(*, replay_ttl_s: float = REPLAY_TTL_S, clock: Callable[[], float] = time.monotonic)
+
+   
+   Join, shield and replay mutating tool calls for one server.
+
+
+   :Parameters:
+
+       **replay_ttl_s** : :class:`python:float`, default: :obj:`REPLAY_TTL_S`
+           Seconds a finished idempotent result can be replayed.
+
+       **clock** : :obj:`Callable`\[[], :class:`python:float`], default: :obj:`time.monotonic`
+           Monotonic clock, injectable for tests.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+.. py:currentmodule:: CallCoordinator
+
+Overview
+--------
+
+.. tab-set::
+
+
+
+   .. tab-item:: Methods
+
+      .. list-table::
+          :header-rows: 0
+          :widths: auto
+
+          * - :py:attr:`~run`
+            - Run a mutating call, joining or replaying an identical one when possible.
+
+
+
+
+
+
+
+
+Import detail
+-------------
+
+.. code-block:: python
+
+    from ansys.fluent.mcp.common.host.operations import CallCoordinator
+
+
+
+Method detail
+-------------
+
+.. py:method:: run(key: tuple[str, str], start: Callable[[], Awaitable[Any]], *, idempotent: bool) -> Any
+   :async:
+
+
+   
+   Run a mutating call, joining or replaying an identical one when possible.
+
+
+   :Parameters:
+
+       **key** : :class:`python:tuple`\[:class:`python:str`, :class:`python:str`]
+           Call identity from :func:`call_key`.
+
+       **start** : :obj:`Callable`\[[], :obj:`Awaitable`\[:obj:`Any`]]
+           Starts the actual tool call.
+
+       **idempotent** : :ref:`bool <python:bltin-boolean-values>`
+           Whether repeating the call with the same arguments is harmless.
+
+
+
+   :Returns:
+
+       :obj:`Any`
+           The tool result.
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+
+
+
