@@ -5,7 +5,7 @@ description: |
   `ansys-fluent-mcp` MCP server. USE WHEN the user asks to load a
   case/mesh, inspect physics, change settings, run iterations, or
   query results — and the chat client is connected directly to the
-  MCP (VS Code Copilot, Cursor, Claude Desktop). EXPOSES a 21-tool
+  MCP (VS Code Copilot, Cursor, Claude Desktop). EXPOSES a 23-tool
   surface: `session_status`, `connect`, `disconnect`,
   `get_help`, `get_state`,
   `get_targeted_context`, `list_named_objects`, `find_named_object`,
@@ -48,10 +48,15 @@ is no plan builder, journal, or undo.
 | `mesh_quality(include_check?)` | Live skewness / orthogonal-quality / aspect-ratio histograms (+ optional `mesh.check()`). Route *every* "show mesh quality" / "skewness" / "orthogonal quality" / "aspect ratio" / "check mesh" intent here. |
 | `list_fields(scope?)` | Enumerate scalar/vector fields available in the loaded case (pressure, velocity-magnitude, …). |
 | `compare_files(path_a, path_b)` | Diff two case/mesh files in two ephemeral PyFluent sessions; returns a markdown summary table per family. Live workspace session is not touched. |
+| `probe_path(paths)` | Check whether settings paths exist, are active, and can be created. |
+| `get_active_status(paths)` | Check whether settings paths are active in the current solver mode. |
+| `get_allowed_values(paths)` | Get allowed values for enum and menu-style settings. |
+| `describe_named_object_template(path)` | Inspect fields and constraints for a new named object. |
+| `describe_path(paths)` | Get combined metadata for one or more settings paths. |
 
 That is the complete surface. There is **no** `propose_step`,
 `finalize`, `summarize_session`, `inspect_api`, `describe_command`,
-`get_allowed_values`, `query_reports`, `validate_setup`,
+`query_reports`, `validate_setup`,
 `diagnose_divergence`, or engineering-correlation helper
 (`compute_htc`, `lookup_emissivity`, …) on this server. Don't call
 them — they don't exist here.

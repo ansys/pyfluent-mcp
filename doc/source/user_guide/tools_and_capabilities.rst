@@ -4,7 +4,7 @@ Tools and capabilities
 Tool surface
 ------------
 
-PyFluent-MCP exposes **25 tools** organized into 6 groups:
+PyFluent-MCP exposes **23 tools** organized into 6 groups:
 
 .. list-table::
    :header-rows: 1
@@ -13,9 +13,9 @@ PyFluent-MCP exposes **25 tools** organized into 6 groups:
    * - Group
      - Tools
    * - Connection & session
-     - ``connect``, ``disconnect``, ``session_status``, ``solver_status``, ``manage_fluent``
+     - ``connect``, ``disconnect``, ``session_status``, ``solver_status``
    * - Schema discovery
-     - ``find_api``, ``get_help``, ``get_state``, ``get_targeted_context``
+     - ``get_help``, ``get_state``, ``get_targeted_context``
    * - Named objects
      - ``list_named_objects``, ``find_named_object``, ``select_named_objects``
    * - Execution & validation
@@ -32,13 +32,12 @@ Live versus offline tools
 
 **Offline-capable tools** work without a live Fluent session:
 
-- ``find_api`` and ``get_help`` search the bundled settings schema.
-- ``validate_code`` performs an AST pre-check only.
+- ``validate_code`` performs a static AST and safety pre-check without executing code.
 
 **Live-session tools** require PyFluent and a connected Fluent solver:
 
-- ``connect``, ``disconnect``, ``session_status``, ``solver_status``, ``manage_fluent``
-- ``get_state``, ``get_targeted_context``, named-object tools
+- ``connect``, ``disconnect``, ``session_status``, ``solver_status``
+- ``get_help``, ``get_state``, ``get_targeted_context``, named-object tools
 - ``run_code``, ``summarize_setup``, ``simulation_report``, ``screenshot``
 - ``mesh_quality``, ``list_fields``, ``compare_files``, ``probe_path``,
   ``get_active_status``, ``get_allowed_values``,
@@ -52,7 +51,8 @@ Discover-validate-execute loop
 
 For most setup tasks, follow this pattern:
 
-#. **Discover**: ``find_api("turbulence model")`` or ``get_state("setup.general")``.
+#. **Discover**: use ``get_targeted_context`` or ``get_state`` to inspect the live
+   settings tree, then ``get_help`` for details about a path.
 #. **Validate**: ``validate_code(python_snippet)``.
 #. **Execute**: ``run_code(python_snippet)``.
 #. **Verify**: ``summarize_setup()`` or ``simulation_report()``.
@@ -72,12 +72,10 @@ it.
 Schema discovery
 ~~~~~~~~~~~~~~~~
 
-Use ``find_api`` for ranked path search over the settings tree:
-
-*"Find API paths related to boundary condition velocity inlet."*
-
-Use ``get_state`` to read live values and ``list_named_objects`` to enumerate named
-collections (boundary conditions, cell zones, materials, and so on).
+Use ``get_targeted_context`` and ``get_state`` to inspect the live settings tree.
+Use ``get_help`` for documentation, child names, and allowed values at a known path.
+Use ``list_named_objects`` to enumerate named collections (boundary conditions, cell
+zones, materials, and so on).
 
 Use ``probe_path`` to check whether settings paths exist, are active in the
 current solver mode, and can be created. Use ``get_active_status`` for focused
@@ -131,15 +129,12 @@ Generate a mesh from geometry
 
 #. ``connect(connect_kwargs={"mode": "meshing", "precision": "double"})`` launches
    Fluent in meshing mode.
-#. ``find_api("workflow initialize watertight geometry", under="workflow")`` discovers
-   workflow tasks.
+#. Use ``get_targeted_context`` or ``get_help`` to inspect the live workflow settings
+   relevant to the geometry operation.
 #. ``validate_code`` checks the generated meshing commands.
 #. ``run_code`` executes workflow steps such as geometry import, local sizing,
    surface mesh generation, boundary layers, volume mesh generation, and mesh checks.
 #. ``run_code`` can switch to solver mode when the mesh is ready for setup.
-
-The API catalog includes common entries for Watertight Geometry,
-Fault-tolerant Meshing, and 2D Meshing workflows.
 
 Load a case and inspect setup
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -152,7 +147,7 @@ Load a case and inspect setup
 Generate and apply a settings change
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#. ``find_api("under-relaxation pressure")`` discovers the active path family.
+#. ``get_targeted_context`` or ``get_state`` inspects the active solver settings.
 #. ``get_state("solution.controls")`` reads the live URF configuration.
 #. ``validate_code`` then ``run_code`` applies the change.
 

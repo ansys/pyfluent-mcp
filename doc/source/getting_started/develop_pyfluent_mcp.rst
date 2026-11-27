@@ -41,12 +41,13 @@ connection and the per-session REPL namespace used by ``run_code``.
 **Startup**
 
 - Initializes the Solve MCP server (:class:`~ansys.fluent.mcp.solve.SolveMCP`).
-- Loads the offline settings schema from ``settings_271.json.gz``.
+- Initializes the PyFluent backend for live settings introspection when a solver is
+  connected.
 - Waits for MCP client connections over STDIO or streamable HTTP.
 
 **Runtime**
 
-- Exposes 22 MCP tools for Fluent interaction.
+- Exposes 23 MCP tools for Fluent interaction.
 - Routes live operations through the PyFluent backend.
 - Runs Python through an AST sandbox before it reaches the solver.
 
@@ -74,9 +75,7 @@ Package layout
    │   └── solve/                # Fluent Solve MCP leaf
    │       ├── mcp/              # SolveMCP
    │       ├── backends/         # PyFluent backend (+ plugins)
-   │       ├── catalog/          # Schema and local API search
    │       ├── lib/              # Domain tools
-   │       ├── data/             # settings_271.json.gz
    │       └── skills/           # MCP-host routing skill
    ├── tests/
    └── doc/                      # Sphinx documentation
@@ -159,7 +158,7 @@ Lint with Ruff:
 Add a domain tool
 =================
 
-Domain tools are stateless backend/catalog operations registered in
+Domain tools are stateless backend operations registered in
 ``ansys.fluent.mcp.solve.lib.domain_tools``. To add one:
 
 #. Write a typed coroutine in ``solve/lib/<area>.py``:

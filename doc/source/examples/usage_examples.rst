@@ -49,17 +49,17 @@ Generate and apply a boundary condition change
 #. ``run_code`` applies the deterministic settings API calls.
 #. ``get_state("setup.boundary_conditions.velocity_inlet")`` verifies the new value.
 
-Perform offline API discovery
------------------------------
+Inspect live settings
+---------------------
 
 **User prompt:**
 
-*"What settings path controls the turbulence model when Fluent is not running?"*
+*"Inspect the turbulence model settings in the connected Fluent session."*
 
 **Expected tool sequence:**
 
-#. ``find_api("turbulence model")`` performs ranked path search offline.
-#. ``get_help("setup.general.turbulence.model")`` returns per-path help text.
+#. ``get_state("setup.models.viscous")`` reads the current model settings.
+#. ``get_help("setup.models.viscous")`` returns help and available child names.
 
 Compare two case files
 ----------------------

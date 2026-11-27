@@ -178,9 +178,6 @@ variables include:
      - Path to a PEM CA bundle for corporate or self-signed TLS environments
    * - ``FLUIDS_MCP_VERIFY_TLS``
      - Enable or disable TLS verification (default enabled)
-   * - ``FLUIDS_MCP_SETTINGS_JSON``
-     - External file for overriding the bundled settings schema
-
 For the full list, see :doc:`../user_guide/configuration`.
 
 Next steps

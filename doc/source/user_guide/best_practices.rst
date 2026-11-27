@@ -20,13 +20,14 @@ Discover-generate-validate-execute loop
 
 For almost every non-trivial setup change:
 
-#. **Discover**: Use ``find_api``, ``get_state``, or ``list_named_objects`` before
-   writing code.
+#. **Discover**: Use ``get_targeted_context``, ``get_state``, or
+   ``list_named_objects`` to inspect the connected solver before writing code.
 #. **Validate**: Use ``validate_code`` to catch sandbox violations before execution.
 #. **Execute**: Use ``run_code`` to apply the change.
 #. **Verify**: Use ``summarize_setup`` or ``get_state`` to confirm the result.
 
-Never skip discovery for path-dependent settings (URF, Courant, UTL vs classic tree).
+Never skip live discovery for path-dependent settings (URF, Courant, UTL vs classic
+tree).
 
 Code execution
 --------------
@@ -62,9 +63,10 @@ Workflow design
     When ``run_code`` fails, read the error, re-discover with ``get_state``, and
     regenerate rather than retrying blindly.
 
-**Offline-first discovery**
-    Use ``find_api`` and ``get_help`` even when offline; only call live tools when you
-    need current values or mutations.
+**Use live discovery**
+    Inspect the connected solver with ``get_targeted_context``, ``get_state``, and
+    ``get_help`` before writing settings code. The server no longer includes an
+    offline settings catalog.
 
 Performance
 -----------

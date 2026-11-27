@@ -14,14 +14,10 @@ General settings
 
    * - Variable
      - Effect
-   * - ``FLUIDS_MCP_SETTINGS_JSON``
-     - External JSON file for overriding the bundled settings schema
    * - ``FLUIDS_MCP_LOG_LEVEL``
      - Server log level (default ``INFO``)
    * - ``FLUIDS_MCP_DISABLE_SESSION_LOGS``
      - ``1`` turns off session logs
-   * - ``FLUIDS_MCP_STRICT_VALIDATION``
-     - ``1`` turns near-match settings-path warnings into errors
    * - ``FLUIDS_MCP_MAX_STATE_BYTES``
      - Cap on the size of each state value returned by context tools (default ``5000``)
    * - ``FLUIDS_MCP_BATCH_FAMILY_LIMIT``
@@ -39,7 +35,7 @@ exposure.
 The repository provides:
 
 - validated Fluent execution
-- schema retrieval and grounding
+- live settings inspection
 - backend abstraction
 - deterministic tool execution
 - MCP transport support

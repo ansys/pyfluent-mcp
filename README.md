@@ -49,7 +49,7 @@ agent loops. Those concerns belong to applications that consume this package.
 
 ## Tool surface
 
-You can use 19 tools exposed by the server:
+You can use 23 tools exposed by the server:
 
 | Group | Tools |
 |-------|-------|
@@ -59,6 +59,7 @@ You can use 19 tools exposed by the server:
 | Execution and validation | `run_code`, `validate_code` |
 | Reporting and inspection | `summarize_setup`, `simulation_report`, `screenshot` |
 | Mesh/fields/compare | `mesh_quality`, `list_fields`, `compare_files` |
+| Live settings inspection | `probe_path`, `get_active_status`, `get_allowed_values`, `describe_named_object_template`, `describe_path` |
 
 ## Requirements
 
@@ -71,11 +72,10 @@ You can use 19 tools exposed by the server:
 | `h5py` 3.0 or later | Only for `compare_files` on `.h5`/`.cas.h5` files | The `file-probe` extra |
 
 > **PyFluent is required for live-session tools and is installed automatically.**
-> Offline-only tools such as `get_help` and `validate_code`
-> still work without a local Fluent installation. Any tool that touches a
-> solver, including `connect`, `run_code`, `get_state`, `summarize_setup`,
-> `mesh_quality`, and `screenshot`, requires a licensed Fluent installation
-> on your machine.
+> `validate_code` can check Python snippets without a live Fluent session.
+> Settings discovery and solver-operation tools need a connected session.
+> Launching a local Fluent session also requires a licensed Fluent
+> installation.
 
 ## Installation
 
@@ -141,7 +141,6 @@ You configure the server through `FLUIDS_MCP_*` environment variables. Common va
 
 | Variable | Effect |
 |----------|--------|
-| `FLUIDS_MCP_SETTINGS_JSON` | Override the bundled settings schema with an external file |
 | `FLUIDS_MCP_LOG_LEVEL` | Set the log level (default `INFO`) |
 | `FLUIDS_MCP_DISABLE_SESSION_LOGS` | Set to `1` to disable session logs |
 | `FLUIDS_MCP_MAX_STATE_BYTES` | Cap on the size of each state value returned by context tools (default `5000`) |

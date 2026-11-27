@@ -39,7 +39,8 @@ PyFluent-MCP includes several key components under the ``ansys.fluent.mcp`` name
 - **Tool surface**: Stateless tools for connection, discovery, execution,
   validation, and reporting.
 - **PyFluent backend**: In-process gRPC to a local or remote Fluent solver.
-- **Settings catalog**: Offline schema (~62k paths) with local BM25-based search.
+- **Live settings inspection**: Tools for inspecting settings paths, values, and
+  allowed options in the connected Fluent session.
 - **AST sandbox**: Validates Python before it reaches the solver.
 
 PyFluent-MCP intentionally stays a deterministic substrate. It does not own
@@ -54,8 +55,8 @@ Design tenets
   connection and the ``run_code`` REPL namespace.
 - **Python never writes Fluent directly without validation.** Python only runs through
   ``run_code`` / ``validate_code``, which pass through an AST sandbox.
-- **Offline-first knowledge.** ``find_api`` and ``get_help`` work from
-  the bundled settings schema without any network service.
+- **Live discovery.** ``get_help``, ``get_state``, and ``get_targeted_context`` inspect
+  the active Fluent settings tree.
 - **Pluggable backends.** PyFluent ships in-box. Other backends can be contributed via
   entry points.
 
