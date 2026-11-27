@@ -119,6 +119,7 @@ def test_variables_read_by_the_package_are_known(name):
         "FLUIDS_MCP_API_OBJECTS_PATH",
         "FLUIDS_MCP_CACHE_DIR",
         "FLUIDS_MCP_SETTINGS_JSON",
+        "FLUIDS_MCP_STRICT_VALIDATION",
     ],
 )
 def test_removed_catalog_variables_are_not_recognized(name):

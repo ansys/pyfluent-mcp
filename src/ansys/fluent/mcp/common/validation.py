@@ -458,7 +458,7 @@ _SANDBOX_ALTERNATIVES: tuple[tuple[tuple[str, ...], str], ...] = (
     (
         ("tui", "execute_tui"),
         "use the settings API (solver.settings...) and inspect live paths with "
-        "get_help, get_state, or get_targeted_context",
+        "describe_path, get_help, get_state, or get_targeted_context",
     ),
     (
         ("open", "os", "shutil", "subprocess", "pathlib"),
