@@ -5,8 +5,8 @@ description: |
   `ansys-fluent-mcp` MCP server. USE WHEN the user asks to load a
   case/mesh, inspect physics, change settings, run iterations, or
   query results — and the chat client is connected directly to the
-  MCP (VS Code Copilot, Cursor, Claude Desktop). EXPOSES a 22-tool
-  surface: `session_status`, `connect`, `disconnect`, `find_api`,
+  MCP (VS Code Copilot, Cursor, Claude Desktop). EXPOSES a 21-tool
+  surface: `session_status`, `connect`, `disconnect`,
   `get_help`, `get_state`,
   `get_targeted_context`, `list_named_objects`, `find_named_object`,
   `select_named_objects`, `summarize_setup`, `simulation_report`,
@@ -34,7 +34,6 @@ is no plan builder, journal, or undo.
 | `connect(ip?, port?, ...)` | Launch a local Fluent session or attach to a running one. |
 | `disconnect` | Tear down the session. |
 | `solver_status` | Is the solver busy iterating? |
-| `find_api(query, limit?, kind?)` | Lexical (or, if configured, semantic) search over the Fluent settings tree. Returns ranked paths + signatures. |
 | `get_help(path)` | Per-node help text. |
 | `get_state(path, projection?)` | Read any settings path. `path` is a STRING. |
 | `get_targeted_context(...)` | Trimmed live-context snapshot for a specific intent. |
@@ -62,7 +61,7 @@ them — they don't exist here.
 For nearly every intent, the loop is:
 
 ```
-1. Discover    → find_api / get_help / list_named_objects / summarize_setup
+1. Discover    → get_help / list_named_objects / summarize_setup
 2. Author      → your host or user supplies PyFluent settings-API Python
 3. Validate    → validate_code (offline AST check)
 4. Execute     → run_code (mutates the live solver)
@@ -143,12 +142,6 @@ server.
 ### "What's the path for <X>?"
 
 ```
-find_api(query="velocity inlet thermal temperature", kind="path")
-```
-
-Pick the most-specific match and then:
-
-```
 get_help(path="setup.boundary_conditions.velocity_inlet.<zone>.thermal.t")
 ```
 
@@ -196,8 +189,7 @@ run_code(code="solver.file.read_data(file_name=r'<path>')")
 - Named expressions REQUIRE units when dimensional:
   `'288.15 [K]'`, `'1.225 [kg/m^3]'`, `'1 [m/s]'`. Bare numbers
   silently break downstream report defs and BC values.
-- `get_state(path=...)` takes a **string**, not a list. Same for
-  `find_api(query=...)`.
+- `get_state(path=...)` takes a **string**, not a list.
 
 ## Anti-patterns (do not do)
 

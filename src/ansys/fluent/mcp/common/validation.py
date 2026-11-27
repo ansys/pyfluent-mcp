@@ -407,8 +407,8 @@ _ALLOWED_BUILTINS: frozenset[str] = frozenset(
         "print",
         # ``dir`` is read-only attribute introspection — no side effects, no
         # way to mutate state. Blocking it forced every "what's available
-        # under this object?" probe through extra find_api / get_help
-        # roundtrips. Allowing it cuts discovery cost.
+        # under this object?" probe through extra get_help roundtrips.
+        # Allowing it cuts discovery cost.
         "dir",
         # exception classes — needed for ``try/except`` blocks the agent
         # routinely writes when probing PyFluent state. They are class
@@ -457,8 +457,8 @@ _SANDBOX_ALTERNATIVES: tuple[tuple[tuple[str, ...], str], ...] = (
     ),
     (
         ("tui", "execute_tui"),
-        "use the settings API (solver.settings...). find_api(query=...) and "
-        "describe_path(paths=[...]) locate the settings path and its allowed values",
+        "use the settings API (solver.settings...) and inspect live paths with "
+        "get_help, get_state, or get_targeted_context",
     ),
     (
         ("open", "os", "shutil", "subprocess", "pathlib"),

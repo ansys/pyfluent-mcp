@@ -14,15 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""``validate_code`` strict mode + unknown-path promotion.
+"""``validate_code`` strict mode.
 
 The PyFluent backend's ``validate_code`` now:
 
 * invokes :func:`validate_python_source` with ``strict=True``, which
-  enforces the AST import allow-list and top-level Name allow-list,
-* promotes settings paths that the bundled API index reports as
-  having *no near-match* to a structured ``unknown_settings_path``
-  error (instead of leaving them as silent warnings).
+    enforces the AST import allow-list and top-level Name allow-list.
 
 The tests below pin both behaviours against the offline (no-session)
 path of the PyFluent backend so they run on any developer machine.
@@ -32,8 +29,6 @@ from __future__ import annotations
 
 import ast
 import asyncio
-
-import pytest
 
 from ansys.fluent.mcp.solve.backends.pyfluent import PyFluentBackend, _extract_settings_paths
 
@@ -80,53 +75,6 @@ def test_validate_code_accepts_allowed_imports():
     assert result.status == "ok"
 
 
-# ---------------------------------------------------------------------
-# unknown_settings_path — hallucinated path detection
-# ---------------------------------------------------------------------
-
-
-def test_validate_code_rejects_completely_hallucinated_path():
-    """A path with neither a direct hit nor a near-match in the API
-    index should be promoted to ``unknown_settings_path`` error."""
-    backend = _make_backend()
-    code = "solver.setup.totally_nonexistent.fake_node_xyzzyx.do_thing(42)\n"
-    result = _run(backend.validate_code(code))
-    # The leaf "do_thing" doesn't exist anywhere in the bundled
-    # api_objects.json so the catalog search returns no candidate
-    # and we promote to an error.
-    if result.status == "error":
-        assert result.error_code == "unknown_settings_path"
-        # The hallucinated path should appear in the message.
-        assert "fake_node_xyzzyx" in result.message
-    else:
-        # The catalog index isn't available in this environment;
-        # skip the assertion. The companion ``test_validation.py``
-        # already pins offline parse behaviour.
-        pytest.skip("api_objects.json index not available")
-
-
-def test_validate_code_keeps_nearby_misspellings_as_warning():
-    """A path whose leaf has a plausible near-match should stay as
-    a warning so the caller can self-correct."""
-    backend = _make_backend()
-    # ``material_name`` is the canonical typo for ``general.material``
-    # under a fluid cell zone — the catalog index can resolve "material"
-    # as a near-match, so we keep it as a warning rather than
-    # blocking.
-    code = "solver.setup.cell_zone_conditions.fluid['x'].material_name = 'air'\n"
-    result = _run(backend.validate_code(code))
-    # Either it parses cleanly as a warning, or the catalog isn't
-    # available — either is acceptable; we just must not crash.
-    if result.status == "ok":
-        # Warning should be present if any warnings were emitted.
-        assert result.warnings is None or isinstance(result.warnings, list)
-    else:
-        # If strict mode rejected for an unrelated reason that's a
-        # legitimate validation result too; we only care that the
-        # path triage didn't crash.
-        assert result.error_code is not None
-
-
 def test_validate_code_passes_clean_snippet():
     """A snippet that reads only well-known paths should pass."""
     backend = _make_backend()
@@ -136,7 +84,7 @@ def test_validate_code_passes_clean_snippet():
 
 
 # ---------------------------------------------------------------------
-# Phase 1a: run_code reflection-write guard + strict env helper
+# Phase 1a: run_code reflection-write guard
 # ---------------------------------------------------------------------
 
 
@@ -184,14 +132,3 @@ session.PartManagement.InputFileChanged(FilePath="x.pmdb")
     assert "workflow.InitializeWorkflow" in paths
     assert "workflow.TaskObject.Arguments.set_state" in paths
     assert "PartManagement.InputFileChanged" in paths
-
-
-def test_strict_validation_env_helper(monkeypatch):
-    from ansys.fluent.mcp.solve.backends.pyfluent import _strict_validation_enabled
-
-    monkeypatch.delenv("FLUIDS_MCP_STRICT_VALIDATION", raising=False)
-    assert _strict_validation_enabled() is False
-    monkeypatch.setenv("FLUIDS_MCP_STRICT_VALIDATION", "1")
-    assert _strict_validation_enabled() is True
-    monkeypatch.setenv("FLUIDS_MCP_STRICT_VALIDATION", "off")
-    assert _strict_validation_enabled() is False

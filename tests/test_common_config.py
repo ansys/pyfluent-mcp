@@ -106,7 +106,6 @@ def test_load_config_warns_for_agent_owned_max_steps_variables():
     [
         "FLUIDS_MCP_SETTINGS_JSON",
         "FLUIDS_MCP_BATCH_FAMILY_LIMIT",
-        "FLUIDS_MCP_STRICT_VALIDATION",
         "FLUIDS_MCP_MAX_STATE_BYTES",
     ],
 )

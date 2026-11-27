@@ -60,7 +60,6 @@ class SolveMCP(FluidsLeafMCP):
         "list_named_objects",
         "find_named_object",
         "select_named_objects",
-        "find_api",
         "get_state",
         "get_targeted_context",
         "get_help",

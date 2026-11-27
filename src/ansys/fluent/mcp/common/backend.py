@@ -517,52 +517,6 @@ class Backend(ABC):
         """
         raise BackendUnavailableError(f"{self.label} does not expose mesh adjacency.")
 
-    async def find_api(
-        self,
-        query: str,
-        *,
-        top_k: int = 10,
-        kinds: list[str] | None = None,
-        under: str | None = None,
-    ) -> list[dict[str, Any]]:
-        """Retrieve candidate Fluent settings APIs for ``query``.
-
-        Uses the configured lexical :class:`ApiRetriever`, which
-        performs BM25 ranking over the bundled Fluent API catalog
-        and PyFluent class docstrings.
-
-        Returns a list of ``{path, kind, score, ...}`` hits.
-        Backends may override to add live cross-checks (e.g. filter
-        out paths whose immediate parent does not exist on the
-        connected solver).
-
-        Parameters
-        ----------
-        query : str
-            Search query supplied by the caller.
-        top_k : int
-            Maximum number of search hits to return.
-        kinds : list[str] | None
-            Optional API object kinds used to filter search results.
-        under : str | None
-            Optional root path used to constrain API search results.
-
-        Returns
-        -------
-        list[dict[str, Any]]
-            Mapping containing the operation result.
-        """
-        from ansys.fluent.mcp.solve.catalog.retriever import get_default_api_retriever
-
-        retriever = get_default_api_retriever()
-        hits = await retriever.retrieve(query, top_k=top_k, kinds=kinds, under=under)
-        if not hits and not getattr(retriever, "available", True):
-            raise BackendUnavailableError(
-                "No API retriever returned results. "
-                "Install pyfluent and ensure the lexical API index is available."
-            )
-        return [h.to_tool_dict() for h in hits]
-
     # ---- code execution ----------------------------------------------
 
     async def run_code(

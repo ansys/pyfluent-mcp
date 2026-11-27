@@ -214,34 +214,6 @@ class IntegrationBackend:
         """
         return {"initialized": True, "iterations": 12}
 
-    async def find_api(self, query, *, top_k=10, kinds=None, under=None):
-        """Find api entries.
-
-        Parameters
-        ----------
-        query : Any
-            Search text or user request to evaluate.
-        top_k : Any
-            Maximum number of results to return.
-        kinds : Any
-            Optional result kinds used to narrow the operation.
-        under : Any
-            Optional path prefix used to scope the operation.
-
-        Returns
-        -------
-        None
-            The function completes through its side effects.
-        """
-        return [
-            {
-                "path": f"{under or 'setup'}.temperature",
-                "kind": (kinds or ["Parameter"])[0],
-                "score": 0.9,
-                "docstring": f"Temperature result for {query}\nMore detail",
-            }
-        ][:top_k]
-
     async def run_code(self, code, **kwargs):
         """Execute Python code through the backend runtime.
 
@@ -525,7 +497,6 @@ def test_solve_mcp_runtime_covers_general_tool_surface(monkeypatch):
                 "list_named_objects",
                 "find_named_object",
                 "select_named_objects",
-                "find_api",
                 "get_state",
                 "get_targeted_context",
                 "get_help",
@@ -592,17 +563,6 @@ def test_solve_mcp_runtime_covers_general_tool_surface(monkeypatch):
             "children"
         ] == ["child"]
         assert _structured(await server.call_tool("solver_status", {}))["iterations"] == 12
-        compact_hits = _structured(
-            await server.call_tool("find_api", {"query": "temperature", "compact": True})
-        )
-        assert compact_hits == [
-            {
-                "path": "setup.temperature",
-                "kind": "Parameter",
-                "score": 0.9,
-                "summary": "Temperature result for temperature",
-            }
-        ]
 
         validated = _structured(await server.call_tool("validate_code", {"code": "print('x')"}))
         assert validated["stdout"] == "valid"

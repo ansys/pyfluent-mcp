@@ -36,7 +36,7 @@ def test_package_imports():
         The function completes through its side effects.
     """
     importlib.import_module("ansys.fluent.mcp.common.network")
-    importlib.import_module("ansys.fluent.mcp.solve.catalog.retriever")
+    importlib.import_module("ansys.fluent.mcp.solve.backends.pyfluent")
 
 
 def test_module_launcher_entry_point():

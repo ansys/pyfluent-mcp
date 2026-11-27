@@ -449,17 +449,6 @@ def _is_forbidden_import_value(value: Any) -> bool:
     return owner.split(".", 1)[0] in _FORBIDDEN_VALUE_MODULE_ROOTS
 
 
-def _strict_validation_enabled() -> bool:
-    """Return ``True`` when opt-in strict schema validation is enabled.
-
-    Set ``FLUIDS_MCP_STRICT_VALIDATION=1`` to promote near-match Fluent
-    settings-path warnings to hard ``unknown_settings_path`` errors.
-    Default off — near-matches stay warnings so clients can autocorrect.
-    """
-    val = os.environ.get("FLUIDS_MCP_STRICT_VALIDATION")
-    return val is not None and val.strip().lower() in {"1", "true", "yes", "on"}
-
-
 def _scan_reflection_writes(code: str) -> list[str]:
     """Return reflection-based write patterns found in ``code``.
 
@@ -1602,47 +1591,6 @@ class PyFluentBackend(Backend):
     def mark_disconnected(self) -> None:
         """Stop using the current session, retaining it for cleanup, and invalidate caches."""
         self._mark_solver_disconnected()
-
-    def api_retriever(self):
-        """Return the API retriever; extension point for application augmentation."""
-        from ansys.fluent.mcp.solve.catalog.retriever import get_api_retriever_for_session
-
-        return get_api_retriever_for_session(self._session_kind)
-
-    async def find_api(
-        self,
-        query: str,
-        *,
-        top_k: int = 10,
-        kinds: list[str] | None = None,
-        under: str | None = None,
-    ) -> list[dict[str, Any]]:
-        """Retrieve API candidates from the active PyFluent session catalog.
-
-        Parameters
-        ----------
-        query : str
-            Search query supplied by the caller.
-        top_k : int
-            Maximum number of search hits to return.
-        kinds : list[str] | None
-            Optional API object kinds used to filter search results.
-        under : str | None
-            Optional root path used to constrain API search results.
-
-        Returns
-        -------
-        list[dict[str, Any]]
-            Collection containing ranked API hits.
-        """
-        retriever = self.api_retriever()
-        hits = await retriever.retrieve(query, top_k=top_k, kinds=kinds, under=under)
-        if not hits and not getattr(retriever, "available", True):
-            raise BackendUnavailableError(
-                "No API retriever returned results. "
-                "Install pyfluent and ensure the lexical API index is available."
-            )
-        return [h.to_tool_dict() for h in hits]
 
     # ------------------------------------------------------------------
     # Session health and cleanup
@@ -3479,68 +3427,7 @@ class PyFluentBackend(Backend):
         if result.status != "ok":
             return result
 
-        # Best-effort semantic check: extract settings API paths from the
-        # AST and verify them against the bundled api_objects.json index.
-        # This catches plausible-looking but wrong attribute names (e.g.
-        # ``fluid["zone"].material_name`` → the real path is
-        # ``fluid["zone"].general.material``) before the code ever reaches
-        # the live solver. The check is best-effort: if the index is not
-        # available (no api_objects.json found) we skip silently.
-        #
-        # Paths the index reports as completely unknown (i.e. no
-        # similar path of distance ≤ 2 from the leaf token) are
-        # promoted from warnings to a structured ``unknown_settings_path``
-        # error, because such tokens almost always signal a
-        # hallucinated API call rather than a typo. Paths that have a
-        # plausible nearby match stay as warnings so clients can
-        # autocorrect without aborting the whole snippet.
         warnings: list[str] = []
-        hallucinated: list[tuple[str, str]] = []
-        try:
-            tree = ast.parse(code)
-            paths = _extract_settings_paths(tree)
-            if paths:
-                from ansys.fluent.mcp.solve.catalog.index import get_api_index_for_session
-
-                index = get_api_index_for_session(self._session_kind)
-                if index.available:
-                    for path in sorted(set(paths)):
-                        if index.lookup(path) is None:
-                            leaf = path.rsplit(".", 1)[-1]
-                            parent = path.rsplit(".", 1)[0] if "." in path else None
-                            similar = index.search(
-                                leaf,
-                                top_k=3,
-                                kinds=["Parameter", "Command"],
-                                under=parent,
-                            )
-                            if similar and not _strict_validation_enabled():
-                                hint = ", ".join(h.entry.path for h in similar[:2])
-                                warnings.append(
-                                    f"unknown settings path '{path}'; did you mean: {hint}"
-                                )
-                            else:
-                                # No near-match, OR strict mode promotes
-                                # every near-match miss to a hard error.
-                                hallucinated.append((path, ""))
-        except (SyntaxError, Exception) as exc:  # best-effort only
-            logger.debug("validate_code: semantic check failed: %s", exc, exc_info=True)
-
-        if hallucinated:
-            joined = ", ".join(p for p, _ in hallucinated)
-            return RunCodeResult(
-                status="error",
-                error_code="unknown_settings_path",
-                message=(
-                    "validate_code rejected the snippet: the following "
-                    "settings path(s) were not found in the bundled "
-                    f"Fluent API index and have no near-match: {joined}. "
-                    "These are almost certainly hallucinated. Use "
-                    "``find_api`` / ``probe_path`` to discover the real "
-                    "path before calling ``validate_code`` again."
-                ),
-                warnings=warnings,
-            )
 
         if not self.is_connected():
             return RunCodeResult(
@@ -3640,11 +3527,7 @@ class PyFluentBackend(Backend):
                     "status": "error",
                     "error_code": "unknown_attribute",
                     "message": f"path {target_path!r} does not exist: {exc}",
-                    "hint": (
-                        "call ``find_api`` to locate the intended path "
-                        "or ``get_help`` on the parent to enumerate "
-                        "available children"
-                    ),
+                    "hint": ("call ``get_help`` on the parent to enumerate available children"),
                 }
             except Exception as exc:  # noqa: BLE001
                 return {

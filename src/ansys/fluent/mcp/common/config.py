@@ -50,7 +50,6 @@ _KNOWN_ENV_VARS: frozenset[str] = frozenset(
         "FLUIDS_MCP_HOST_CONTRACT",
         "FLUIDS_MCP_SETTINGS_JSON",
         "FLUIDS_MCP_BATCH_FAMILY_LIMIT",
-        "FLUIDS_MCP_STRICT_VALIDATION",
         "FLUIDS_MCP_MAX_STATE_BYTES",
     }
 )
