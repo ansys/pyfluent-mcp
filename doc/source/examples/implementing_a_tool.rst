@@ -8,8 +8,8 @@ Learn how to implement a custom MCP domain tool for PyFluent-MCP.
 Tool overview
 -------------
 
-A *domain tool* is a stateless backend or catalog operation with no dependency on an
-agent loop, journal, or recipe registry. Domain tool can perform the following tasks:
+A *domain tool* is a stateless backend operation with no dependency on an
+agent loop, journal, or recipe registry. A domain tool can perform the following tasks:
 
 - Take structured input parameters.
 - Perform an operation through the ``Backend`` interface.

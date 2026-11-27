@@ -63,8 +63,8 @@ Inspect, generate, and execute
 
 Once Fluent is connected, the recommended loop for most setup tasks is:
 
-1. **Discover**: Use ``find_api``, ``get_state``, or ``list_named_objects`` to inspect
-   the live settings tree.
+1. **Discover**: Use ``get_targeted_context``, ``get_state``, or ``list_named_objects``
+   to inspect the live settings tree; use ``get_help`` for details about a known path.
 2. **Validate**: Use ``validate_code`` to pre-check Python snippets against the AST sandbox.
 3. **Execute**: Use ``run_code`` to apply the change to the live solver.
 4. **Verify**: Use ``summarize_setup`` or ``simulation_report`` to confirm the result.
@@ -72,11 +72,10 @@ Once Fluent is connected, the recommended loop for most setup tasks is:
 Use offline-only tools
 ~~~~~~~~~~~~~~~~~~~~~~
 
-You can use several tools **without** a live Fluent session:
+You can use ``validate_code`` **without** a live Fluent session:
 
-- ``find_api`` searches the bundled settings schema.
-- ``get_help`` returns per-path help text.
-- ``validate_code`` performs an AST pre-check only.
+It performs a static AST and safety pre-check; executing code and inspecting live
+settings requires a connected Fluent session.
 
 Consider example use cases
 --------------------------

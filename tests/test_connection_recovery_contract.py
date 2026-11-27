@@ -27,7 +27,6 @@ from ansys.fluent.mcp.common.models import TypedError
 
 CASES = [
     ("get_state", {}),
-    ("find_api", {"query": "energy"}),
     ("list_named_objects", {}),
     ("find_named_object", {"name": "inlet"}),
     ("select_named_objects", {"collection": "setup.boundary_conditions.wall"}),

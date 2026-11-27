@@ -39,8 +39,6 @@ _KNOWN_ENV_VARS: frozenset[str] = frozenset(
     {
         "FLUIDS_MCP_HTTP_TIMEOUT",
         "FLUIDS_MCP_VERIFY_TLS",
-        "FLUIDS_MCP_API_OBJECTS_PATH",
-        "FLUIDS_MCP_CACHE_DIR",
         "FLUIDS_MCP_CA_BUNDLE",
         "FLUIDS_MCP_LOG_LEVEL",
         "FLUIDS_MCP_SESSION_LOGS",
@@ -48,9 +46,7 @@ _KNOWN_ENV_VARS: frozenset[str] = frozenset(
         "FLUIDS_MCP_SESSION_LOG_DIR",
         "FLUIDS_MCP_SESSION_LOG_LEVEL",
         "FLUIDS_MCP_HOST_CONTRACT",
-        "FLUIDS_MCP_SETTINGS_JSON",
         "FLUIDS_MCP_BATCH_FAMILY_LIMIT",
-        "FLUIDS_MCP_STRICT_VALIDATION",
         "FLUIDS_MCP_MAX_STATE_BYTES",
     }
 )
@@ -95,7 +91,6 @@ class FluidsMCPConfig:
 
     http_timeout: float = 300.0
     verify_tls: bool = True
-    api_objects_path: Optional[str] = None
     log_level: str = "INFO"
     warnings: tuple[str, ...] = field(default_factory=tuple)
 
@@ -211,7 +206,6 @@ def load_config(env: Optional[dict[str, str]] = None) -> FluidsMCPConfig:
     return FluidsMCPConfig(
         http_timeout=http_timeout,
         verify_tls=verify_tls,
-        api_objects_path=src.get("FLUIDS_MCP_API_OBJECTS_PATH"),
         log_level=log_level,
         warnings=tuple(warnings),
     )

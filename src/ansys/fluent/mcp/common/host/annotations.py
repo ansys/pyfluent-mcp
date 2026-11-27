@@ -59,7 +59,6 @@ LEAF_TOOL_ANNOTATIONS: dict[str, dict[str, bool]] = {
     "compare_files": READ_ONLY,
     "describe_named_object_template": READ_ONLY,
     "describe_path": READ_ONLY,
-    "find_api": READ_ONLY,
     "find_named_object": READ_ONLY,
     "get_active_status": READ_ONLY,
     "get_allowed_values": READ_ONLY,

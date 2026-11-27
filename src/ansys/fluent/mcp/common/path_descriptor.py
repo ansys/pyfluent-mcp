@@ -18,8 +18,7 @@
 
 Before this module the leaf published four separate probes
 (``probe_path``, ``get_active_status``, ``get_allowed_values``,
-``describe_named_object_template``) plus a couple of higher-level tools
-(``find_api``, ``get_targeted_context``) and every one of them returned
+``describe_named_object_template``) plus ``get_targeted_context`` and every one of them returned
 a *different* payload shape. Validators, recipe grounders, and tool-call
 handlers all built their own view of a
 path by stitching those envelopes together, and each stitching layer
@@ -158,9 +157,7 @@ class CommandArgument:
 
     Populated from :meth:`Backend.get_command_arguments` — the live
     solver reports ``argument_names`` (ordered list) and ``arguments``
-    (per-name descriptor). The offline schema in
-    ``settings_271.json.gz`` carries the same information under
-    ``args`` on command nodes.
+    (per-name descriptor).
     """
 
     name: str

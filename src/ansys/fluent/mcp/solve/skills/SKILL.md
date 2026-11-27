@@ -5,8 +5,8 @@ description: |
   `ansys-fluent-mcp` MCP server. USE WHEN the user asks to load a
   case/mesh, inspect physics, change settings, run iterations, or
   query results — and the chat client is connected directly to the
-  MCP (VS Code Copilot, Cursor, Claude Desktop). EXPOSES a 22-tool
-  surface: `session_status`, `connect`, `disconnect`, `find_api`,
+  MCP (VS Code Copilot, Cursor, Claude Desktop). EXPOSES a 23-tool
+  surface: `session_status`, `connect`, `disconnect`,
   `get_help`, `get_state`,
   `get_targeted_context`, `list_named_objects`, `find_named_object`,
   `select_named_objects`, `summarize_setup`, `simulation_report`,
@@ -34,7 +34,6 @@ is no plan builder, journal, or undo.
 | `connect(ip?, port?, ...)` | Launch a local Fluent session or attach to a running one. |
 | `disconnect` | Tear down the session. |
 | `solver_status` | Is the solver busy iterating? |
-| `find_api(query, limit?, kind?)` | Lexical (or, if configured, semantic) search over the Fluent settings tree. Returns ranked paths + signatures. |
 | `get_help(path)` | Per-node help text. |
 | `get_state(path, projection?)` | Read any settings path. `path` is a STRING. |
 | `get_targeted_context(...)` | Trimmed live-context snapshot for a specific intent. |
@@ -49,10 +48,15 @@ is no plan builder, journal, or undo.
 | `mesh_quality(include_check?)` | Live skewness / orthogonal-quality / aspect-ratio histograms (+ optional `mesh.check()`). Route *every* "show mesh quality" / "skewness" / "orthogonal quality" / "aspect ratio" / "check mesh" intent here. |
 | `list_fields(scope?)` | Enumerate scalar/vector fields available in the loaded case (pressure, velocity-magnitude, …). |
 | `compare_files(path_a, path_b)` | Diff two case/mesh files in two ephemeral PyFluent sessions; returns a markdown summary table per family. Live workspace session is not touched. |
+| `probe_path(paths)` | Check whether settings paths exist, are active, and can be created. |
+| `get_active_status(paths)` | Check whether settings paths are active in the current solver mode. |
+| `get_allowed_values(paths)` | Get allowed values for enum and menu-style settings. |
+| `describe_named_object_template(path)` | Inspect fields and constraints for a new named object. |
+| `describe_path(paths)` | Get combined metadata for one or more settings paths. |
 
 That is the complete surface. There is **no** `propose_step`,
 `finalize`, `summarize_session`, `inspect_api`, `describe_command`,
-`get_allowed_values`, `query_reports`, `validate_setup`,
+`query_reports`, `validate_setup`,
 `diagnose_divergence`, or engineering-correlation helper
 (`compute_htc`, `lookup_emissivity`, …) on this server. Don't call
 them — they don't exist here.
@@ -62,7 +66,7 @@ them — they don't exist here.
 For nearly every intent, the loop is:
 
 ```
-1. Discover    → find_api / get_help / list_named_objects / summarize_setup
+1. Discover    → get_help / list_named_objects / summarize_setup
 2. Author      → your host or user supplies PyFluent settings-API Python
 3. Validate    → validate_code (offline AST check)
 4. Execute     → run_code (mutates the live solver)
@@ -143,12 +147,6 @@ server.
 ### "What's the path for <X>?"
 
 ```
-find_api(query="velocity inlet thermal temperature", kind="path")
-```
-
-Pick the most-specific match and then:
-
-```
 get_help(path="setup.boundary_conditions.velocity_inlet.<zone>.thermal.t")
 ```
 
@@ -196,8 +194,7 @@ run_code(code="solver.file.read_data(file_name=r'<path>')")
 - Named expressions REQUIRE units when dimensional:
   `'288.15 [K]'`, `'1.225 [kg/m^3]'`, `'1 [m/s]'`. Bare numbers
   silently break downstream report defs and BC values.
-- `get_state(path=...)` takes a **string**, not a list. Same for
-  `find_api(query=...)`.
+- `get_state(path=...)` takes a **string**, not a list.
 
 ## Anti-patterns (do not do)
 

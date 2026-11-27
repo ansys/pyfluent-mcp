@@ -116,7 +116,6 @@ ALL_TOOLS = (
     "list_named_objects",
     "find_named_object",
     "select_named_objects",
-    "find_api",
     "get_state",
     "get_targeted_context",
     "get_help",
@@ -468,8 +467,6 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
             self._tool_find_named_object()
         if "select_named_objects" in self._exposed:
             self._tool_select_named_objects()
-        if "find_api" in self._exposed:
-            self._tool_find_api()
         if "get_state" in self._exposed:
             self._tool_get_state()
         if "get_targeted_context" in self._exposed:
@@ -878,14 +875,12 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
         "api-discovery": {
             "description": ("Tools for exploring and searching the settings API tree."),
             "skill": (
-                "Use find_api for keyword-based semantic search. Use "
-                "get_help for docstrings and child listings. Use "
+                "Use get_help for docstrings and child listings. Use "
                 "get_targeted_context for batched disambiguation "
                 "(active-status + state + allowed-values + child-names "
                 "in one round-trip)."
             ),
             "tools": [
-                "find_api",
                 "get_help",
                 "get_targeted_context",
             ],
@@ -1288,85 +1283,6 @@ class FluidsLeafMCP(PyAnsysBaseMCP):
                 include_shadows=include_shadows,
                 exclude=exclude,
             )
-
-    def _tool_find_api(self) -> None:
-        """Register the ``find_api`` MCP tool.
-
-        Returns
-        -------
-        None
-            The function completes through its side effects.
-        """
-
-        @self.tool(
-            name="find_api",
-            description=(
-                "Retrieve candidate Fluent settings APIs for a query "
-                "from the bundled Fluent API catalog. Returns ranked hits as "
-                "{path, kind, score, ...}. Use this to locate the "
-                "dotted settings path that implements a property "
-                "(e.g. query 'temperature wall' returns "
-                "wall.thermal.temperature variants). Optional filters: "
-                "`kinds` (Parameter, Command, Object, Group) and "
-                "`under` (path prefix to scope the search)."
-            ),
-        )
-        @typed_guard
-        async def find_api(
-            query: str,
-            top_k: int = 10,
-            kinds: Optional[list[str]] = None,
-            under: Optional[str] = None,
-            compact: bool = False,
-        ) -> list[dict[str, Any]]:
-            """Find api entries.
-
-            Parameters
-            ----------
-            query : str
-                Search text or user request to evaluate.
-            top_k : int
-                Maximum number of results to return.
-            kinds : Optional[list[str]]
-                Optional result kinds used to narrow the operation.
-            under : Optional[str]
-                Optional path prefix used to scope the operation.
-            compact : bool
-                Whether to enable or apply compact.
-
-            Returns
-            -------
-            list[dict[str, Any]]
-                List of results produced by the operation.
-            """
-            hits = await self.backend.find_api(
-                query,
-                top_k=top_k,
-                kinds=kinds,
-                under=under,
-            )
-            if not compact:
-                return hits
-            # Slim envelope: only the fields the agent uses to pick
-            # the next call. Drops schema/allowed_values/docstring
-            # (~80% of the bytes per hit) so cheap discovery turns
-            # don't bloat the prompt cache.
-            slim: list[dict[str, Any]] = []
-            for h in hits:
-                desc = h.get("docstring") or h.get("description") or ""
-                if isinstance(desc, str):
-                    one_line = desc.strip().split("\n", 1)[0][:160]
-                else:
-                    one_line = ""
-                slim.append(
-                    {
-                        "path": h.get("path"),
-                        "kind": h.get("kind"),
-                        "score": h.get("score"),
-                        "summary": one_line,
-                    }
-                )
-            return slim
 
     def _tool_get_state(self) -> None:
         """Register the ``get_state`` MCP tool.

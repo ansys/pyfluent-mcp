@@ -104,15 +104,30 @@ def test_load_config_warns_for_agent_owned_max_steps_variables():
 @pytest.mark.parametrize(
     "name",
     [
-        "FLUIDS_MCP_SETTINGS_JSON",
         "FLUIDS_MCP_BATCH_FAMILY_LIMIT",
-        "FLUIDS_MCP_STRICT_VALIDATION",
         "FLUIDS_MCP_MAX_STATE_BYTES",
     ],
 )
 def test_variables_read_by_the_package_are_known(name):
     """Verify that variables the package honors never trigger the typo warning."""
     assert load_config({name: "1"}).warnings == ()
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "FLUIDS_MCP_API_OBJECTS_PATH",
+        "FLUIDS_MCP_CACHE_DIR",
+        "FLUIDS_MCP_SETTINGS_JSON",
+        "FLUIDS_MCP_STRICT_VALIDATION",
+    ],
+)
+def test_removed_catalog_variables_are_not_recognized(name):
+    """Verify that removed catalog settings are reported as unknown."""
+    config = load_config({name: "1"})
+
+    assert len(config.warnings) == 1
+    assert name in config.warnings[0]
 
 
 @pytest.mark.parametrize(

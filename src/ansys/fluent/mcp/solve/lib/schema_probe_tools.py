@@ -51,7 +51,7 @@ from typing import Any
 from ansys.fluent.mcp.common.backend import Backend, BackendUnavailableError
 from ansys.fluent.mcp.common.path_descriptor import PathDescriptor
 
-#: A member placeholder as ``find_api`` prints it: ``["<name>"]``, ``['*']`` or ``.<name>``.
+#: A member placeholder as API paths print it: ``["<name>"]``, ``['*']`` or ``.<name>``.
 _PLACEHOLDER = re.compile(r"""\[(['"]?)(?:<[^>\]]*>|\*)\1\]|\.<[^>.]*>(?=\.|$)""")
 
 
@@ -133,8 +133,7 @@ async def probe_path_impl(
     Returns ``{path: {exists, is_active, is_user_creatable, kind}}``
     in a single round-trip. Backends without a live session raise
     :class:`BackendUnavailableError`; the wrapper surfaces that as
-    a structured error so callers can pivot to ``get_state`` or
-    ``find_api`` without burning a turn.
+    a structured error so callers can pivot without burning a turn.
 
     Parameters
     ----------

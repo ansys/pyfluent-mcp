@@ -48,7 +48,7 @@ _AUTH = (
     "(not in chat), restart the server, then retry."
 )
 _FIX_ARGUMENTS = (
-    "Correct the arguments (use describe_path, find_api or list_named_objects to find valid "
+    "Correct the arguments (use describe_path or list_named_objects to find valid "
     "values) and call again; do not resend the same arguments."
 )
 _REWRITE = "Rewrite the code or step as the message describes; do not resend it unchanged."
